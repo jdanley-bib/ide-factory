@@ -1,0 +1,22 @@
+{
+  "name": "ide-factory",
+  "version": "0.1.0",
+  "description": "IDE-native software factory for Cursor, GitHub Copilot, and Claude Code",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "start": "node src/cli.mjs"
+  },
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "idefactory": "src/cli.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@fission-ai/openspec": "^1.14.3",
+    "backlog.md": "^1.55.0"
+  }
+}
