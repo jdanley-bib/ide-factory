@@ -12,7 +12,7 @@ import {
   writeIfMissing,
   writeText,
 } from './layout.mjs';
-import { findBinary } from './backlog.mjs';
+import { findBinary, runBacklog } from './backlog.mjs';
 
 const STATE_FILES = [
   'team.md',
@@ -173,20 +173,20 @@ function ensureOpenspec(project, env) {
 
 function ensureBacklog(project, env) {
   if (fs.existsSync(path.join(project, 'backlog', 'config.yml'))) return;
-  const bin = env.IDEFACTORY_BACKLOG || findBinary('backlog', project, env);
-  if (!bin) {
-    throw new Error('backlog CLI not found. Install backlog.md, then re-run with --with-backlog.');
-  }
   const name = path.basename(project);
-  const result = spawnSync(bin, [
-    'init', name,
-    '--defaults',
-    '--agent-instructions', 'none',
-    '--integration-mode', 'cli',
-    '--auto-open-browser', 'false',
-    '--no-git',
-  ], { cwd: project, env, encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error((result.stderr || result.stdout || 'backlog init failed').trim());
+  try {
+    runBacklog(project, [
+      'init', name,
+      '--defaults',
+      '--agent-instructions', 'none',
+      '--integration-mode', 'cli',
+      '--auto-open-browser', 'false',
+      '--no-git',
+    ], env);
+  } catch (error) {
+    if (error.code === 'NO_BACKLOG') {
+      throw new Error('backlog CLI not found. Install backlog.md, then re-run with --with-backlog.');
+    }
+    throw new Error(error.message || 'backlog init failed');
   }
 }
