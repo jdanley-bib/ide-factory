@@ -1,0 +1,17 @@
+{
+  "version": "0.1.0",
+  "runtime": "ide",
+  "ideation": false,
+  "models": {
+    "note": "Hints only. The IDE session model does the work. idefactory does not launch a model.",
+    "lead": "ide-session",
+    "architect": "ide-session",
+    "engineer": "ide-session",
+    "reviewer": "ide-session",
+    "scribe": "ide-session"
+  },
+  "governance": {
+    "protectedPaths": ["GOLDEN_RULES.md", ".factory/decisions.md", ".factory/agents/"],
+    "reviewerMustDiffer": true
+  }
+}
