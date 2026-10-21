@@ -3,7 +3,7 @@
 ## 1. Scoped approval
 
 - [x] 1.1 Add failing tests that a schema version 1 approval records change, task, source revision, action, approver, issuance, expiry, and policy version, and that a missing field, an action other than `accept` or `complete`, an expiry more than 24 hours after issuance, or an approver equal to the implementer is rejected without writing a file. Implement that validator and verify with `node --test test/risk-gates.test.mjs`.
-- [ ] 1.2 Add failing tests that `approve` with an id, a note, and every scope field writes a JSON approval containing the note and appends that id to `decisions.md`, and that an id and note with a scope field omitted writes no file and appends nothing. A dirty non-run-state tree also writes nothing. Verify with `node --test test/risk-gates.test.mjs`.
+- [x] 1.2 Add failing tests that `approve` with an id, a note, and every scope field writes a JSON approval containing the note and appends that id to `decisions.md`, and that an id and note with a scope field omitted writes no file and appends nothing. A dirty non-run-state tree also writes nothing. Verify with `node --test test/risk-gates.test.mjs`.
 
 ## 2. Human gate
 

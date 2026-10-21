@@ -2,7 +2,7 @@
   "id": "1185d1bd-ff1f-437d-a8af-065599d8d07a",
   "change": "enforce-risk-gates-and-security-stage",
   "taskId": "1.2",
-  "state": "accepted",
+  "state": "finalized",
   "implementerRole": "engineer",
   "implementerId": "bc-623988f2-aed4-5dd5-b3bd-dffc0338625c",
   "reviewerId": "bc-92fb38bc-096b-521f-846d-6bb64f062043",
@@ -56,6 +56,30 @@
         "timedOut": false,
         "worktreeClean": true,
         "sourceRevision": "bd25891644151f59ce474f8de45579a47f350476"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:18:09.123Z",
+        "finishedAt": "2026-10-21T20:19:09.637Z",
+        "logDigest": "sha256:2e1dbf75e547dd52e1095cc6fa48599b4afd95c78eec1f2f401dd5a45a620922",
+        "artifactDigests": [],
+        "attemptId": "1185d1bd-ff1f-437d-a8af-065599d8d07a",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "b12b4c947b003c993629420b719043ef50e76688"
       }
     ],
     "security": [],
@@ -96,8 +120,12 @@
     {
       "at": "2026-10-21T20:17:50.254Z",
       "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T20:19:09.687Z",
+      "state": "finalized"
     }
   ],
   "createdAt": "2026-10-21T20:11:53.633Z",
-  "updatedAt": "2026-10-21T20:17:50.254Z"
+  "updatedAt": "2026-10-21T20:19:09.687Z"
 }
