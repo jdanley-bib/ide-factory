@@ -12,7 +12,7 @@
 
 ## 3. Lockout lifecycle
 
-- [ ] 3.1 Add failing tests that lockout creation writes immutable schema version 1 `created.json` data under a printed lockout id and blocks completion, and that `lockout resolve <id>` requires a distinct resolver and reason, writes one immutable `resolved.json`, unblocks completion, repeats identical resolution without duplication, and rejects conflicting resolution. Add legacy markdown resolution by exact basename and digest without renaming or deleting the note. Update all shipped factory-governance skill copies with the supported command. Verify with `node --test test/govern.test.mjs test/finalization-recovery.test.mjs`.
+- [x] 3.1 Add failing tests that lockout creation writes immutable schema version 1 `created.json` data under a printed lockout id and blocks completion, and that `lockout resolve <id>` requires a distinct resolver and reason, writes one immutable `resolved.json`, unblocks completion, repeats identical resolution without duplication, and rejects conflicting resolution. Add legacy markdown resolution by exact basename and digest without renaming or deleting the note. Update all shipped factory-governance skill copies with the supported command. Verify with `node --test test/govern.test.mjs test/finalization-recovery.test.mjs`.
 
 ## 4. One-writer lease
 

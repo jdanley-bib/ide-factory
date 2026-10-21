@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: make-finalization-recoverable/2.2 (2026-10-21)
+Last finalized: make-finalization-recoverable/3.1 (2026-10-21)

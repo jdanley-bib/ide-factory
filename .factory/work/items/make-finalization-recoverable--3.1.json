@@ -2,7 +2,7 @@
   "id": "3.1",
   "change": "make-finalization-recoverable",
   "title": "Add failing tests that lockout creation writes immutable schema version 1 `created.json` data under a printed lockout id and blocks completion, and that `lockout resolve <id>` requires a distinct resolver and reason, writes one immutable `resolved.json`, unblocks completion, repeats identical resolution without duplication, and rejects conflicting resolution. Add legacy markdown resolution by exact basename and digest without renaming or deleting the note. Update all shipped factory-governance skill copies with the supported command. Verify with `node --test test/govern.test.mjs test/finalization-recovery.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "Add failing tests that lockout creation writes immutable schema version 1 `created.json` data under a printed lockout id and blocks completion, and that `lockout resolve <id>` requires a distinct resolver and reason, writes one immutable `resolved.json`, unblocks completion, repeats identical resolution without duplication, and rejects conflicting resolution. Add legacy markdown resolution by exact basename and digest without renaming or deleting the note. Update all shipped factory-governance skill copies with the supported command. Verify with `node --test test/govern.test.mjs test/finalization-recovery.test.mjs`. works as specified and is covered by the verification profile checks."
@@ -24,5 +24,5 @@
     "dependencies": []
   },
   "attemptId": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
-  "updatedAt": "2026-10-21T22:47:59.004Z"
+  "updatedAt": "2026-10-21T22:59:40.429Z"
 }
