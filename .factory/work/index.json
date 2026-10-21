@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T19:09:36.261Z",
+  "updatedAt": "2026-10-21T19:16:46.170Z",
   "items": [
     {
       "change": "enforce-verification-evidence",
@@ -120,7 +120,7 @@
     {
       "change": "persist-bounded-run-sessions",
       "id": "4.1",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "persist-bounded-run-sessions",
