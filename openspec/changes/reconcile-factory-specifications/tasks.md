@@ -16,7 +16,7 @@
     checks: [unit, threat-review]
     verificationProfile: security-sensitive
 
-- [ ] 1.3 Add or refine install and governance contract tests for the seven-role roster, `.factory/governance.md`, preserved legacy `GOLDEN_RULES.md`, and the full shared adapter command set; verify with `node --test test/install.test.mjs test/govern.test.mjs`
+- [x] 1.3 Add or refine install and governance contract tests for the seven-role roster, `.factory/governance.md`, preserved legacy `GOLDEN_RULES.md`, and the full shared adapter command set; verify with `node --test test/install.test.mjs test/govern.test.mjs`
   factory:
     kind: general
     roles: [engineer, test-engineer, reviewer, scribe]
@@ -25,14 +25,14 @@
 
 ## 2. Specification baseline
 
-- [ ] 2.1 Validate every delta against current behavior, correct any overclaim without changing runtime scope, and verify with `npx openspec validate reconcile-factory-specifications --strict`
+- [x] 2.1 Validate every delta against current behavior, correct any overclaim without changing runtime scope, and verify with `npx openspec validate reconcile-factory-specifications --strict`
   factory:
     kind: docs
     roles: [lead, reviewer, scribe]
     checks: [docs]
     verificationProfile: docs
 
-- [ ] 2.2 Run the complete repository baseline and confirm the reconciled change is ready for sync; verify with `npm test`, `node src/cli.mjs doctor`, and `npx openspec validate --all`
+- [x] 2.2 Run the complete repository baseline and confirm the reconciled change is ready for sync; verify with `npm test`, `node src/cli.mjs doctor`, and `npx openspec validate --all`
   factory:
     kind: docs
     roles: [lead, reviewer, scribe]

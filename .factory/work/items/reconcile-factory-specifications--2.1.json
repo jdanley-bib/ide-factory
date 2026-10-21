@@ -2,7 +2,7 @@
   "id": "2.1",
   "change": "reconcile-factory-specifications",
   "title": "Validate every delta against current behavior, correct any overclaim without changing runtime scope, and verify with `npx openspec validate reconcile-factory-specifications --strict`",
-  "status": "todo",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "Validate every delta against current behavior, correct any overclaim without changing runtime scope, and verify with `npx openspec validate reconcile-factory-specifications --strict` works as specified and is covered by the verification profile checks."
@@ -23,6 +23,6 @@
     "verificationProfile": "docs",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T15:21:28.473Z"
+  "attemptId": "1646e745-b051-4ceb-8a62-71488802e7d0",
+  "updatedAt": "2026-10-21T15:47:27.578Z"
 }

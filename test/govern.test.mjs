@@ -4,6 +4,27 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
 
+test('doctor requires .factory/governance.md and does not require GOLDEN_RULES.md', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
+    assert.equal((await idefactory(dir, ['doctor'])).code, 0);
+    fs.unlinkSync(path.join(dir, '.factory/governance.md'));
+    const missing = await idefactory(dir, ['doctor']);
+    assert.notEqual(missing.code, 0);
+    assert.match(`${missing.out}${missing.err}`, /governance\.md/);
+    assert.doesNotMatch(`${missing.out}${missing.err}`, /GOLDEN_RULES/);
+    fs.writeFileSync(path.join(dir, 'GOLDEN_RULES.md'), 'legacy\n');
+    const withLegacy = await idefactory(dir, ['doctor']);
+    assert.notEqual(withLegacy.code, 0);
+    assert.match(`${withLegacy.out}${withLegacy.err}`, /governance\.md/);
+    assert.doesNotMatch(`${withLegacy.out}${withLegacy.err}`, /GOLDEN_RULES/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('approve and reject append, and lockout writes a note', async () => {
   const dir = tempProject();
   try {

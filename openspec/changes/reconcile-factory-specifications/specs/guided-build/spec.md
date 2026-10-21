@@ -46,10 +46,10 @@ Each started work item SHALL have a persisted attempt whose state transitions re
 - **THEN** the command exits with an illegal-transition error
 
 ### Requirement: Security review stage
-Run SHALL request the security-reviewer role before the reviewer when a work item is security-sensitive or requires a security check.
+Run SHALL request the security-reviewer role before the reviewer when a work item's `securityProfile` is `security-sensitive` or when its checks include a security-patterned check (for example threat-review, sast, secret, or audit). Run SHALL NOT treat `verificationProfile` alone as that trigger, and SHALL NOT make the security-checking transition mandatory.
 
 #### Scenario: Security-sensitive verification
-- **WHEN** a security-sensitive attempt reaches verification
+- **WHEN** an attempt whose work item has `securityProfile: security-sensitive` or a security-patterned check reaches verification
 - **THEN** the next orchestration request names the security-reviewer role
 
 ### Requirement: Separate reviewer

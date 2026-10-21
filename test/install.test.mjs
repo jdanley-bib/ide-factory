@@ -5,11 +5,41 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
+const ROLES = [
+  'lead',
+  'architect',
+  'engineer',
+  'test-engineer',
+  'security-reviewer',
+  'reviewer',
+  'scribe',
+];
+
+const SHARED_COMMANDS = ['status', 'plan', 'build', 'run', 'full', 'review'];
+
+/** Skill each shared command must direct the IDE to follow (by purpose, not bare name). */
+const COMMAND_SKILLS = {
+  status: [/factory-coordinator/i],
+  plan: [/factory-openspec/i],
+  build: [/factory-build/i],
+  run: [/factory-run/i],
+  full: [/factory-full/i],
+  review: [/factory-build/i, /factory-governance/i],
+};
+
 function read(dir, rel) {
   return fs.readFileSync(path.join(dir, rel), 'utf8');
 }
 
-test('init writes the default team and leaves an application file alone', async () => {
+function adapterPaths(command) {
+  return [
+    `.cursor/commands/factory-${command}.md`,
+    `.claude/commands/factory-${command}.md`,
+    `.github/prompts/factory-${command}.prompt.md`,
+  ];
+}
+
+test('init writes the seven-role roster, governance baseline, and machine work state', async () => {
   const dir = tempProject();
   try {
     fs.writeFileSync(path.join(dir, 'app.js'), 'keep-app\n');
@@ -21,19 +51,26 @@ test('init writes the default team and leaves an application file alone', async 
       assert.match(team, new RegExp(role));
     }
     assert.match(team, /does not implement product code/);
+    for (const role of ROLES) {
+      assert.equal(fs.existsSync(path.join(dir, `.factory/agents/${role}/charter.md`)), true, role);
+      assert.equal(fs.existsSync(path.join(dir, `.factory/agents/${role}/history.md`)), true, role);
+    }
     assert.equal(fs.existsSync(path.join(dir, '.factory/decisions.md')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/governance.md')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/profiles.json')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/work/index.json')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/attempts')), true);
+    const governance = read(dir, '.factory/governance.md');
+    assert.match(governance, /approve/i);
+    assert.match(governance, /verif/i);
+    assert.match(governance, /append-only|memor/i);
+    assert.match(governance, /HALT/);
+    assert.match(governance, /review/i);
+    assert.match(governance, /\.factory\/work|queue/i);
+    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
     const config = JSON.parse(read(dir, '.factory/config.json'));
     assert.equal(config.runtime, 'ide');
     assert.equal(config.ideation, false);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/engineer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/test-engineer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/security-reviewer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
-    assert.match(read(dir, '.factory/governance.md'), /IDE models only/i);
-    assert.match(read(dir, '.factory/governance.md'), /approve/i);
   } finally {
     cleanup(dir);
   }
@@ -65,39 +102,63 @@ test('re-init preserves decisions, history, squad, and AGENTS.md', async () => {
   }
 });
 
-test('installs factory build/run/full commands, a narrow rule, and skills with no model launcher', async () => {
+test('installs the full shared adapter command set for Cursor, Copilot, and Claude', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
-    for (const rel of [
-      '.cursor/commands/factory-build.md',
-      '.cursor/commands/factory-run.md',
-      '.cursor/commands/factory-full.md',
-      '.github/prompts/factory-build.prompt.md',
-      '.github/prompts/factory-run.prompt.md',
-      '.github/prompts/factory-full.prompt.md',
-      '.claude/commands/factory-build.md',
-      '.claude/commands/factory-run.md',
-      '.claude/commands/factory-full.md',
-      '.cursor/commands/factory-status.md',
-      '.cursor/commands/factory-plan.md',
-      '.cursor/commands/factory-review.md',
-      '.github/agents/factory.agent.md',
-      '.claude/skills/factory-coordinator/SKILL.md',
-      '.cursor/skills/factory-run/SKILL.md',
-      '.cursor/skills/factory-full/SKILL.md',
-    ]) {
-      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+    for (const command of SHARED_COMMANDS) {
+      for (const rel of adapterPaths(command)) {
+        assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+        const body = read(dir, rel);
+        for (const skill of COMMAND_SKILLS[command]) {
+          assert.match(
+            body,
+            skill,
+            `${rel} must direct the IDE to the corresponding factory skill (${skill})`,
+          );
+        }
+      }
     }
     assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /openspec-explore/);
     assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /factory-run/);
-    assert.match(read(dir, '.cursor/commands/factory-full.md'), /factory-full skill/);
     assert.match(read(dir, '.cursor/rules/factory.mdc'), /Unrelated requests are left alone/);
     const build = read(dir, '.cursor/skills/factory-build/SKILL.md');
     assert.match(build, /failing test/i);
     assert.match(build, /verification/i);
     assert.match(build, /different role/i);
     assert.match(build, /idefactory complete/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('installed factory skills state the IDE session model and do not launch a model', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const launchPattern = /idefactory\b[\s\S]{0,80}\b(launch|start)\b[\s\S]{0,40}\bmodel\b|\bcursor-agent\b/i;
+    for (const root of ['.cursor/skills', '.claude/skills', '.github/skills']) {
+      const skillRoot = path.join(dir, root);
+      for (const name of fs.readdirSync(skillRoot).sort()) {
+        const rel = path.join(root, name, 'SKILL.md');
+        const body = read(dir, rel);
+        assert.match(
+          body,
+          /IDE session model does the work/i,
+          `${rel} must state that the IDE session model does the work`,
+        );
+        assert.doesNotMatch(body, launchPattern, `${rel} must not direct the CLI to launch a model`);
+      }
+    }
+    for (const command of SHARED_COMMANDS) {
+      for (const rel of adapterPaths(command)) {
+        assert.doesNotMatch(
+          read(dir, rel),
+          launchPattern,
+          `${rel} must not direct the CLI to launch a model`,
+        );
+      }
+    }
   } finally {
     cleanup(dir);
   }

@@ -2,7 +2,7 @@
   "id": "2.2",
   "change": "reconcile-factory-specifications",
   "title": "Run the complete repository baseline and confirm the reconciled change is ready for sync; verify with `npm test`, `node src/cli.mjs doctor`, and `npx openspec validate --all`",
-  "status": "todo",
+  "status": "done",
   "dependencies": [
     "2.1"
   ],
@@ -28,6 +28,6 @@
       "2.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T15:21:28.473Z"
+  "attemptId": "a683a14c-a70b-4b1f-b0da-0e23f57e1ce0",
+  "updatedAt": "2026-10-21T15:50:30.010Z"
 }

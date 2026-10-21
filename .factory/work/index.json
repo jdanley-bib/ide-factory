@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T15:31:25.322Z",
+  "updatedAt": "2026-10-21T15:50:30.016Z",
   "items": [
     {
       "change": "reconcile-factory-specifications",
@@ -15,17 +15,17 @@
     {
       "change": "reconcile-factory-specifications",
       "id": "1.3",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "reconcile-factory-specifications",
       "id": "2.1",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "reconcile-factory-specifications",
       "id": "2.2",
-      "status": "todo"
+      "status": "done"
     }
   ]
 }
