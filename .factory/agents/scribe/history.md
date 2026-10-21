@@ -65,3 +65,7 @@ Attempt: afb8638d-2e0c-4707-8f18-3209896f130a
 ## 2026-10-21 finalized enforce-verification-evidence/5.1
 
 Attempt: 8152331d-3d0a-49ec-9726-4448883624c9
+
+## 2026-10-21 finalized persist-bounded-run-sessions/1.1
+
+Attempt: 1dd1b142-2dc7-4317-a6f6-eea9e5019472
