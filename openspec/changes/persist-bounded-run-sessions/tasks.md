@@ -17,7 +17,7 @@
 ## 3. Stops that are not task counters
 
 - [x] 3.1 Add failing tests that a second process seeing the same attempt, role, and work-item status exits 0 with `unchanged-state` and no request, and that `--new-run` after `max-agent-steps` opens a new run id at zero steps while the previous file remains. A resume flag higher than the stored budget must not raise it. Verify with `node --test test/run-session.test.mjs`.
-- [ ] 3.2 Add failing tests that a configured token ceiling at the host-exposed count exits 0 with `max-tokens`, a configured cost ceiling with no host cost exits 1 with `host-usage-unavailable`, and no ceiling stores neither a token nor a cost value. Verify with `node --test test/run-session.test.mjs`.
+- [x] 3.2 Add failing tests that a configured token ceiling at the host-exposed count exits 0 with `max-tokens`, a configured cost ceiling with no host cost exits 1 with `host-usage-unavailable`, and no ceiling stores neither a token nor a cost value. Verify with `node --test test/run-session.test.mjs`.
 - [ ] 3.3 Add failing tests that a complete request does not increment agent steps, and that `HALT` exits with an error, leaves session files unchanged, and prints no request. Verify with `node --test test/run-session.test.mjs`.
 - [ ] 3.4 Add a failing test that the security-reviewer route still exits 2 with one security-reviewer request when the session has remaining budget. Verify with `node --test test/orchestration.test.mjs`.
 

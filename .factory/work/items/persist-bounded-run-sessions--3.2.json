@@ -2,7 +2,7 @@
   "id": "3.2",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a configured token ceiling at the host-exposed count exits 0 with `max-tokens`, a configured cost ceiling with no host cost exits 1 with `host-usage-unavailable`, and no ceiling stores neither a token nor a cost value. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "3.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "30e9c0f2-5077-43b7-9143-ac9eff1d5874",
-  "updatedAt": "2026-10-21T18:37:10.216Z"
+  "updatedAt": "2026-10-21T18:43:59.925Z"
 }
