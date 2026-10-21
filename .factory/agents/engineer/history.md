@@ -173,3 +173,11 @@ Implementer: bc-71e04e8a-ab36-5609-b0b5-5a71762974c2
 Red: temporary mutation in `openOrResumeRunSession` made `--new-run` resume sticky closed sessions; `node --test test/orchestration.test.mjs` exit 1, 1 fail (`security-reviewer route in fresh session…`: `0 !== 2`, stdout `Run stopped (unchanged-state) for demo.`, no security-reviewer request); `node src/cli.mjs verify run c923e6ab-933a-44a2-a41e-4969af7b9380 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:300575144b9fbd16c2771ba6b43c52032b4f7a5166cf867de36271bdf3720896). Mutation removed before handoff; rejected earlier auto-reopen of sticky `unchanged-state` (spec requires `--new-run`).
 Green: `node --test test/orchestration.test.mjs` exit 0, 17 pass; `node --test test/run-session.test.mjs` exit 0, 32 pass.
 Scope: orchestration regression test only (`--new-run` after sticky unchanged-state → one security-reviewer request); no production delta retained — no security enforcement/tools/review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/4.1
+
+Attempt: e63c39e8-9c29-419e-af8e-769c141de8d5
+Implementer: bc-6845af6a-3531-51c0-a362-d67febcb6b98
+Red: `node --test test/install.test.mjs` exit 1, 1 fail (`init writes positive run-budget defaults in config`: missing defaultMaxAgentSteps); `node src/cli.mjs verify run e63c39e8-9c29-419e-af8e-769c141de8d5 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:e5744152b721e296a5662b006ef14a7cec92ab11ea29238804638b9a7f980946).
+Green: `node --test test/install.test.mjs` exit 0, 12 pass.
+Scope: config template run-budget defaults and install tests only — templates/factory/config.json gains defaultMaxAgentSteps/defaultMaxTasks/defaultMaxWallClockMs/defaultMaxFailures; re-init config bytes unchanged; repo `.factory/config.json` untouched; no skill/review/complete/commit/push.

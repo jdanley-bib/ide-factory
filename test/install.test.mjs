@@ -100,6 +100,34 @@ test('init writes a schema-valid check registry with only unit → npm test', as
   }
 });
 
+test('init writes positive run-budget defaults in config', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const run = JSON.parse(read(dir, '.factory/config.json')).run;
+    assert.ok(Number.isInteger(run.defaultMaxAgentSteps) && run.defaultMaxAgentSteps > 0);
+    assert.ok(Number.isInteger(run.defaultMaxTasks) && run.defaultMaxTasks > 0);
+    assert.ok(Number.isInteger(run.defaultMaxWallClockMs) && run.defaultMaxWallClockMs > 0);
+    assert.ok(Number.isInteger(run.defaultMaxFailures) && run.defaultMaxFailures > 0);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing config byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const configPath = path.join(dir, '.factory/config.json');
+    const custom = `${read(dir, '.factory/config.json').trimEnd()}\nCONFIG-SENTINEL\n`;
+    fs.writeFileSync(configPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), custom);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('re-init leaves an existing check registry byte-for-byte unchanged', async () => {
   const dir = tempProject();
   try {
