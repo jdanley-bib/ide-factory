@@ -2,9 +2,9 @@
   "schemaVersion": 1,
   "runId": "5c71cea4-687f-4022-b936-e1c27dfa2e73",
   "change": "enforce-risk-gates-and-security-stage",
-  "status": "open",
+  "status": "closed",
   "startedAt": "2026-10-21T20:05:36.686Z",
-  "lastObservedAt": "2026-10-21T21:45:30.149Z",
+  "lastObservedAt": "2026-10-21T21:49:09.809Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
@@ -25,5 +25,5 @@
     "attemptState": "verifying",
     "workItemStatus": "in_progress"
   },
-  "stopReason": null
+  "stopReason": "max-agent-steps"
 }
