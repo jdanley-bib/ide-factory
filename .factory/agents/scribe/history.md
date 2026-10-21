@@ -57,3 +57,7 @@ Attempt: dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665
 ## 2026-10-21 finalized enforce-verification-evidence/4.2
 
 Attempt: 1b6bdd69-d6b1-408e-aa05-c10d9ed94a7d
+
+## 2026-10-21 finalized enforce-verification-evidence/4.3
+
+Attempt: afb8638d-2e0c-4707-8f18-3209896f130a

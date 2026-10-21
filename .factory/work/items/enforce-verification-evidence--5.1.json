@@ -2,7 +2,7 @@
   "id": "5.1",
   "change": "enforce-verification-evidence",
   "title": "Run `npx openspec validate enforce-verification-evidence --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in the implementation notes. Do not start a model, add a run-session budget, enforce `humanGate`, or change finalization atomicity.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [],
   "acceptanceCriteria": [
     "Run `npx openspec validate enforce-verification-evidence --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in the implementation notes. Do not start a model, add a run-session budget, enforce `humanGate`, or change finalization atomicity. works as specified and is covered by the verification profile checks."
@@ -23,6 +23,6 @@
     "verificationProfile": "frontend-low",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T16:11:21.783Z"
+  "attemptId": "8152331d-3d0a-49ec-9726-4448883624c9",
+  "updatedAt": "2026-10-21T17:03:02.304Z"
 }

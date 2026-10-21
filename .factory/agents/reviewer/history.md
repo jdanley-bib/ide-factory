@@ -71,3 +71,10 @@ Attempt: afb8638d-2e0c-4707-8f18-3209896f130a
 Reviewer: bc-7e305b58-af31-51d3-84e9-a3946635754d
 Verdict: ACCEPT
 Re-ran `node --test test/orchestration.test.mjs` exit 0, 16 pass.
+
+## 2026-10-21 enforce-verification-evidence/5.1
+
+Attempt: 8152331d-3d0a-49ec-9726-4448883624c9
+Reviewer: bc-3897f2e7-ff02-5b9e-9735-d9dced3845f6
+Verdict: ACCEPT
+Re-ran strict validate exit 0, doctor exit 0, npm test exit 0 (77 pass).

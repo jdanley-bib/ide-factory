@@ -71,3 +71,10 @@ Attempt: afb8638d-2e0c-4707-8f18-3209896f130a
 Implementer: bc-0ef4d2fe-2a82-51e1-a793-9bfaedd232d4
 Red: expected issuer hand-written, actual cli.
 Green: `node --test test/orchestration.test.mjs` exit 0, 16 pass.
+
+## 2026-10-21 enforce-verification-evidence/5.1
+
+Attempt: 8152331d-3d0a-49ec-9726-4448883624c9
+Implementer: bc-c7302652-ec5f-552a-9db8-1d1448116c75
+Red: missing implementation notes file.
+Green: strict validate exit 0, npm test exit 0 (77 pass), doctor exit 0.

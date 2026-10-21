@@ -981,3 +981,18 @@ test('verify import refuses when HALT is present and writes no evidence', async 
     cleanupImportFixture(fixture);
   }
 });
+
+test('implementation notes record strict validate, npm test, and doctor', () => {
+  const notesPath = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    '../openspec/changes/enforce-verification-evidence/implementation-notes.md',
+  );
+  assert.ok(
+    fs.existsSync(notesPath),
+    `missing implementation notes: ${notesPath}`,
+  );
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  assert.match(notes, /npx openspec validate enforce-verification-evidence --strict/);
+  assert.match(notes, /npm test/);
+  assert.match(notes, /node src\/cli\.mjs doctor/);
+});
