@@ -141,3 +141,7 @@ Attempt: d989d087-25f9-408b-a6d1-0f593b01c5db
 ## 2026-10-21 finalized enforce-risk-gates-and-security-stage/2.2
 
 Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
+
+## 2026-10-21 finalized enforce-risk-gates-and-security-stage/3.1
+
+Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
