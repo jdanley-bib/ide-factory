@@ -120,3 +120,10 @@ Attempt: 143ad813-9542-4662-acfd-844349500751
 Reviewer: bc-0c0d3d98-fab4-5b94-ae4c-443263567189
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 11 pass. Simulated red: parent orchestrate + new tests → 2 fail. Clean-head unit pass at 5186a5b; expired wall-clock exits 0 with no request; clock regression exits 1 `invalid-session` with no request; checks before syncTasks/agent-step path.
+
+## 2026-10-21 persist-bounded-run-sessions/2.4
+
+Attempt: 7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a
+Reviewer: bc-69422a87-2e2a-57e0-ab15-b4ab19eea163
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 13 pass. Simulated red: parent run-session/orchestrate + new tests → 1 fail (max-failures got exit 2). CLI red present; clean-head unit pass at 5604e17; red evidence excluded from failure count; timed-out verification at cap exits 0 with `max-failures` and no request; distinct record ids via `countedFailureIds`.
