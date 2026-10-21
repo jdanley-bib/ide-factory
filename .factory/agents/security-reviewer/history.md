@@ -56,3 +56,13 @@ Verdict: ACCEPT
 Product: c72a5cc
 Commands: `node --test test/install.test.mjs` exit 0 (14 pass).
 Threat review: Template `security-sensitive.humanGate` is true and `release.humanGate` remains true (c72a5cc). Init copies `profiles.json` via `writeIfMissing`, so re-init leaves an existing file byte-for-byte unchanged (install tests cover both). This repo's `.factory/profiles.json` is untouched (`security-sensitive.humanGate` still false at HEAD 6ee0264). Scope is template + install tests only; no scanner argv, no forged security evidence, no attempt transition.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.2
+
+Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
+Reviewer: bc-48e201b4-4a68-5185-9464-4dd05771a55b
+Implementer: bc-7e555273-1c59-5f81-a461-d70b73089dc6
+Verdict: ACCEPT
+Product: 6ce9d47
+Commands: `node --test test/risk-gates.test.mjs` exit 0 (26 pass).
+Threat review: Five factory-run skill copies (`.cursor`, `.github`, `.agents`, `.claude`, `templates`) describe `human-gate` as the stop for a true profile `humanGate`, not the release profile alone (6ce9d47). Loop sections use `--until human-gate` and do not pass `--new-run` (`--new-run` remains only under New session, human only). Risk-gates skill-copy unit test locks the wording. Scope is skill text + test only; no scanner argv, no forged security evidence, no attempt transition.
