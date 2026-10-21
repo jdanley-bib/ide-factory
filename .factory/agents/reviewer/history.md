@@ -85,3 +85,10 @@ Attempt: 1dd1b142-2dc7-4317-a6f6-eea9e5019472
 Reviewer: bc-08118c0e-bda9-592a-9c98-e05854379b0f
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 3 pass. CLI red present; unit pass at 0d986a7; validator/parser scope only.
+
+## 2026-10-21 persist-bounded-run-sessions/1.2
+
+Attempt: c25f30f4-06f7-4c2e-a65e-90261f9ca384
+Reviewer: bc-8fee5780-6f98-59d5-beed-7f231e6437d5
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 5 pass. CLI red present; clean-head unit pass at c156c80; create/resume scope only.

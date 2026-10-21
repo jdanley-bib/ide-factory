@@ -2,10 +2,10 @@
   "id": "c25f30f4-06f7-4c2e-a65e-90261f9ca384",
   "change": "persist-bounded-run-sessions",
   "taskId": "1.2",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-f41b503f-dbea-5dd2-93db-3f0f9f724e58",
-  "reviewerId": null,
+  "reviewerId": "bc-8fee5780-6f98-59d5-beed-7f231e6437d5",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "24f52d20ab962be8e725053ec4ea00d8a5e424b3"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T17:42:21.653Z",
+        "finishedAt": "2026-10-21T17:42:52.938Z",
+        "logDigest": "sha256:88d0ca541c151e3930353627ee64b5789483ddaa092a7590cd29e6ac596afa66",
+        "artifactDigests": [],
+        "attemptId": "c25f30f4-06f7-4c2e-a65e-90261f9ca384",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "c156c8023a575226c7d84c9747d8a0330ca01138"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-8fee5780-6f98-59d5-beed-7f231e6437d5",
+      "notes": "ACCEPT: CLI red (issuer=cli, exit 1, worktree dirty) present; clean-head unit pass bound to c156c80 (worktreeClean=true); focused tests cover first-run session write under orchestration/runs/<run-id>.json and cross-process resume of same runId+agentSteps; impl limited to create/resume wiring in runFactory (no budget caps, ledger tripwire, or skill updates). Re-ran node --test test/run-session.test.mjs exit 0 (5 pass).",
+      "at": "2026-10-21T17:43:33.707Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-21T17:41:17.271Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T17:42:52.980Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T17:43:29.754Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T17:43:33.707Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T17:39:18.474Z",
-  "updatedAt": "2026-10-21T17:41:17.271Z"
+  "updatedAt": "2026-10-21T17:43:33.707Z"
 }
