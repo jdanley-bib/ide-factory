@@ -93,3 +93,11 @@ Implementer: bc-f41b503f-dbea-5dd2-93db-3f0f9f724e58
 Red: `node --test test/run-session.test.mjs` exit 1 (2 assertion failures: no session file on first run / resume); `node src/cli.mjs verify run c25f30f4-06f7-4c2e-a65e-90261f9ca384 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 5 pass.
 Scope: create/resume only — no budgets/tripwires/stuck/host enforcement.
+
+## 2026-10-21 persist-bounded-run-sessions/1.3
+
+Attempt: 11409764-fcdc-4ef3-ae0e-22916ac1ef69
+Implementer: bc-54489461-09a6-5be8-a344-270b204b7df9
+Red: `node --test test/run-session.test.mjs` exit 1 (2 assertion failures: unmatched open / high-water still exited 2 with request); `node src/cli.mjs verify run 11409764-fcdc-4ef3-ae0e-22916ac1ef69 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 7 pass.
+Scope: ledger tripwire only — appends stay best-effort; no budget/stuck/host enforcement.

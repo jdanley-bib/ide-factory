@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { ledger } from './layout.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 
@@ -176,7 +177,80 @@ export function resolveNewSessionBudgets(config = {}, { maxTasks } = {}) {
 }
 
 /**
+ * Best-effort parse of `.factory/ledger.jsonl`. Read failures yield [].
+ *
+ * @param {string} project
+ * @returns {object[]}
+ */
+export function readLedgerEvents(project) {
+  const file = path.join(project, '.factory', 'ledger.jsonl');
+  if (!fs.existsSync(file)) return [];
+  try {
+    const text = fs.readFileSync(file, 'utf8');
+    const events = [];
+    for (const line of text.split('\n')) {
+      if (!line.trim()) continue;
+      try {
+        events.push(JSON.parse(line));
+      } catch {
+        // Skip malformed lines; ledger is observational.
+      }
+    }
+    return events;
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Run ids with `run-session-opened` for the change, no `run-session-closed`,
+ * and no session file on disk.
+ *
+ * @param {string} project
+ * @param {string} change
+ * @returns {string[]}
+ */
+export function unmatchedOpenRunIds(project, change) {
+  const opened = new Set();
+  const closed = new Set();
+  for (const event of readLedgerEvents(project)) {
+    if (!event || typeof event.runId !== 'string' || !event.runId) continue;
+    if (event.event === 'run-session-closed') {
+      closed.add(event.runId);
+      continue;
+    }
+    if (event.event === 'run-session-opened' && event.change === change) {
+      opened.add(event.runId);
+    }
+  }
+  const unmatched = [];
+  for (const runId of opened) {
+    if (closed.has(runId)) continue;
+    if (!fs.existsSync(runSessionPath(project, runId))) unmatched.push(runId);
+  }
+  return unmatched;
+}
+
+/**
+ * Highest `agentSteps` recorded in ledger `run-agent-step` lines for a run id.
+ *
+ * @param {string} project
+ * @param {string} runId
+ * @returns {number}
+ */
+export function ledgerAgentStepHighWater(project, runId) {
+  let high = 0;
+  for (const event of readLedgerEvents(project)) {
+    if (event?.event !== 'run-agent-step' || event.runId !== runId) continue;
+    const n = Number(event.agentSteps);
+    if (Number.isInteger(n) && n > high) high = n;
+  }
+  return high;
+}
+
+/**
  * Create a new open session file for the change.
+ * Appends best-effort `run-session-opened` to the ledger (non-blocking).
  *
  * @param {string} project
  * @param {{ change: string, budgets: object, now?: Date }} options
@@ -185,7 +259,7 @@ export function resolveNewSessionBudgets(config = {}, { maxTasks } = {}) {
 export function createRunSession(project, { change, budgets, now = new Date() } = {}) {
   if (!change) throw new Error('createRunSession requires change');
   const startedAt = now.toISOString();
-  return writeRunSession(project, {
+  const session = writeRunSession(project, {
     schemaVersion: SUPPORTED_SCHEMA_VERSION,
     runId: randomUUID(),
     change,
@@ -201,11 +275,16 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
     lastRequestFingerprint: null,
     stopReason: null,
   });
+  // Best-effort: ledger() swallows write errors and must not block the run.
+  ledger(project, 'run-session-opened', { change, runId: session.runId });
+  return session;
 }
 
 /**
  * Resume the latest session for a change, or create one when none exists.
  * Resume preserves run id and counters; budgets are only applied on create.
+ * Ledger tripwire: unmatched opened ids with no file refuse create; ledger
+ * agent-step high-water above the file refuses resume (file left unchanged).
  *
  * @param {string} project
  * @param {{ change: string, budgets: object, now?: Date }} options
@@ -215,10 +294,22 @@ export function openOrResumeRunSession(project, { change, budgets, now = new Dat
   if (!change) throw new Error('openOrResumeRunSession requires change');
   const existing = latestRunSession(project, change);
   if (existing) {
+    const highWater = ledgerAgentStepHighWater(project, existing.runId);
+    if (highWater > existing.agentSteps) {
+      throw new Error(
+        `invalid-session: ledger agent-step high-water ${highWater} exceeds session file agentSteps ${existing.agentSteps}`,
+      );
+    }
     return writeRunSession(project, {
       ...existing,
       lastObservedAt: now.toISOString(),
     });
+  }
+  const unmatched = unmatchedOpenRunIds(project, change);
+  if (unmatched.length > 0) {
+    throw new Error(
+      `invalid-session: ledger run-session-opened for ${unmatched[0]} has no session file and no close line`,
+    );
   }
   return createRunSession(project, { change, budgets, now });
 }

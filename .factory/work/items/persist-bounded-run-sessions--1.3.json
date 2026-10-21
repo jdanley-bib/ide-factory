@@ -2,7 +2,7 @@
   "id": "1.3",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a ledger `run-session-opened` id with no session file and no close line exits 1 with `invalid-session` and creates no zeroed file, and that a ledger agent-step count higher than the file exits 1 without printing a request. Implement that tripwire without making ledger appends blocking. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "1.2"
   ],
@@ -27,6 +27,6 @@
       "1.2"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T17:34:41.260Z"
+  "attemptId": "11409764-fcdc-4ef3-ae0e-22916ac1ef69",
+  "updatedAt": "2026-10-21T17:44:26.903Z"
 }

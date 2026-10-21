@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "runId": "c4c2c746-2346-4048-bc98-f27f1064e3a3",
+  "change": "persist-bounded-run-sessions",
+  "status": "open",
+  "startedAt": "2026-10-21T17:44:26.895Z",
+  "lastObservedAt": "2026-10-21T17:44:26.895Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 0,
+  "completedTasks": 0,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": null,
+  "stopReason": null
+}
