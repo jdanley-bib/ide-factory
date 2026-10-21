@@ -1,0 +1,107 @@
+{
+  "id": "6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "5.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-ae8483c8-42ea-5aa9-8256-d83a75f8468b",
+  "reviewerId": "bc-5cd232d8-f88d-56c4-8f27-b001704b23f4",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T19:42:48.061Z",
+      "finishedAt": "2026-10-21T19:43:39.974Z",
+      "logDigest": "sha256:8e3b3b834277eb3787199b2f1d0f506b30bb3e3df5564204c4c3a1ec8432a840",
+      "artifactDigests": [],
+      "attemptId": "6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "b907273e268fb2ef325de7dab275942c61beada1"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:47:49.998Z",
+        "finishedAt": "2026-10-21T19:48:22.322Z",
+        "logDigest": "sha256:1ee21a0ac68ee10daa9bd8496529b9d21b91c02022c28bdd405d65763f3b8cd4",
+        "artifactDigests": [],
+        "attemptId": "6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "99b8be59481d98ed6bb7ff7db381ef61e562ed4f"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-5cd232d8-f88d-56c4-8f27-b001704b23f4",
+      "notes": "Notes record validate/npm test/doctor; focused suite 35 pass; red issuer cli kind unit exitCode 1 passed false; scope limited to integration notes.",
+      "at": "2026-10-21T19:46:48.997Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T19:39:50.865Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T19:39:50.866Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T19:42:45.166Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T19:43:55.914Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T19:44:40.619Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T19:46:48.965Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T19:46:48.998Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T19:48:33.076Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T19:39:50.865Z",
+  "updatedAt": "2026-10-21T19:48:33.076Z"
+}

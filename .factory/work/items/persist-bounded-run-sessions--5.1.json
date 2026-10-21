@@ -2,7 +2,7 @@
   "id": "5.1",
   "change": "persist-bounded-run-sessions",
   "title": "Run `npx openspec validate persist-bounded-run-sessions --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add a risk gate, make `complete` transactional, resolve lockout, or add CI or provenance.",
-  "status": "todo",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "Run `npx openspec validate persist-bounded-run-sessions --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add a risk gate, make `complete` transactional, resolve lockout, or add CI or provenance. works as specified and is covered by the verification profile checks."
@@ -23,6 +23,6 @@
     "verificationProfile": "frontend-low",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T17:34:41.269Z"
+  "attemptId": "6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6",
+  "updatedAt": "2026-10-21T19:48:33.069Z"
 }

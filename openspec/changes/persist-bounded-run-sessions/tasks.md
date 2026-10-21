@@ -28,7 +28,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npx openspec validate persist-bounded-run-sessions --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add a risk gate, make `complete` transactional, resolve lockout, or add CI or provenance.
+- [x] 5.1 Run `npx openspec validate persist-bounded-run-sessions --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add a risk gate, make `complete` transactional, resolve lockout, or add CI or provenance.
 
 ## Workflow follow-up
 
