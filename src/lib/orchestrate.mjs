@@ -51,12 +51,33 @@ export function runFactory(project, env, {
 
   const config = readConfig(project);
   const sessionBudgets = resolveNewSessionBudgets(config, { maxTasks, maxAgentSteps });
-  let session = openOrResumeRunSession(project, { change, budgets: sessionBudgets });
+  const now = new Date();
+  let session = openOrResumeRunSession(project, { change, budgets: sessionBudgets, now });
   if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
     return {
       code: EXIT_OK,
       text: `Run stopped (${session.stopReason}) for ${change}.\n`,
       stopReason: session.stopReason,
+      request: null,
+    };
+  }
+  const startedMs = Date.parse(session.startedAt);
+  const nowMs = now.getTime();
+  if (Number.isFinite(startedMs) && nowMs < startedMs) {
+    session = closeRunSession(project, session, 'invalid-session');
+    return {
+      code: EXIT_ERROR,
+      text: `Run stopped (invalid-session) for ${change}.\n`,
+      stopReason: 'invalid-session',
+      request: null,
+    };
+  }
+  if (Number.isFinite(startedMs) && nowMs - startedMs >= session.budgets.maxWallClockMs) {
+    session = closeRunSession(project, session, 'wall-clock');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (wall-clock) for ${change}.\n`,
+      stopReason: 'wall-clock',
       request: null,
     };
   }

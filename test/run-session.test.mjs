@@ -368,3 +368,74 @@ test('max-tasks counts only tasks finalized during the session; baseline done id
     cleanup(dir);
   }
 });
+
+test('session past maxWallClockMs exits 0 with wall-clock and no orchestration request', async () => {
+  const dir = tempProject();
+  const maxWallClockMs = 60_000;
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const created = readRunSession(files[0]);
+    const expiredStart = new Date(Date.now() - maxWallClockMs - 5_000).toISOString();
+    fs.writeFileSync(
+      files[0],
+      `${JSON.stringify({
+        ...created,
+        startedAt: expiredStart,
+        budgets: { ...created.budgets, maxWallClockMs },
+        lastObservedAt: expiredStart,
+      }, null, 2)}\n`,
+    );
+
+    const capped = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /wall-clock/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /# Orchestration request/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /"action": "agent-step"/);
+
+    const finalSession = readRunSession(files[0]);
+    assert.equal(finalSession.runId, created.runId);
+    assert.equal(finalSession.stopReason, 'wall-clock');
+    assert.equal(finalSession.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('clock earlier than startedAt exits 1 with invalid-session and no orchestration request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const created = readRunSession(files[0]);
+    const futureStart = new Date(Date.now() + 3_600_000).toISOString();
+    fs.writeFileSync(
+      files[0],
+      `${JSON.stringify({
+        ...created,
+        startedAt: futureStart,
+        lastObservedAt: futureStart,
+      }, null, 2)}\n`,
+    );
+
+    const regressed = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(regressed.status, 1, regressed.stderr + regressed.stdout);
+    assert.match(`${regressed.stderr}\n${regressed.stdout}`, /invalid-session/);
+    assert.doesNotMatch(`${regressed.stderr}\n${regressed.stdout}`, /# Orchestration request/);
+
+    const finalSession = readRunSession(files[0]);
+    assert.equal(finalSession.runId, created.runId);
+    assert.equal(finalSession.stopReason, 'invalid-session');
+    assert.equal(finalSession.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});

@@ -117,3 +117,11 @@ Implementer: bc-516efcf5-e89c-5c53-a7c7-515b03e50b57
 Red: `node --test test/run-session.test.mjs` exit 1 (baselineDoneIds [] !== ['1.1']); `node src/cli.mjs verify run c7fa68b1-97c2-49f7-8fab-9b7dbd1a3c7e --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 9 pass.
 Scope: completed-task budget only — baselineDoneIds at create; count newly finalized during session; stop max-tasks with no request; already-done at creation excluded. No wall-clock/failure/unchanged/host; no review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/2.3
+
+Attempt: 143ad813-9542-4662-acfd-844349500751
+Implementer: bc-5d39ce56-0b0f-5900-a10e-a4fd698b91f0
+Red: `node --test test/run-session.test.mjs` exit 1 (2 failures: wall-clock exit 2 with request; clock regression exit 2); `node src/cli.mjs verify run 143ad813-9542-4662-acfd-844349500751 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 11 pass.
+Scope: wall-clock budget and clock integrity only — elapsed ≥ maxWallClockMs stops code 0 wall-clock/no request; now < startedAt stops code 1 invalid-session/no request; no failure/unchanged/host enforcement; no review/complete/commit/push.
