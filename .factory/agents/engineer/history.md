@@ -332,3 +332,11 @@ Implementer: bc-03a962db-89ec-5031-86e3-ffbba1993901
 Red: `node --test test/writer-lease.test.mjs` exit 1 (6 failures: heartbeat, five-minute stale takeover, owner-loss, corrupt/unsupported LEASE_RECOVERY, CLI wrap/cliCommandKey, release/takeover); `node src/cli.mjs verify run 29c52e9a-6ec4-4fdd-a733-7b7248bce462 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:c98e8af0e566fa12a790234f983e4926ad27d01034db7dc5537a3a2b510a9f2d).
 Green: `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 41 pass.
 Scope: fake-clock one-minute heartbeat, five-minute expiry with one-winner atomic stale-directory rename takeover, owner-loss rejection, corrupt/unsupported LEASE_RECOVERY without delete, HALT lease bypass, top-level CLI wrap of all mutating commands without nested acquisition, read-only unleased, release rename TOCTOU fix vs successor. No review, accept, complete, or push.
+
+## 2026-10-21 make-finalization-recoverable/5.1
+
+Attempt: 9247289a-042d-4ef4-8e9c-1f98d80ee70f
+Implementer: bc-c064be93-5bd6-54d5-aebc-9344f8749e47
+Red: missing `openspec/changes/make-finalization-recoverable/implementation-notes.md`; `node --test test/finalization-recovery.test.mjs` 20 pass / 1 fail; `node src/cli.mjs verify run 9247289a-042d-4ef4-8e9c-1f98d80ee70f --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:3a52394a372624272647300b38fcb975201f2ca977cb127ae2f382d093ae79a9).
+Green: `npx openspec validate make-finalization-recoverable --strict` exit 0; `npm test` exit 0 (187 pass); `node src/cli.mjs doctor` exit 0; `node --test test/finalization-recovery.test.mjs` exit 0, 21 pass.
+Scope: integration notes only — no model start, CI, provenance, observability, gate/evidence policy change, archive, review, checkbox, or push.

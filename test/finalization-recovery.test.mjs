@@ -20,7 +20,7 @@ import {
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
 import { getWorkItem, upsertWorkItem } from '../src/lib/work.mjs';
-import { cleanup, tempProject } from './helpers.mjs';
+import { cleanup, repoRoot, tempProject } from './helpers.mjs';
 
 const CHANGE = 'make-finalization-recoverable';
 const TASK_ID = '1.1';
@@ -1021,4 +1021,19 @@ test('runJournaledFinalization without faultHook reaches committed final state',
   } finally {
     cleanup(dir);
   }
+});
+
+test('implementation notes record strict validate, npm test, and doctor', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/make-finalization-recoverable/implementation-notes.md',
+  );
+  assert.ok(
+    fs.existsSync(notesPath),
+    `missing implementation notes: ${notesPath}`,
+  );
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  assert.match(notes, /npx openspec validate make-finalization-recoverable --strict/);
+  assert.match(notes, /npm test/);
+  assert.match(notes, /node src\/cli\.mjs doctor/);
 });
