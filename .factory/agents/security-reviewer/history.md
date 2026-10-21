@@ -27,3 +27,12 @@ Verdict: ACCEPT
 Transition: verifying → security-checking (2026-10-21T20:39Z)
 Commands: `node --test test/risk-gates.test.mjs` exit 0 (16 pass); advisory `npm audit --audit-level=high` exit 0 (0 vulns).
 Threat review: Scoped match in `hasMatchingScopedApproval` (356d7ad) fail-closes on missing change/task, dirty/unresolved HEAD, wrong action/task/change, stale `sourceRevision`, policy version mismatch, expired/not-yet-valid window, invalid JSON/schema, and approver===implementer. Matching accept/complete authorize; `humanGate: false` on non-sensitive work reaches review without approval. `.factory/checks.json` remains unit-only (no scanner argv). `evidence.security` left empty — no forged threat-review records. Not moved to awaiting-review; complete not run.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.1
+
+Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
+Reviewer: bc-f9ea047e-5815-5278-b118-08acdd05d9ab
+Verdict: ACCEPT
+Transition: verifying → security-checking (2026-10-21T20:52Z)
+Commands: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0 (38 pass); advisory `npm audit --audit-level=high` exit 0 (0 vulns).
+Threat review: `requiresSecurityStage` in `validateEvidence` (afa2b0a) rejects `verifying` → `awaiting-review` when `securityProfile === security-sensitive` or a security-patterned check matches; attempt file left unchanged on reject. `verificationProfile` alone does not trigger. Orchestration `stageForState` still routes verifying security-sensitive work to role `security-reviewer` / `nextState: security-checking` (tests lock bypass rejection + routing). `.factory/checks.json` remains unit-only (no scanner argv). `evidence.security` left empty — no forged threat-review records. Not moved to awaiting-review; complete not run.
