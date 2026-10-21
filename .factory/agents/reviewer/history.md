@@ -247,3 +247,10 @@ Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
 Reviewer: bc-f129bc18-3c3e-5980-a466-45f6084e62da
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs` exit 0, 26 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 5e61bd3); clean-head unit pass at 6ce9d47 worktreeClean. Product 6ce9d47: five factory-run skill copies describe human-gate as true profile `humanGate` (not release alone); Loop uses `--until human-gate` and does not pass `--new-run` (`--new-run` only under New session). Risk-gates skill-copy unit test locks wording. Transitions verifying → awaiting-review → accepted (post security-reviewer bc-48e201b4-4a68-5185-9464-4dd05771a55b). No verify/complete.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/5.1
+
+Attempt: c55fda80-405c-41b0-ae1c-743da4435908
+Reviewer: bc-2bcc3a49-cb7c-5f23-af68-6496693c6c78
+Verdict: ACCEPT
+Re-ran `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `node --test test/risk-gates.test.mjs` exit 0, 27 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 423fd37); clean-head unit pass at 11ccb4b worktreeClean. Product 11ccb4b: implementation notes record strict validate, npm test (146 pass), and doctor ok; focused test locks those three command strings. Scope exclusions held (no model start, transactional complete, lockout, lease, CI, provenance, observability). Transitions verifying → awaiting-review → accepted (post security-reviewer bc-4bc55479-78ad-5095-900b-66e5a3a91307). No verify/complete.
