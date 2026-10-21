@@ -141,3 +141,10 @@ Attempt: 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4
 Reviewer: bc-fb94fb40-9294-527a-9f85-698cd39d71f3
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 23 pass. Simulated red: parent orchestrate/run-session/run at 24ec84e + new tests → 4 fail (unchanged-state ×2, sticky bytes, --new-run). CLI red present (exitCode 1, issuer cli, baseRev 24ec84e); clean-head unit pass at 569f647; fingerprint unchanged-state exit 0 no request no increment; sticky closed session no rewrite; --new-run keeps prior file; mergeResumeBudgets never raises stored cap.
+
+## 2026-10-21 persist-bounded-run-sessions/3.2
+
+Attempt: 30e9c0f2-5077-43b7-9143-ac9eff1d5874
+Reviewer: bc-e1cbb0b3-2125-5399-b7e0-62f4a787ba3d
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 28 pass. Simulated red: parent orchestrate/run-session/run at cbf3222 + new tests → 4 fail (max-tokens at ceiling; host-usage-unavailable; config+env ceiling; invalid token/host ceilings). CLI red at cbf3222; unit pass at f71627f; host metrics CLI/env only; max-tokens exit 0 no request; cost ceiling without metric exit 1; no ceiling omits token/cost fields; invalid-budget fail closed.
