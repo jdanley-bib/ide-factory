@@ -2,7 +2,7 @@
   "id": "3.2",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Add failing tests that a transition from `security-checking` to `awaiting-review` is rejected without a passing CLI security record, succeeds when that record is bound to the attempt and the current clean source revision, and is rejected for a recorded red result or a caller-supplied security payload. When no check is security-patterned, the required kind is `threat-review`. Do not add scanner argv to the shipped check registry. Verify with `node --test test/risk-gates.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "3.1"
   ],
@@ -20,18 +20,15 @@
       "scribe"
     ],
     "checks": [
-      "unit",
-      "build",
-      "dependency-audit",
-      "threat-review"
+      "unit"
     ],
     "modelProfile": "security-strong",
-    "securityProfile": "security-sensitive",
+    "securityProfile": "dependency-basic",
     "verificationProfile": "security-sensitive",
     "dependencies": [
       "3.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T20:05:30.941Z"
+  "attemptId": "30dbe229-266c-4a72-922e-ceebdc47f490",
+  "updatedAt": "2026-10-21T20:56:14.483Z"
 }

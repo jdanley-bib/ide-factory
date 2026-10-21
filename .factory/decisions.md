@@ -59,3 +59,13 @@ Authorized-by: factory lead aligning the machine queue to the human task and app
 Work-item: enforce-risk-gates-and-security-stage/3.1
 Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
 Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task tests the security stage. The human task verifies with `node --test test/risk-gates.test.mjs test/orchestration.test.mjs`; the registry maps only unit to `npm test`; and the design forbids inventing scanner argv. Set completion checks to unit. Retain security-sensitive routing and independent security review; do not forge build, dependency-audit, or threat-review evidence.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-3.2-bootstrap
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-3.2-bootstrap
+Authorized-at: 2026-10-21T20:56:15Z
+Authorized-by: factory lead aligning the machine queue to the approved design
+Work-item: enforce-risk-gates-and-security-stage/3.2
+Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
+Note: Task 3.2 implements the mandatory CLI security-evidence gate. If its classifier-generated `security-sensitive` metadata remains, the newly implemented gate would require a live `threat-review` mapping to review this same bootstrap attempt. The approved design explicitly forbids inventing scanner argv, and the registry maps only unit to `npm test`. For this work item only, set completion checks to unit and machine securityProfile to dependency-basic. Still require a distinct security-reviewer to inspect the implementation before the distinct reviewer accepts it, but do not forge or label unit output as threat-review evidence. Product behavior remains fail-closed for security-sensitive work.
