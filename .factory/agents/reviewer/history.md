@@ -113,3 +113,10 @@ Attempt: c7fa68b1-97c2-49f7-8fab-9b7dbd1a3c7e
 Reviewer: bc-dc822b6e-2be9-5e5b-9cab-b51e43611b85
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 9 pass. CLI red present (exit 1, baselineDoneIds mismatch); clean-head unit pass at ba2aa77; baselineDoneIds at create excludes pre-done work; one in-session finalize then cap exits 0 with `max-tasks` and no request.
+
+## 2026-10-21 persist-bounded-run-sessions/2.3
+
+Attempt: 143ad813-9542-4662-acfd-844349500751
+Reviewer: bc-0c0d3d98-fab4-5b94-ae4c-443263567189
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 11 pass. Simulated red: parent orchestrate + new tests → 2 fail. Clean-head unit pass at 5186a5b; expired wall-clock exits 0 with no request; clock regression exits 1 `invalid-session` with no request; checks before syncTasks/agent-step path.

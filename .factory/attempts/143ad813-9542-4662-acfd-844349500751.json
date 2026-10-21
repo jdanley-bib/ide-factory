@@ -2,10 +2,10 @@
   "id": "143ad813-9542-4662-acfd-844349500751",
   "change": "persist-bounded-run-sessions",
   "taskId": "2.3",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-5d39ce56-0b0f-5900-a10e-a4fd698b91f0",
-  "reviewerId": null,
+  "reviewerId": "bc-0c0d3d98-fab4-5b94-ae4c-443263567189",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -56,10 +56,39 @@
         "timedOut": false,
         "worktreeClean": false,
         "sourceRevision": "3974fc0666184685612f1df00f7170d909197f5d"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T18:03:34.316Z",
+        "finishedAt": "2026-10-21T18:04:19.411Z",
+        "logDigest": "sha256:e2285657affbc5934bd30c240f8672e60b8dda1d8d89debc3f0592893381f4d1",
+        "artifactDigests": [],
+        "attemptId": "143ad813-9542-4662-acfd-844349500751",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "5186a5b5a02128e1e4797d6ef9e26b8683c7f228"
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-0c0d3d98-fab4-5b94-ae4c-443263567189",
+      "notes": "Independent review: simulated red (2 fail at parent orchestrate); run-session 11/11 pass; wall-clock exit 0 no request; invalid-session exit 1 no request; checks precede agent-step/request path.",
+      "at": "2026-10-21T18:04:54.913Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -83,8 +112,16 @@
     {
       "at": "2026-10-21T18:03:21.512Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T18:04:54.875Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T18:04:54.913Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T18:01:07.773Z",
-  "updatedAt": "2026-10-21T18:03:21.512Z"
+  "updatedAt": "2026-10-21T18:04:54.913Z"
 }
