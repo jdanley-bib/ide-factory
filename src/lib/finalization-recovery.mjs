@@ -344,7 +344,9 @@ export function buildFinalizationPlan(project, options = {}) {
     planDigest: '',
   };
   journal.planDigest = planDigest(journal);
-  validateFinalizationJournal(journal, {
+  // Use the validated document shape so prepared/ready bytes match
+  // createFinalizationJournal atomic writes (stable field order).
+  const preparedJournal = validateFinalizationJournal(journal, {
     change,
     taskId,
     attemptId,
@@ -352,8 +354,11 @@ export function buildFinalizationPlan(project, options = {}) {
     projectRoot: project,
   });
 
-  const preparedBytes = `${JSON.stringify(journal, null, 2)}\n`;
-  const readyBytes = `${JSON.stringify({ ...journal, phase: 'ready-to-commit' }, null, 2)}\n`;
+  const preparedBytes = `${JSON.stringify(preparedJournal, null, 2)}\n`;
+  const readyBytes = `${JSON.stringify({
+    ...preparedJournal,
+    phase: 'ready-to-commit',
+  }, null, 2)}\n`;
   const journalApplyTarget = {
     path: journalRel,
     beforeDigest: contentDigest(preparedBytes),
@@ -378,12 +383,196 @@ export function buildFinalizationPlan(project, options = {}) {
     sourceRevision,
     completionDate,
     finalizedAt,
-    journal,
+    journal: preparedJournal,
     targets,
     commit,
     writeOrder,
     finalCorrectnessCriticalWrite: commit.path,
   };
+}
+
+/**
+ * Compare-and-apply one journaled target.
+ * - current digest == afterDigest → skip
+ * - current digest == beforeDigest → atomically write exact afterBytes
+ * - otherwise → conflict (no write)
+ *
+ * @param {string} project
+ * @param {{
+ *   path: string,
+ *   beforeDigest: string,
+ *   afterDigest: string,
+ *   afterBytes: string,
+ * }} target
+ * @returns {{ action: 'skipped' | 'applied', path: string }}
+ */
+export function compareAndApplyTarget(project, target) {
+  if (!project || typeof project !== 'string') {
+    throw new Error('project is required to compare-and-apply a finalization target');
+  }
+  if (!target || typeof target !== 'object' || Array.isArray(target)) {
+    throw new Error('finalization target must be an object');
+  }
+  requireNonEmptyString(target, 'path');
+  requireNonEmptyString(target, 'beforeDigest');
+  requireNonEmptyString(target, 'afterDigest');
+  if (typeof target.afterBytes !== 'string') {
+    throw new Error('finalization target afterBytes must be a string');
+  }
+  assertSafeRelativePath(target.path, path.resolve(project));
+
+  const absolute = path.join(project, target.path);
+  const currentBytes = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+  const currentDigest = contentDigest(currentBytes);
+
+  if (currentDigest === target.afterDigest) {
+    return { action: 'skipped', path: normalizeRelPath(target.path) };
+  }
+  if (currentDigest === target.beforeDigest) {
+    if (contentDigest(target.afterBytes) !== target.afterDigest) {
+      throw new Error('finalization target afterDigest does not match afterBytes');
+    }
+    atomicWriteText(absolute, target.afterBytes);
+    return { action: 'applied', path: normalizeRelPath(target.path) };
+  }
+  throw new Error(
+    `finalization recovery conflict for ${normalizeRelPath(target.path)}: `
+    + `current digest matches neither before nor after`,
+  );
+}
+
+/**
+ * Replay an ordered list of journaled targets with compare-and-apply.
+ * Stops on the first conflict without applying that target.
+ *
+ * @param {string} project
+ * @param {object[]} targets
+ * @returns {{ action: 'skipped' | 'applied', path: string }[]}
+ */
+export function replayFinalizationTargets(project, targets) {
+  if (!Array.isArray(targets)) {
+    throw new Error('finalization replay requires an ordered targets array');
+  }
+  const results = [];
+  for (const target of targets) {
+    results.push(compareAndApplyTarget(project, target));
+  }
+  return results;
+}
+
+/**
+ * Resume or repeat a journaled finalization.
+ *
+ * Permitted when the attempt is accepted, finalize-failed, or already
+ * finalized with this matching journal while the work item is unfinished.
+ * When the matching ready journal and work item are already committed,
+ * returns without changing bytes.
+ *
+ * @param {string} project
+ * @param {{
+ *   change: string,
+ *   taskId: string,
+ *   attemptId: string,
+ *   sourceRevision: string,
+ *   targets?: object[],
+ *   commit?: object,
+ * }} options
+ * @returns {{
+ *   status: 'committed' | 'resumed' | 'already-committed',
+ *   attempt: object,
+ *   item: object,
+ *   actions: { action: string, path: string }[],
+ * }}
+ */
+export function recoverFinalization(project, options = {}) {
+  if (!project || typeof project !== 'string') {
+    throw new Error('project is required to recover finalization');
+  }
+  const change = requireOptionString(options, 'change');
+  const taskId = requireOptionString(options, 'taskId');
+  const attemptId = requireOptionString(options, 'attemptId');
+  const sourceRevision = requireOptionString(options, 'sourceRevision');
+
+  const journal = readFinalizationJournal(project, attemptId, {
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+  });
+
+  const attemptPathRel = `.factory/attempts/${attemptId}.json`;
+  const itemPathRel = `.factory/work/items/${change}--${taskId}.json`;
+  const attempt = readJsonObject(project, attemptPathRel, 'attempt');
+  const item = readJsonObject(project, itemPathRel, 'work item');
+
+  if (attempt.change !== change || attempt.taskId !== taskId || attempt.id !== attemptId) {
+    throw new Error('finalization recovery attempt identity mismatch');
+  }
+  if (item.change !== change || item.id !== taskId) {
+    throw new Error('finalization recovery work item identity mismatch');
+  }
+
+  const targets = Array.isArray(options.targets) && options.targets.length > 0
+    ? options.targets
+    : resolveApplyTargets(journal);
+  const commit = options.commit && typeof options.commit === 'object'
+    ? options.commit
+    : null;
+
+  if (!canResumeFinalization(attempt, item, journal)) {
+    throw new Error(
+      `finalization recovery refuses attempt state=${attempt.state} item status=${item.status}`,
+    );
+  }
+
+  if (isFinalizationCommitted(project, journal, item, targets, commit)) {
+    return {
+      status: 'already-committed',
+      attempt,
+      item,
+      actions: [],
+    };
+  }
+
+  const hadPartialProgress = targets.some((target) => {
+    const absolute = path.join(project, target.path);
+    const current = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+    return contentDigest(current) === target.afterDigest;
+  }) || attempt.state === 'finalized';
+
+  const actions = replayFinalizationTargets(project, targets);
+
+  if (commit) {
+    actions.push(compareAndApplyTarget(project, commit));
+  }
+
+  const itemAfter = readJsonObject(project, itemPathRel, 'work item');
+  const attemptAfter = readJsonObject(project, attemptPathRel, 'attempt');
+  if (itemAfter.status !== 'done') {
+    throw new Error('finalization recovery finished without marking the work item done');
+  }
+
+  return {
+    status: hadPartialProgress ? 'resumed' : 'committed',
+    attempt: attemptAfter,
+    item: itemAfter,
+    actions,
+  };
+}
+
+/**
+ * @param {object} attempt
+ * @param {object} item
+ * @param {object} journal
+ * @returns {boolean}
+ */
+export function canResumeFinalization(attempt, item, journal) {
+  if (!attempt || !item || !journal) return false;
+  if (item.status === 'done' && journal.phase === 'ready-to-commit') return true;
+  if (item.status === 'done') return false;
+  if (attempt.state === 'accepted' || attempt.state === 'finalize-failed') return true;
+  if (attempt.state === 'finalized') return true;
+  return false;
 }
 
 /**
@@ -629,4 +818,104 @@ function withScribeMarker(historyText, { change, taskId, attemptId, completionDa
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function atomicWriteText(absolutePath, bytes) {
+  const dir = path.dirname(absolutePath);
+  fs.mkdirSync(dir, { recursive: true });
+  const tmp = path.join(
+    dir,
+    `.${path.basename(absolutePath)}.${process.pid}.${Date.now()}.tmp`,
+  );
+  fs.writeFileSync(tmp, bytes);
+  fs.renameSync(tmp, absolutePath);
+}
+
+function readJsonObject(project, relPath, label) {
+  const absolute = path.join(project, relPath);
+  let text;
+  try {
+    text = fs.readFileSync(absolute, 'utf8');
+  } catch (err) {
+    throw new Error(`finalization recovery ${label} unreadable: ${err.message}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (err) {
+    throw new Error(`finalization recovery ${label} corrupt JSON: ${err.message}`);
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`finalization recovery ${label} must be an object`);
+  }
+  return parsed;
+}
+
+/**
+ * Resolve apply targets from a stored journal. Content targets keep their
+ * afterBytes; the journal self-target is reconstructed as ready-to-commit.
+ *
+ * @param {object} journal
+ * @returns {object[]}
+ */
+function resolveApplyTargets(journal) {
+  const journalRel = normalizeRelPath(
+    `.factory/orchestration/finalizations/${journal.attemptId}.json`,
+  );
+  return journal.targets.map((target) => {
+    if (normalizeRelPath(target.path) !== journalRel) {
+      return {
+        path: normalizeRelPath(target.path),
+        beforeDigest: target.beforeDigest,
+        afterDigest: target.afterDigest,
+        afterBytes: target.afterBytes,
+      };
+    }
+    const prepared = {
+      schemaVersion: journal.schemaVersion,
+      change: journal.change,
+      taskId: journal.taskId,
+      attemptId: journal.attemptId,
+      sourceRevision: journal.sourceRevision,
+      completionDate: journal.completionDate,
+      phase: 'prepared',
+      planDigest: journal.planDigest,
+      targets: journal.targets,
+    };
+    // Match validateFinalizationJournal / createFinalizationJournal field order.
+    const preparedBytes = `${JSON.stringify(prepared, null, 2)}\n`;
+    const readyBytes = `${JSON.stringify({ ...prepared, phase: 'ready-to-commit' }, null, 2)}\n`;
+    return {
+      path: journalRel,
+      beforeDigest: contentDigest(preparedBytes),
+      afterDigest: contentDigest(readyBytes),
+      afterBytes: readyBytes,
+    };
+  });
+}
+
+function isFinalizationCommitted(project, journal, item, targets, commit) {
+  if (item.status !== 'done') return false;
+  if (journal.phase !== 'ready-to-commit') {
+    // Disk journal may still say prepared while apply targets already wrote ready bytes.
+    const journalAbs = finalizationJournalPath(project, journal.attemptId);
+    if (!fs.existsSync(journalAbs)) return false;
+    try {
+      const onDisk = JSON.parse(fs.readFileSync(journalAbs, 'utf8'));
+      if (onDisk.phase !== 'ready-to-commit') return false;
+    } catch {
+      return false;
+    }
+  }
+  for (const target of targets) {
+    const absolute = path.join(project, target.path);
+    const current = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+    if (contentDigest(current) !== target.afterDigest) return false;
+  }
+  if (commit) {
+    const absolute = path.join(project, commit.path);
+    const current = fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : '';
+    if (contentDigest(current) !== commit.afterDigest) return false;
+  }
+  return true;
 }

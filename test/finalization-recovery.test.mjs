@@ -6,11 +6,14 @@ import { test } from 'node:test';
 import {
   allowlistedTargetPaths,
   buildFinalizationPlan,
+  compareAndApplyTarget,
   contentDigest,
   createFinalizationJournal,
   finalizationJournalPath,
   planDigest,
   readFinalizationJournal,
+  recoverFinalization,
+  replayFinalizationTargets,
   validateFinalizationJournal,
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
@@ -25,6 +28,8 @@ const COMPLETION_DATE = '2026-10-21';
 const FINALIZED_AT = '2026-10-21T22:00:00.000Z';
 const PLAN_TASK_ID = '1.2';
 const PLAN_ATTEMPT_ID = '46a2aac4-ca25-4b93-a9db-ee047d77be5c';
+const RECOVERY_TASK_ID = '2.1';
+const RECOVERY_ATTEMPT_ID = '3a56eca2-2a84-440c-b064-87222e4e7a3c';
 
 function sha256Digest(text) {
   const hex = createHash('sha256').update(text, 'utf8').digest('hex');
@@ -462,6 +467,371 @@ test('buildFinalizationPlan keeps timestamps fixed only when completionDate and 
       buildFinalizationPlan(dir, planOptions()),
       first,
     );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function seedRecoveryFixture(dir, { attemptState = 'accepted' } = {}) {
+  writeText(
+    path.join(dir, 'openspec', 'changes', CHANGE, 'tasks.md'),
+    [
+      '# Tasks',
+      '',
+      '## 2. Replay and crash recovery',
+      '',
+      `- [ ] ${RECOVERY_TASK_ID} Add failing tests that replay skips an after-digest target`,
+      '',
+    ].join('\n'),
+  );
+  writeText(path.join(dir, '.factory', 'agents', 'scribe', 'history.md'), '# History\n\n(none yet)\n');
+  writeText(path.join(dir, '.factory', 'identity', 'now.md'), '# Now\n\nIdle.\n');
+  const attempt = {
+    id: RECOVERY_ATTEMPT_ID,
+    change: CHANGE,
+    taskId: RECOVERY_TASK_ID,
+    state: attemptState,
+    implementerRole: 'engineer',
+    implementerId: 'bc-engineer',
+    reviewerId: 'bc-reviewer',
+    modelProfile: 'coding-standard',
+    evidence: {
+      red: { issuer: 'cli', kind: 'unit', passed: false, exitCode: 1 },
+      verification: [],
+      security: [],
+      review: { verdict: 'ACCEPT', reviewerId: 'bc-reviewer', notes: '', at: '2026-10-21T21:00:00.000Z' },
+      changedFiles: [],
+      baseRev: null,
+      ...(attemptState === 'finalized' ? { completed: true } : {}),
+    },
+    history: [
+      { at: '2026-10-21T20:00:00.000Z', state: 'planned' },
+      { at: '2026-10-21T21:00:00.000Z', state: 'accepted' },
+      ...(attemptState === 'finalized'
+        ? [{ at: FINALIZED_AT, state: 'finalized' }]
+        : []),
+    ],
+    createdAt: '2026-10-21T20:00:00.000Z',
+    updatedAt: attemptState === 'finalized' ? FINALIZED_AT : '2026-10-21T21:00:00.000Z',
+  };
+  writeText(
+    path.join(dir, '.factory', 'attempts', `${RECOVERY_ATTEMPT_ID}.json`),
+    `${JSON.stringify(attempt, null, 2)}\n`,
+  );
+  upsertWorkItem(dir, {
+    id: RECOVERY_TASK_ID,
+    change: CHANGE,
+    title: 'compare-and-apply recovery',
+    status: 'in_progress',
+    dependencies: ['1.2'],
+    acceptanceCriteria: [],
+    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    attemptId: RECOVERY_ATTEMPT_ID,
+  });
+  return attempt;
+}
+
+function recoveryPlanOptions(overrides = {}) {
+  return {
+    change: CHANGE,
+    taskId: RECOVERY_TASK_ID,
+    attemptId: RECOVERY_ATTEMPT_ID,
+    sourceRevision: SOURCE_REVISION,
+    completionDate: COMPLETION_DATE,
+    finalizedAt: FINALIZED_AT,
+    ...overrides,
+  };
+}
+
+function countMatches(text, pattern) {
+  const matches = text.match(pattern);
+  return matches ? matches.length : 0;
+}
+
+function snapshotTargets(dir, targets) {
+  return Object.fromEntries(
+    targets.map((target) => {
+      const absolute = path.join(dir, target.path);
+      return [target.path, fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : null];
+    }),
+  );
+}
+
+test('compareAndApplyTarget skips a target already at its after digest', () => {
+  const dir = tempProject();
+  try {
+    const rel = 'openspec/changes/make-finalization-recoverable/tasks.md';
+    const after = '- [x] 2.1 already applied\n';
+    writeText(path.join(dir, rel), after);
+    const target = {
+      path: rel,
+      beforeDigest: contentDigest('- [ ] 2.1 pending\n'),
+      afterDigest: contentDigest(after),
+      afterBytes: after,
+    };
+
+    const result = compareAndApplyTarget(dir, target);
+    assert.equal(result.action, 'skipped');
+    assert.equal(fs.readFileSync(path.join(dir, rel), 'utf8'), after);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('compareAndApplyTarget applies exact after bytes when current digest matches before', () => {
+  const dir = tempProject();
+  try {
+    const rel = '.factory/identity/now.md';
+    const before = '# Now\n\nIdle.\n';
+    const after = '# Now\n\nLast finalized: make-finalization-recoverable/2.1 (2026-10-21)\n';
+    writeText(path.join(dir, rel), before);
+    const target = {
+      path: rel,
+      beforeDigest: contentDigest(before),
+      afterDigest: contentDigest(after),
+      afterBytes: after,
+    };
+
+    const result = compareAndApplyTarget(dir, target);
+    assert.equal(result.action, 'applied');
+    assert.equal(fs.readFileSync(path.join(dir, rel), 'utf8'), after);
+    assert.equal(contentDigest(fs.readFileSync(path.join(dir, rel))), target.afterDigest);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('compareAndApplyTarget rejects a conflict digest without writing after bytes', () => {
+  const dir = tempProject();
+  try {
+    const rel = '.factory/agents/scribe/history.md';
+    const before = '# History\n\n(none yet)\n';
+    const after = '# History\n\n## marker\n';
+    const conflict = '# History\n\nexternally edited\n';
+    writeText(path.join(dir, rel), conflict);
+    const target = {
+      path: rel,
+      beforeDigest: contentDigest(before),
+      afterDigest: contentDigest(after),
+      afterBytes: after,
+    };
+
+    assert.throws(() => compareAndApplyTarget(dir, target), /conflict/i);
+    assert.equal(fs.readFileSync(path.join(dir, rel), 'utf8'), conflict);
+    assert.notEqual(contentDigest(conflict), target.afterDigest);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('replayFinalizationTargets skips after-digest, applies before-digest, and stops on conflict', () => {
+  const dir = tempProject();
+  try {
+    const appliedRel = '.factory/identity/now.md';
+    const pendingRel = 'openspec/changes/make-finalization-recoverable/tasks.md';
+    const conflictRel = '.factory/agents/scribe/history.md';
+    const appliedAfter = '# Now\n\nLast finalized: x\n';
+    const pendingBefore = '- [ ] 2.1 task\n';
+    const pendingAfter = '- [x] 2.1 task\n';
+    const conflictBefore = '# History\n\n(none yet)\n';
+    const conflictAfter = '# History\n\n## done\n';
+    writeText(path.join(dir, appliedRel), appliedAfter);
+    writeText(path.join(dir, pendingRel), pendingBefore);
+    writeText(path.join(dir, conflictRel), '# History\n\nconflicted\n');
+
+    const targets = [
+      {
+        path: appliedRel,
+        beforeDigest: contentDigest('# Now\n\nIdle.\n'),
+        afterDigest: contentDigest(appliedAfter),
+        afterBytes: appliedAfter,
+      },
+      {
+        path: pendingRel,
+        beforeDigest: contentDigest(pendingBefore),
+        afterDigest: contentDigest(pendingAfter),
+        afterBytes: pendingAfter,
+      },
+      {
+        path: conflictRel,
+        beforeDigest: contentDigest(conflictBefore),
+        afterDigest: contentDigest(conflictAfter),
+        afterBytes: conflictAfter,
+      },
+    ];
+
+    assert.throws(() => replayFinalizationTargets(dir, targets), /conflict/i);
+    assert.equal(fs.readFileSync(path.join(dir, appliedRel), 'utf8'), appliedAfter);
+    assert.equal(fs.readFileSync(path.join(dir, pendingRel), 'utf8'), pendingAfter);
+    assert.equal(fs.readFileSync(path.join(dir, conflictRel), 'utf8'), '# History\n\nconflicted\n');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('recoverFinalization resumes a matching finalized attempt with an unfinished journal', () => {
+  const dir = tempProject();
+  try {
+    // Journal is planned while accepted; crash leaves attempt at after digest (finalized)
+    // while later targets and the work-item commit remain unfinished.
+    seedRecoveryFixture(dir, { attemptState: 'accepted' });
+    const plan = buildFinalizationPlan(dir, recoveryPlanOptions());
+    createFinalizationJournal(dir, plan.journal, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+    });
+
+    writeText(path.join(dir, plan.targets[0].path), plan.targets[0].afterBytes);
+    writeText(path.join(dir, plan.targets[1].path), plan.targets[1].afterBytes);
+    writeText(path.join(dir, plan.targets[3].path), plan.targets[3].afterBytes);
+
+    const beforeScribe = fs.readFileSync(path.join(dir, plan.targets[1].path), 'utf8');
+    const attemptBeforeResume = JSON.parse(
+      fs.readFileSync(path.join(dir, plan.targets[3].path), 'utf8'),
+    );
+    assert.equal(attemptBeforeResume.state, 'finalized');
+    assert.notEqual(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+
+    const result = recoverFinalization(dir, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+      targets: plan.targets,
+      commit: plan.commit,
+    });
+
+    assert.equal(result.status, 'resumed');
+    assert.equal(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.targets[0].path), 'utf8'),
+      plan.targets[0].afterBytes,
+    );
+    assert.equal(fs.readFileSync(path.join(dir, plan.targets[1].path), 'utf8'), beforeScribe);
+    assert.equal(
+      countMatches(beforeScribe, new RegExp(`Attempt:\\s*${RECOVERY_ATTEMPT_ID}`, 'g')),
+      1,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.targets[2].path), 'utf8'),
+      plan.targets[2].afterBytes,
+    );
+    const attemptAfter = JSON.parse(fs.readFileSync(path.join(dir, plan.targets[3].path), 'utf8'));
+    assert.equal(attemptAfter.state, 'finalized');
+    assert.equal(
+      attemptAfter.history.filter((entry) => entry.state === 'finalized').length,
+      1,
+    );
+    assert.deepEqual(attemptAfter, attemptBeforeResume);
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.targets[4].path), 'utf8'),
+      plan.targets[4].afterBytes,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.targets[5].path), 'utf8'),
+      plan.targets[5].afterBytes,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.commit.path), 'utf8'),
+      plan.commit.afterBytes,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('recoverFinalization repeats an already committed completion without changing bytes or duplicating records', () => {
+  const dir = tempProject();
+  try {
+    seedRecoveryFixture(dir, { attemptState: 'accepted' });
+    const plan = buildFinalizationPlan(dir, recoveryPlanOptions());
+    createFinalizationJournal(dir, plan.journal, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+    });
+
+    const first = recoverFinalization(dir, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+      targets: plan.targets,
+      commit: plan.commit,
+    });
+    assert.equal(first.status, 'committed');
+    assert.equal(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+
+    const targetSnapshot = snapshotTargets(dir, [...plan.targets, plan.commit]);
+    const scribeText = fs.readFileSync(path.join(dir, plan.targets[1].path), 'utf8');
+    const attemptText = fs.readFileSync(path.join(dir, plan.targets[3].path), 'utf8');
+    const checkboxText = fs.readFileSync(path.join(dir, plan.targets[0].path), 'utf8');
+    assert.equal(countMatches(scribeText, new RegExp(`Attempt:\\s*${RECOVERY_ATTEMPT_ID}`, 'g')), 1);
+    assert.equal(
+      JSON.parse(attemptText).history.filter((entry) => entry.state === 'finalized').length,
+      1,
+    );
+    assert.match(checkboxText, new RegExp(`- \\[x\\]\\s+${RECOVERY_TASK_ID}\\b`));
+
+    const second = recoverFinalization(dir, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+      targets: plan.targets,
+      commit: plan.commit,
+    });
+    assert.equal(second.status, 'already-committed');
+    assert.deepEqual(snapshotTargets(dir, [...plan.targets, plan.commit]), targetSnapshot);
+    assert.equal(
+      countMatches(
+        fs.readFileSync(path.join(dir, plan.targets[1].path), 'utf8'),
+        new RegExp(`Attempt:\\s*${RECOVERY_ATTEMPT_ID}`, 'g'),
+      ),
+      1,
+    );
+    assert.equal(
+      JSON.parse(fs.readFileSync(path.join(dir, plan.targets[3].path), 'utf8'))
+        .history.filter((entry) => entry.state === 'finalized').length,
+      1,
+    );
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.targets[0].path), 'utf8'),
+      checkboxText,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('recoverFinalization conflict keeps the work item not done', () => {
+  const dir = tempProject();
+  try {
+    seedRecoveryFixture(dir, { attemptState: 'accepted' });
+    const plan = buildFinalizationPlan(dir, recoveryPlanOptions());
+    createFinalizationJournal(dir, plan.journal, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+    });
+    writeText(path.join(dir, plan.targets[1].path), '# History\n\nexternal edit\n');
+
+    assert.throws(
+      () => recoverFinalization(dir, {
+        change: CHANGE,
+        taskId: RECOVERY_TASK_ID,
+        attemptId: RECOVERY_ATTEMPT_ID,
+        sourceRevision: SOURCE_REVISION,
+        targets: plan.targets,
+        commit: plan.commit,
+      }),
+      /conflict/i,
+    );
+    assert.notEqual(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
   } finally {
     cleanup(dir);
   }

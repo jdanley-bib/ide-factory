@@ -292,3 +292,11 @@ Implementer: bc-e0b69195-d4e8-574f-a362-216d96aaf86f
 Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing export `buildFinalizationPlan`); `node src/cli.mjs verify run 46a2aac4-ca25-4b93-a9db-ee047d77be5c --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:e5c0b609c549019138f96282e7cad459345c6d4ac4854f3befd01ed0570e1082).
 Green: `node --test test/finalization-recovery.test.mjs` exit 0, 10 pass.
 Scope: planned target generation only — deterministic plan for checkbox, scribe marker, identity, finalized attempt, intended index, ready journal, and atomic work-item done as final correctness-critical write; frozen completionDate/finalizedAt. No replay, fault injection, lockout, lease, complete wiring, review, or push.
+
+## 2026-10-21 make-finalization-recoverable/2.1
+
+Attempt: 3a56eca2-2a84-440c-b064-87222e4e7a3c
+Implementer: bc-00133855-88d8-53b4-9d4d-a6a578edb96b
+Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing exports compareAndApplyTarget/recoverFinalization); `node src/cli.mjs verify run 3a56eca2-2a84-440c-b064-87222e4e7a3c --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:b5b6b7b1f602b75b0e5806041f16fd05c2a3f8846666af6026f42aec0fa70945).
+Green: `node --test test/finalization-recovery.test.mjs` exit 0, 17 pass.
+Scope: compare-and-apply recovery only — skip after-digest, apply before-digest, conflict otherwise; recoverFinalization resumes finalized+unfinished journal and repeats already-committed without duplicating checkbox/scribe/attempt history; journal apply bytes aligned to validated create shape. No fault injection, lockout, lease, complete wiring, review, or push.
