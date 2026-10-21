@@ -69,3 +69,13 @@ Authorized-by: factory lead aligning the machine queue to the approved design
 Work-item: enforce-risk-gates-and-security-stage/3.2
 Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
 Note: Task 3.2 implements the mandatory CLI security-evidence gate. If its classifier-generated `security-sensitive` metadata remains, the newly implemented gate would require a live `threat-review` mapping to review this same bootstrap attempt. The approved design explicitly forbids inventing scanner argv, and the registry maps only unit to `npm test`. For this work item only, set completion checks to unit and machine securityProfile to dependency-basic. Still require a distinct security-reviewer to inspect the implementation before the distinct reviewer accepts it, but do not forge or label unit output as threat-review evidence. Product behavior remains fail-closed for security-sensitive work.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-4.1-unit-check
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-4.1-unit-check
+Authorized-at: 2026-10-21T21:13:45Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: enforce-risk-gates-and-security-stage/4.1
+Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
+Note: The classifier inferred security checks because the task names the `security-sensitive` profile. The human task only edits the profile template and verifies `node --test test/install.test.mjs`; the shipped registry has no scanner argv. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts, without forged security evidence.
