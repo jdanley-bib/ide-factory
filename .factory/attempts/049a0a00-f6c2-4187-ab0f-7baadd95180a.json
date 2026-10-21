@@ -1,0 +1,94 @@
+{
+  "id": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "2.2",
+  "state": "security-checking",
+  "implementerRole": "engineer",
+  "implementerId": "bc-28a08772-dc3e-5db8-81b6-131c8bce22d8",
+  "reviewerId": null,
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T20:32:50.449Z",
+      "finishedAt": "2026-10-21T20:34:07.181Z",
+      "logDigest": "sha256:6a5d407d751614ecc834e6ef97786c62547b93f8f0e4ada31529f8cf1770c696",
+      "artifactDigests": [],
+      "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "900fb7bc7400f8fb81ab38a7275ca16b3ae39711"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:36:03.914Z",
+        "finishedAt": "2026-10-21T20:37:20.225Z",
+        "logDigest": "sha256:6c0f5d5bb0b5a5d8da2f0888c74a293d673a26f0722e941ac524ba5caffeedce",
+        "artifactDigests": [],
+        "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "356d7ad1346ba417c749b00e763d6b6ba037098e"
+      }
+    ],
+    "security": [],
+    "review": null,
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T20:28:53.848Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T20:28:53.849Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T20:31:11.998Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T20:34:09.560Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T20:37:41.171Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T20:39:13.738Z",
+      "state": "security-checking"
+    }
+  ],
+  "createdAt": "2026-10-21T20:28:53.848Z",
+  "updatedAt": "2026-10-21T20:39:13.738Z"
+}
