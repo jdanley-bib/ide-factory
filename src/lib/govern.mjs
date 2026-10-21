@@ -1,7 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
+import { writeScopedApproval } from './risk-gates.mjs';
+import { resolveGitBinding } from './verification-evidence.mjs';
 import { listWorkItems, workCounts } from './work.mjs';
+
+const DEFAULT_POLICY_VERSION = 1;
 
 const REQUIRED = [
   '.factory/team.md',
@@ -83,12 +87,74 @@ function summarizeAllWork(project) {
   return `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`;
 }
 
-export function approve(project, id, note) {
-  return recordDecision(project, id, note, 'accepted');
+/**
+ * Issue a scoped approval JSON token and append its id to decisions.md.
+ * Missing caller scope, validation failure, or a dirty non-run-state tree
+ * writes nothing (no approval file, no decisions line).
+ *
+ * @param {string} project
+ * @param {string} id
+ * @param {string} note
+ * @param {{ change?: string, task?: string, action?: string, approver?: string, expiry?: string }} [scope]
+ * @returns {string} path written
+ */
+export function approve(project, id, note, scope = {}) {
+  if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/.test(id)) {
+    throw new Error('Usage: idefactory approve <id> --note "..." --change ... --task ... --action ... --approver ... --expiry ...');
+  }
+  if (!note) throw new Error('--note is required');
+  const decisions = path.join(project, '.factory', 'decisions.md');
+  if (!fs.existsSync(decisions)) throw new Error('No .factory/decisions.md. Run idefactory init first.');
+
+  const { sourceRevision, worktreeClean } = resolveGitBinding(project);
+  if (!worktreeClean || !sourceRevision) {
+    throw new Error('approval requires a clean worktree and resolvable HEAD (factory run-state dirt ignored)');
+  }
+
+  const issuance = new Date().toISOString();
+  const record = {
+    schemaVersion: 1,
+    change: scope.change,
+    task: scope.task,
+    sourceRevision,
+    action: scope.action,
+    approver: scope.approver,
+    issuance,
+    expiry: scope.expiry,
+    policyVersion: readPolicyVersion(project),
+    note,
+  };
+
+  let file;
+  try {
+    file = writeScopedApproval(project, id, record);
+  } catch (error) {
+    // Validator / write failure must leave decisions.md untouched.
+    throw error;
+  }
+
+  const stamp = stampNow();
+  const entry = `\n## ${stamp.slice(0, 10)} accepted ${id}\n\nStatus: accepted\nId: ${id}\nNote: ${note}\n`;
+  fs.appendFileSync(decisions, entry.endsWith('\n') ? entry : `${entry}\n`);
+  ledger(project, 'accepted', { id });
+  return file;
 }
 
 export function reject(project, id, note) {
   return recordDecision(project, id, note, 'rejected');
+}
+
+function readPolicyVersion(project) {
+  const configPath = path.join(project, '.factory', 'config.json');
+  if (!fs.existsSync(configPath)) return DEFAULT_POLICY_VERSION;
+  try {
+    const config = JSON.parse(readText(configPath));
+    const version = config?.governance?.policyVersion;
+    if (Number.isInteger(version) && version > 0) return version;
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_POLICY_VERSION;
 }
 
 export function lockout(project, { agent, reviewer, reason }) {

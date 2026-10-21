@@ -212,3 +212,11 @@ Implementer: bc-08b83f75-6cbc-5040-906d-abdcc6efdcf2
 Red: `node --test test/risk-gates.test.mjs` exit 1 (ERR_MODULE_NOT_FOUND for `src/lib/risk-gates.mjs`); `node src/cli.mjs verify run e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/risk-gates.test.mjs` exit 0, 5 pass.
 Scope: scoped-approval validator only (`validateScopedApproval` / `writeScopedApproval`) — no approve CLI wiring, human-gate, security stage, lockout, CI, provenance, or complete.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/1.2
+
+Attempt: 1185d1bd-ff1f-437d-a8af-065599d8d07a
+Implementer: bc-623988f2-aed4-5dd5-b3bd-dffc0338625c
+Red: `node --test test/risk-gates.test.mjs` exit 1 (3 failures: JSON not written; omitted scope and dirty tree still exit 0); `node src/cli.mjs verify run 1185d1bd-ff1f-437d-a8af-065599d8d07a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/risk-gates.test.mjs` exit 0, 8 pass.
+Scope: scoped `approve` CLI only — JSON via validator, decisions append, refuse missing scope / dirty non-run-state; no human-gate, security stage, lockout, CI, provenance, or complete.

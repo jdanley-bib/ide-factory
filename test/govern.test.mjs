@@ -1,8 +1,58 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
+
+const HOUR_MS = 60 * 60 * 1000;
+
+function git(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    shell: false,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'idefactory-test',
+      GIT_AUTHOR_EMAIL: 'test@example.com',
+      GIT_COMMITTER_NAME: 'idefactory-test',
+      GIT_COMMITTER_EMAIL: 'test@example.com',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
+function ensureCleanGitCommit(dir) {
+  if (!fs.existsSync(path.join(dir, '.git'))) {
+    git(dir, ['init']);
+    git(dir, ['config', 'user.email', 'test@example.com']);
+    git(dir, ['config', 'user.name', 'idefactory-test']);
+  }
+  git(dir, ['add', '-A']);
+  const porcelain = spawnSync('git', ['status', '--porcelain'], {
+    cwd: dir,
+    encoding: 'utf8',
+    shell: false,
+  });
+  assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+  if (porcelain.stdout.trim().length > 0) {
+    git(dir, ['commit', '-m', 'checkpoint']);
+  }
+  return git(dir, ['rev-parse', 'HEAD']);
+}
+
+function scopedApproveArgs(id, note) {
+  return [
+    'approve', id, '--note', note,
+    '--change', 'demo',
+    '--task', '1.1',
+    '--action', 'accept',
+    '--approver', 'bc-approver-9',
+    '--expiry', new Date(Date.now() + 12 * HOUR_MS).toISOString(),
+  ];
+}
 
 test('doctor requires .factory/governance.md and does not require GOLDEN_RULES.md', async () => {
   const dir = tempProject();
@@ -29,14 +79,16 @@ test('approve and reject append, and lockout writes a note', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
-    const first = await idefactory(dir, ['approve', 'spend-ok', '--note', 'allowed for test']);
+    ensureCleanGitCommit(dir);
+    const first = await idefactory(dir, scopedApproveArgs('spend-ok', 'allowed for test'));
     assert.equal(first.code, 0, first.err);
-    const second = await idefactory(dir, ['approve', 'second-ok', '--note', 'also allowed']);
+    ensureCleanGitCommit(dir);
+    const second = await idefactory(dir, scopedApproveArgs('second-ok', 'also allowed'));
     assert.equal(second.code, 0, second.err);
     const decisions = fs.readFileSync(path.join(dir, '.factory/decisions.md'), 'utf8');
     assert.match(decisions, /spend-ok/);
     assert.match(decisions, /second-ok/);
-    const approvals = fs.readdirSync(path.join(dir, '.factory/approvals')).filter((name) => name.endsWith('.md'));
+    const approvals = fs.readdirSync(path.join(dir, '.factory/approvals')).filter((name) => name.endsWith('.json'));
     const bodies = approvals.map((name) => fs.readFileSync(path.join(dir, '.factory/approvals', name), 'utf8')).join('\n');
     assert.match(bodies, /allowed for test/);
     const rejected = await idefactory(dir, ['reject', 'nope', '--note', 'not this']);

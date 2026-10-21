@@ -29,7 +29,7 @@ Usage:
   idefactory verify run <attemptId> --check <kind> [--red]
   idefactory verify import <attemptId> --file <path>
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
-  idefactory approve <id> --note "text" [--path dir]
+  idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
   idefactory lockout --agent <id> --reviewer <id> --reason "text" [--path dir]
   idefactory halt [path]
@@ -117,7 +117,13 @@ export async function run(argv, io = {}) {
         return 0;
       }
       case 'approve': {
-        const file = approve(project, parsed.rest[0], parsed.flags.note || '');
+        const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
+          change: parsed.flags.change,
+          task: parsed.flags.task,
+          action: parsed.flags.action,
+          approver: parsed.flags.approver,
+          expiry: parsed.flags.expiry,
+        });
         out(`Recorded approval ${file}`);
         return 0;
       }

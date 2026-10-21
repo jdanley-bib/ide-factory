@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Add failing tests that `approve` with an id, a note, and every scope field writes a JSON approval containing the note and appends that id to `decisions.md`, and that an id and note with a scope field omitted writes no file and appends nothing. A dirty non-run-state tree also writes nothing. Verify with `node --test test/risk-gates.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "1.1"
   ],
@@ -27,6 +27,6 @@
       "1.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T20:05:30.939Z"
+  "attemptId": "1185d1bd-ff1f-437d-a8af-065599d8d07a",
+  "updatedAt": "2026-10-21T20:11:53.634Z"
 }
