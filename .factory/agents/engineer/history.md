@@ -340,3 +340,11 @@ Implementer: bc-c064be93-5bd6-54d5-aebc-9344f8749e47
 Red: missing `openspec/changes/make-finalization-recoverable/implementation-notes.md`; `node --test test/finalization-recovery.test.mjs` 20 pass / 1 fail; `node src/cli.mjs verify run 9247289a-042d-4ef4-8e9c-1f98d80ee70f --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:3a52394a372624272647300b38fcb975201f2ca977cb127ae2f382d093ae79a9).
 Green: `npx openspec validate make-finalization-recoverable --strict` exit 0; `npm test` exit 0 (187 pass); `node src/cli.mjs doctor` exit 0; `node --test test/finalization-recovery.test.mjs` exit 0, 21 pass.
 Scope: integration notes only — no model start, CI, provenance, observability, gate/evidence policy change, archive, review, checkbox, or push.
+
+## 2026-10-21 make-finalization-recoverable/4.2 follow-up (publication race)
+
+Implementer: bc-4b9faad8-5f00-549e-adc3-cfb57b7969bf
+Context: clean full-suite verify exposed flaky 4.2 stale-takeover loser getting LEASE_RECOVERY instead of LEASE_HELD (line ~383); root cause was writer.lease visible between mkdir and owner.json write, plus vanished-directory reads during concurrent stale rename.
+Red: `node --test test/writer-lease.test.mjs` — new atomic-publication regression failed with `gaps=2 contender=LEASE_RECOVERY` (existing concurrent stale-takeover test also red under stress).
+Green: `node --test test/writer-lease.test.mjs` exit 0, 16 pass; stress 100× exit 0; `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 43 pass.
+Scope: staging-directory rename publication + missing lease dir → LEASE_HELD; preserve corrupt/unsupported fail-closed and one-winner stale rename. No attempt mutation, review, complete, or push.

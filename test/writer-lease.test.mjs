@@ -392,6 +392,93 @@ test('five-minute expiry allows one-winner atomic stale-directory takeover', asy
   }
 });
 
+test('stale takeover treats a vanished lease directory as LEASE_HELD not LEASE_RECOVERY', () => {
+  const dir = tempProject();
+  try {
+    seedFactory(dir);
+    const clock = createFakeClock();
+    acquireWriterLease(dir, 'complete', { now: clock.now, leaseId: 'expire-me' });
+    clock.advance(WRITER_LEASE_TTL_MS + 1);
+    const leaseDir = writerLeaseDir(dir);
+    const ownerFile = path.join(leaseDir, 'owner.json');
+    const origRead = fs.readFileSync;
+    let ownerReads = 0;
+    fs.readFileSync = function patchedReadFileSync(p, enc) {
+      if (path.resolve(String(p)) === path.resolve(ownerFile)) {
+        ownerReads += 1;
+        if (ownerReads === 1) {
+          const data = origRead.call(fs, p, enc);
+          if (fs.existsSync(leaseDir)) {
+            fs.renameSync(leaseDir, `${leaseDir}.stale-simulated`);
+          }
+          return data;
+        }
+      }
+      return origRead.call(fs, p, enc);
+    };
+    try {
+      assert.throws(
+        () => acquireWriterLease(dir, 'approve', { now: clock.now }),
+        (error) => {
+          assert.equal(error.code, LEASE_HELD);
+          return true;
+        },
+      );
+    } finally {
+      fs.readFileSync = origRead;
+    }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('atomic publication never exposes writer.lease without owner.json; gap contender gets LEASE_HELD', () => {
+  const dir = tempProject();
+  try {
+    seedFactory(dir);
+    const leaseDir = writerLeaseDir(dir);
+    /** @type {string[]} */
+    const gaps = [];
+    /** @type {string|null} */
+    let gapContenderCode = null;
+    const clock = createFakeClock();
+    const origMkdir = fs.mkdirSync;
+    fs.mkdirSync = function patchedMkdirSync(p, opts) {
+      const result = origMkdir.call(fs, p, opts);
+      if (path.resolve(String(p)) !== path.resolve(leaseDir)) return result;
+      if (fs.existsSync(path.join(leaseDir, 'owner.json'))) return result;
+      gaps.push('final lease directory visible without owner.json');
+      if (gapContenderCode === null) {
+        try {
+          acquireWriterLease(dir, 'reject', { now: clock.now });
+          gapContenderCode = 'UNEXPECTED_OK';
+        } catch (error) {
+          gapContenderCode = error.code || 'NO_CODE';
+        }
+      }
+      return result;
+    };
+    try {
+      acquireWriterLease(dir, 'complete', { now: clock.now, leaseId: 'publish-first' });
+      clock.advance(WRITER_LEASE_TTL_MS + 1);
+      acquireWriterLease(dir, 'approve', { now: clock.now, leaseId: 'publish-second' });
+    } finally {
+      fs.mkdirSync = origMkdir;
+    }
+    assert.equal(
+      gaps.length,
+      0,
+      `lease directory must become visible only with owner.json; gaps=${gaps.length} contender=${gapContenderCode}`,
+    );
+    if (gapContenderCode !== null) {
+      assert.equal(gapContenderCode, LEASE_HELD);
+    }
+    assert.equal(readWriterLease(dir).leaseId, 'publish-second');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('owner-loss after heartbeat mismatch rejects success', async () => {
   const dir = tempProject();
   try {

@@ -95,6 +95,8 @@ export function readWriterLease(project) {
 
 /**
  * Atomically acquire the schema version 1 writer lease.
+ * Publishes via staging-directory rename so writer.lease is never visible
+ * without a complete owner.json (avoids LEASE_RECOVERY races for losers).
  * @param {string} project
  * @param {string} command
  * @param {{ now?: () => number, leaseId?: string }} [options]
@@ -106,16 +108,9 @@ export function acquireWriterLease(project, command, options = {}) {
   fs.mkdirSync(orchestration, { recursive: true });
 
   const leaseDir = writerLeaseDir(project);
-  try {
-    fs.mkdirSync(leaseDir);
-  } catch (error) {
-    if (error && error.code === 'EEXIST') {
-      return takeoverExpiredLease(project, command, options, nowMs);
-    }
-    throw error;
-  }
-
-  return writeNewOwner(leaseDir, command, nowMs, options.leaseId);
+  const published = tryPublishNewLease(leaseDir, command, nowMs, options.leaseId);
+  if (published) return published;
+  return takeoverExpiredLease(project, command, options, nowMs);
 }
 
 /**
@@ -283,33 +278,57 @@ function takeoverExpiredLease(project, command, options, nowMs) {
     throw leaseHeldError(tomb || again);
   }
 
+  const published = tryPublishNewLease(leaseDir, command, nowMs, options.leaseId);
+  if (published) {
+    fs.rmSync(stale, { recursive: true, force: true });
+    return published;
+  }
+
+  // Another contender published first; do not restore stale over a successor.
   try {
-    fs.mkdirSync(leaseDir);
+    if (!fs.existsSync(leaseDir)) fs.renameSync(stale, leaseDir);
+    else fs.rmSync(stale, { recursive: true, force: true });
+  } catch {
+    // leave tombstone; harmless per design
+  }
+  throw leaseHeldError(again);
+}
+
+/**
+ * Build a complete lease in a private staging directory, then rename into place.
+ * @returns {object|null} owner when published; null when the final path is occupied
+ */
+function tryPublishNewLease(leaseDir, command, nowMs, leaseId) {
+  if (fs.existsSync(leaseDir)) return null;
+
+  const staging = `${leaseDir}.staging-${randomUUID()}`;
+  fs.mkdirSync(staging);
+  let owner;
+  try {
+    owner = writeNewOwner(staging, command, nowMs, leaseId);
   } catch (error) {
     try {
-      if (!fs.existsSync(leaseDir)) fs.renameSync(stale, leaseDir);
+      fs.rmSync(staging, { recursive: true, force: true });
     } catch {
-      // leave tombstone
+      // ignore
     }
-    if (error && error.code === 'EEXIST') throw leaseHeldError(again);
     throw error;
   }
 
   try {
-    const owner = writeNewOwner(leaseDir, command, nowMs, options.leaseId);
-    fs.rmSync(stale, { recursive: true, force: true });
+    fs.renameSync(staging, leaseDir);
     return owner;
   } catch (error) {
     try {
-      fs.rmSync(leaseDir, { recursive: true, force: true });
+      fs.rmSync(staging, { recursive: true, force: true });
     } catch {
       // ignore
     }
-    try {
-      if (!fs.existsSync(leaseDir)) fs.renameSync(stale, leaseDir);
-    } catch {
-      // leave tombstone
+    if (error && (error.code === 'ENOTEMPTY' || error.code === 'EEXIST' || error.code === 'EPERM' || error.code === 'EBUSY')) {
+      return null;
     }
+    // Destination appeared between existsSync and rename (another publisher won).
+    if (fs.existsSync(leaseDir)) return null;
     throw error;
   }
 }
@@ -357,15 +376,18 @@ function isValidOwner(owner) {
 }
 
 function readValidatedOwnerOrThrow(leaseDir) {
-  const raw = (() => {
-    const file = path.join(leaseDir, 'owner.json');
-    try {
-      return fs.readFileSync(file, 'utf8');
-    } catch {
-      return null;
+  const file = path.join(leaseDir, 'owner.json');
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch (error) {
+    // A concurrent stale-rename winner removes the directory; that is LEASE_HELD,
+    // not corrupt recovery. An existing directory without a readable owner fails closed.
+    if (error && error.code === 'ENOENT' && !fs.existsSync(leaseDir)) {
+      throw leaseHeldError(null);
     }
-  })();
-  if (raw === null) throw leaseRecoveryError('writer lease record is unreadable');
+    throw leaseRecoveryError('writer lease record is unreadable');
+  }
   let parsed;
   try {
     parsed = JSON.parse(raw);
