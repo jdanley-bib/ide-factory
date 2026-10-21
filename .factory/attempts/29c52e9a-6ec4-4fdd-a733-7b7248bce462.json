@@ -2,10 +2,10 @@
   "id": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
   "change": "make-finalization-recoverable",
   "taskId": "4.2",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-03a962db-89ec-5031-86e3-ffbba1993901",
-  "reviewerId": null,
+  "reviewerId": "bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -83,7 +83,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb",
+      "notes": "Independent review ACCEPT: heartbeat/expiry, one-winner stale takeover, owner-loss, corrupt refusal, HALT bypass, command classification for all named mutations and read-only, no nested acquisition, 4.1 release-race rename fix; focused tests 41 pass; CLI red at dcf3336 and clean unit at 98e443b/97eb307 (+4bc2628 rebind) valid.",
+      "at": "2026-10-21T23:22:33.043Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -107,8 +112,16 @@
     {
       "at": "2026-10-21T23:18:08.758Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T23:22:32.954Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T23:22:33.043Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T23:10:34.919Z",
-  "updatedAt": "2026-10-21T23:20:42.412Z"
+  "updatedAt": "2026-10-21T23:22:33.043Z"
 }

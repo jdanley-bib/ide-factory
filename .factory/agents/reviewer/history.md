@@ -296,3 +296,10 @@ Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
 Reviewer: bc-6ddddde1-6bba-519d-8f14-b17c525be39f
 Verdict: ACCEPT
 Re-ran `node --test test/writer-lease.test.mjs` exit 0, 7 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 087b4de worktreeClean:false); clean-head unit pass at 33e2181 worktreeClean. Product 33e2181: schema v1 `owner.json` via exclusive mkdir acquire; live owner yields `LEASE_HELD` without contender mutation; success and handled-error release only matching lease id; read-only wrapper neither acquires nor removes. Scope exclusions held (no heartbeat, stale takeover, corrupt refusal, HALT bypass, CLI dispatch). Prior distinct security ACCEPT by bc-dbd9d8e9 (decision make-finalization-recoverable-4.1-unit-check). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/4.2
+
+Attempt: 29c52e9a-6ec4-4fdd-a733-7b7248bce462
+Reviewer: bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb
+Verdict: ACCEPT
+Re-ran `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 41 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at dcf3336 worktreeClean:false; engineer notes 6 failing heartbeat/takeover/owner-loss/corrupt/CLI/release cases); clean unit at 98e443b≡97eb307 worktreeClean plus rebind verify at 4bc2628. Product 97eb307: one-minute fake-clock heartbeat, five-minute expiry, one-winner stale-directory rename takeover, OWNERSHIP_LOST on successor mismatch, LEASE_RECOVERY corrupt/unsupported without delete, HALT bypass, top-level `run.mjs` wrap of all named mutations with no nested acquire, read-only unleased, rename release TOCTOU fix vs successor. Transitions verifying → awaiting-review → accepted. No verify/complete/push.
