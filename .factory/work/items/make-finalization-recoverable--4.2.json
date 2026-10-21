@@ -2,7 +2,7 @@
   "id": "4.2",
   "change": "make-finalization-recoverable",
   "title": "Add failing fake-clock and multi-process tests for one-minute heartbeat, five-minute expiry, one-winner stale-directory takeover, owner-loss failure, corrupt/unsupported lease refusal, HALT bypass, and top-level coverage of init, upgrade, sync-tasks, next, run, attempt mutations, verify, complete, approve, reject, lockout create/resolve, and resume. Wire CLI dispatch without nested acquisition and verify with `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "4.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
-  "updatedAt": "2026-10-21T23:10:34.919Z"
+  "updatedAt": "2026-10-21T23:24:32.073Z"
 }

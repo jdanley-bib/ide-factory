@@ -185,3 +185,7 @@ Attempt: 7fb6a76f-7c65-4252-aa20-95c69f0257be
 ## 2026-10-21 finalized make-finalization-recoverable/4.1
 
 Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
+
+## 2026-10-21 finalized make-finalization-recoverable/4.2
+
+Attempt: 29c52e9a-6ec4-4fdd-a733-7b7248bce462
