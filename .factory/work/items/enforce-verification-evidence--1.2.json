@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "enforce-verification-evidence",
+  "title": "Add a versioned `.factory/checks.json` template that maps `unit` to `npm test` and no other kind. Extend install tests so a new init writes a schema-valid registry and a second init leaves an existing registry byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "Add a versioned `.factory/checks.json` template that maps `unit` to `npm test` and no other kind. Extend install tests so a new init writes a schema-valid registry and a second init leaves an existing registry byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "26f6eab8-6ce2-47f6-baad-d2b23494c4da",
+  "updatedAt": "2026-10-21T16:17:05.094Z"
+}

@@ -1,0 +1,71 @@
+{
+  "id": "26f6eab8-6ce2-47f6-baad-d2b23494c4da",
+  "change": "enforce-verification-evidence",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-de8fbe90-77d8-5fae-a8fe-bc5d82ad70f4",
+  "reviewerId": "bc-48306195-c681-53d1-bb90-74f316facc41",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/install.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "assertion .factory/checks.json must exist after init, false !== true"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/install.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-48306195-c681-53d1-bb90-74f316facc41",
+      "notes": "Init writes only the unit registry entry and re-init preserves bytes.",
+      "at": "2026-10-21T16:17:05.064Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:15:20.267Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:15:20.269Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:16:35.524Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:16:35.554Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:16:35.585Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:17:05.034Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:17:05.064Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:17:05.100Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:15:20.267Z",
+  "updatedAt": "2026-10-21T16:17:05.100Z"
+}

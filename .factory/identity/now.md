@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: reconcile-factory-specifications/2.2 (2026-10-21)
+Last finalized: enforce-verification-evidence/3.1 (2026-10-21)

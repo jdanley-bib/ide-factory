@@ -2,19 +2,19 @@
 
 ## 1. Check registry
 
-- [ ] 1.1 Add failing tests that a schema-valid registry accepts an argv array, project working-directory policy, timeout, and artifact list, and that a shell command string, empty argv, unsupported schema version, or path outside the project is rejected. Implement the validator until `node --test test/verification-evidence.test.mjs` passes those cases.
-- [ ] 1.2 Add a versioned `.factory/checks.json` template that maps `unit` to `npm test` and no other kind. Extend install tests so a new init writes a schema-valid registry and a second init leaves an existing registry byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`.
+- [x] 1.1 Add failing tests that a schema-valid registry accepts an argv array, project working-directory policy, timeout, and artifact list, and that a shell command string, empty argv, unsupported schema version, or path outside the project is rejected. Implement the validator until `node --test test/verification-evidence.test.mjs` passes those cases.
+- [x] 1.2 Add a versioned `.factory/checks.json` template that maps `unit` to `npm test` and no other kind. Extend install tests so a new init writes a schema-valid registry and a second init leaves an existing registry byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`.
 
 ## 2. CLI-run evidence
 
-- [ ] 2.1 Add failing tests for `verify run`: exit zero stores a derived pass, exit non-zero is not passing, `--red` stores a record only on a non-zero exit, and a caller-supplied red object is not stored. Implement the command with `shell: false` until those tests pass.
-- [ ] 2.2 Add failing tests that a stored record includes schema version, kind, runner name and version, command digest, exit code, timestamps, source revision, log digest, artifact digests, and attempt id, and that a missing exit code is rejected. Verify with `node --test test/verification-evidence.test.mjs`.
-- [ ] 2.3 Add failing tests that a clean git HEAD is stored on a zero exit and that a dirty worktree or an unresolvable HEAD records no pass. Implement that binding and verify with `node --test test/verification-evidence.test.mjs`.
-- [ ] 2.4 Add a failing test that `verify` exits with an error and writes no evidence when `HALT` is present. Verify with `node --test test/verification-evidence.test.mjs`.
+- [x] 2.1 Add failing tests for `verify run`: exit zero stores a derived pass, exit non-zero is not passing, `--red` stores a record only on a non-zero exit, and a caller-supplied red object is not stored. Implement the command with `shell: false` until those tests pass.
+- [x] 2.2 Add failing tests that a stored record includes schema version, kind, runner name and version, command digest, exit code, timestamps, source revision, log digest, artifact digests, and attempt id, and that a missing exit code is rejected. Verify with `node --test test/verification-evidence.test.mjs`.
+- [x] 2.3 Add failing tests that a clean git HEAD is stored on a zero exit and that a dirty worktree or an unresolvable HEAD records no pass. Implement that binding and verify with `node --test test/verification-evidence.test.mjs`.
+- [x] 2.4 Add a failing test that `verify` exits with an error and writes no evidence when `HALT` is present. Verify with `node --test test/verification-evidence.test.mjs`.
 
 ## 3. Imported attestations
 
-- [ ] 3.1 Add failing tests that a signature-valid attestation whose command digest and attempt id match is stored, and that an invalid signature, a missing registry key, or a different attempt id is rejected with no evidence added. Implement Ed25519 verification over canonical JSON using `node:crypto` until `node --test test/verification-evidence.test.mjs` passes. Do not accept an import as red evidence.
+- [x] 3.1 Add failing tests that a signature-valid attestation whose command digest and attempt id match is stored, and that an invalid signature, a missing registry key, or a different attempt id is rejected with no evidence added. Implement Ed25519 verification over canonical JSON using `node:crypto` until `node --test test/verification-evidence.test.mjs` passes. Do not accept an import as red evidence.
 
 ## 4. Fail-closed completion
 

@@ -1,0 +1,82 @@
+{
+  "id": "dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665",
+  "change": "enforce-verification-evidence",
+  "taskId": "4.1",
+  "state": "accepted",
+  "implementerRole": "engineer",
+  "implementerId": "bc-1fa3e1cb-9266-5ee6-b7d9-2c07a3acd782",
+  "reviewerId": "bc-4c651fb3-c393-57f7-aabb-e46df3950c2a",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T16:37:10.641Z",
+      "finishedAt": "2026-10-21T16:37:38.576Z",
+      "logDigest": "sha256:bea938c37d2c4b2823600b6ace9be762f4b9dce554c200e3596acde4b95f1b15",
+      "artifactDigests": [],
+      "attemptId": "dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "43bc3aa2c1754144c962ff6f998591daa89629f9"
+    },
+    "verification": [],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-4c651fb3-c393-57f7-aabb-e46df3950c2a",
+      "notes": "Transition rejects caller check results. Orchestration tests pass.",
+      "at": "2026-10-21T16:41:53.941Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:34:15.502Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:34:15.503Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:38:24.583Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:38:24.622Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:38:24.660Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:39:55.064Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T16:41:53.906Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:41:53.941Z",
+      "state": "accepted"
+    }
+  ],
+  "createdAt": "2026-10-21T16:34:15.502Z",
+  "updatedAt": "2026-10-21T16:41:53.941Z"
+}

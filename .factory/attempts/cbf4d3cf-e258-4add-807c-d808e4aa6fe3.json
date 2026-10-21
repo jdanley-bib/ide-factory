@@ -1,0 +1,71 @@
+{
+  "id": "cbf4d3cf-e258-4add-807c-d808e4aa6fe3",
+  "change": "enforce-verification-evidence",
+  "taskId": "2.3",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-97d51a74-7206-58c4-98a9-811f09ee30fd",
+  "reviewerId": "bc-9d5e57e0-bb71-5867-b282-e90176755ecf",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/verification-evidence.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "worktreeClean undefined !== true"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/verification-evidence.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-9d5e57e0-bb71-5867-b282-e90176755ecf",
+      "notes": "Pass requires a clean resolved HEAD.",
+      "at": "2026-10-21T16:26:25.421Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:23:57.551Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:23:57.553Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:25:51.349Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:25:51.382Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:25:51.413Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:26:25.389Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:26:25.422Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:26:25.460Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:23:57.551Z",
+  "updatedAt": "2026-10-21T16:26:25.460Z"
+}

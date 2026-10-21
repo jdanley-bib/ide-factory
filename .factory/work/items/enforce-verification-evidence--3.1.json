@@ -1,0 +1,28 @@
+{
+  "id": "3.1",
+  "change": "enforce-verification-evidence",
+  "title": "Add failing tests that a signature-valid attestation whose command digest and attempt id match is stored, and that an invalid signature, a missing registry key, or a different attempt id is rejected with no evidence added. Implement Ed25519 verification over canonical JSON using `node:crypto` until `node --test test/verification-evidence.test.mjs` passes. Do not accept an import as red evidence.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that a signature-valid attestation whose command digest and attempt id match is stored, and that an invalid signature, a missing registry key, or a different attempt id is rejected with no evidence added. Implement Ed25519 verification over canonical JSON using `node:crypto` until `node --test test/verification-evidence.test.mjs` passes. Do not accept an import as red evidence. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "1222a024-5505-4908-aa20-6a5194266804",
+  "updatedAt": "2026-10-21T16:34:15.452Z"
+}

@@ -1,0 +1,71 @@
+{
+  "id": "7baf2e09-17b8-4525-b3bf-0bd480db79d3",
+  "change": "enforce-verification-evidence",
+  "taskId": "2.4",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-85961530-c22e-5116-9db0-e5e703ea3eb3",
+  "reviewerId": "bc-fa50139d-bda1-5ab0-9d60-12a69924b84d",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/verification-evidence.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "HALT verify still exited 0"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/verification-evidence.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-fa50139d-bda1-5ab0-9d60-12a69924b84d",
+      "notes": "HALT blocks verify before a check runs.",
+      "at": "2026-10-21T16:29:06.070Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:26:25.501Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:26:25.502Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:28:23.047Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:28:23.083Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:28:23.117Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:29:06.019Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:29:06.070Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:29:06.118Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:26:25.501Z",
+  "updatedAt": "2026-10-21T16:29:06.118Z"
+}

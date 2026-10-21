@@ -7,6 +7,7 @@ import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
+import { verifyImport, verifyRun } from './verification-evidence.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -25,6 +26,8 @@ Usage:
   idefactory attempt start <change> <taskId> [--path dir]
   idefactory attempt transition <attemptId> <state> [--evidence json] [--path dir]
   idefactory attempt show <attemptId> [--path dir]
+  idefactory verify run <attemptId> --check <kind> [--red]
+  idefactory verify import <attemptId> --file <path>
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory approve <id> --note "text" [--path dir]
   idefactory reject <id> --note "text" [--path dir]
@@ -95,6 +98,8 @@ export async function run(argv, io = {}) {
       }
       case 'attempt':
         return handleAttempt(project, parsed, out);
+      case 'verify':
+        return await handleVerify(project, parsed, out);
       case 'complete': {
         const [change, taskId] = parsed.rest;
         const attemptId = parsed.flags.attempt;
@@ -186,6 +191,40 @@ function handleAttempt(project, parsed, out) {
     return 0;
   }
   throw new Error('Usage: idefactory attempt start|transition|show ...');
+}
+
+async function handleVerify(project, parsed, out) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const sub = parsed.rest[0];
+  if (sub === 'run') {
+    const attemptId = parsed.rest[1];
+    const check = parsed.flags.check;
+    if (!attemptId || !check || check === true) {
+      throw new Error('Usage: idefactory verify run <attemptId> --check <kind> [--red]');
+    }
+    const { attempt, record } = await verifyRun(project, attemptId, {
+      check,
+      asRed: Boolean(parsed.flags.red),
+    });
+    out(JSON.stringify({ attemptId: attempt.id, record }, null, 2));
+    return 0;
+  }
+  if (sub === 'import') {
+    const attemptId = parsed.rest[1];
+    const file = parsed.flags.file;
+    if (!attemptId || !file || file === true) {
+      throw new Error('Usage: idefactory verify import <attemptId> --file <path>');
+    }
+    const { attempt, record } = await verifyImport(project, attemptId, { file });
+    out(JSON.stringify({ attemptId: attempt.id, record }, null, 2));
+    return 0;
+  }
+  throw new Error(
+    'Usage: idefactory verify run <attemptId> --check <kind> [--red]\n'
+    + '       idefactory verify import <attemptId> --file <path>',
+  );
 }
 
 function reportDoctor(project, out, err) {

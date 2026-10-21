@@ -20,6 +20,7 @@ const STATE_FILES = [
   'governance.md',
   'ceremonies.md',
   'profiles.json',
+  'checks.json',
   'README.md',
   'identity/now.md',
   'identity/wisdom.md',

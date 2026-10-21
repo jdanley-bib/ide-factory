@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { validateCheckRegistry } from '../src/lib/verification-evidence.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const ROLES = [
@@ -71,6 +72,53 @@ test('init writes the seven-role roster, governance baseline, and machine work s
     const config = JSON.parse(read(dir, '.factory/config.json'));
     assert.equal(config.runtime, 'ide');
     assert.equal(config.ideation, false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init writes a schema-valid check registry with only unit → npm test', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const registryPath = path.join(dir, '.factory/checks.json');
+    assert.equal(fs.existsSync(registryPath), true, '.factory/checks.json must exist after init');
+    const raw = fs.readFileSync(registryPath, 'utf8');
+    const registry = JSON.parse(raw);
+    assert.equal(registry.schemaVersion, 1);
+    assert.deepEqual(Object.keys(registry.checks).sort(), ['unit']);
+    const unit = registry.checks.unit;
+    assert.deepEqual(unit.argv, ['npm', 'test']);
+    assert.equal(unit.cwdPolicy, 'project');
+    assert.ok(Number.isInteger(unit.timeoutMs) && unit.timeoutMs > 0, 'timeoutMs must be positive');
+    assert.deepEqual(unit.artifacts, []);
+    const accepted = validateCheckRegistry(registry, { projectRoot: dir });
+    assert.equal(accepted.schemaVersion, 1);
+    assert.deepEqual(accepted.checks.unit.argv, ['npm', 'test']);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing check registry byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const registryPath = path.join(dir, '.factory/checks.json');
+    const custom = `${JSON.stringify({
+      schemaVersion: 1,
+      checks: {
+        unit: {
+          argv: ['npm', 'test'],
+          cwdPolicy: 'project',
+          timeoutMs: 12_345,
+          artifacts: [],
+        },
+      },
+    }, null, 2)}\nCUSTOM-REGISTRY-SENTINEL\n`;
+    fs.writeFileSync(registryPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(registryPath, 'utf8'), custom);
   } finally {
     cleanup(dir);
   }
