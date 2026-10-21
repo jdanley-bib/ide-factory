@@ -268,3 +268,10 @@ Attempt: 46a2aac4-ca25-4b93-a9db-ee047d77be5c
 Reviewer: bc-dba650a2-57bd-5c76-92cf-caf951a80b4d
 Verdict: ACCEPT
 Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 10 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 16bb79d worktreeClean:false); clean-head unit pass at cdb73d2 worktreeClean. Product cdb73d2: `buildFinalizationPlan` for checkbox, scribe marker, identity, finalized attempt, intended index, ready journal, and atomic work-item `done` as final correctness-critical write; frozen completionDate/finalizedAt across retries; plan does not apply writes. Scope exclusions held (no replay, fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/2.1
+
+Attempt: 3a56eca2-2a84-440c-b064-87222e4e7a3c
+Reviewer: bc-c64a39ea-058f-5d73-a422-dd5aa28ee7f4
+Verdict: ACCEPT
+Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 17 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 1b1f1eb worktreeClean:false); clean-head unit pass at 20f3c9b worktreeClean. Product 20f3c9b: compare-and-apply skip after-digest / apply before-digest / conflict otherwise; `recoverFinalization` resumes finalized+unfinished journal and repeats already-committed without duplicating checkbox/scribe/attempt history; conflict keeps item not done. Scope exclusions held (no fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
