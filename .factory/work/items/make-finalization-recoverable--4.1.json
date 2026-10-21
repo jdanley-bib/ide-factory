@@ -1,0 +1,33 @@
+{
+  "id": "4.1",
+  "change": "make-finalization-recoverable",
+  "title": "Add failing tests that atomic lease acquisition has exactly one winner, a non-expired owner makes a second writer fail clearly without mutation, success and handled errors release only the matching lease id, and read-only commands neither acquire nor remove a lease. Implement the schema version 1 lease and command wrapper primitives. Verify with `node --test test/writer-lease.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that atomic lease acquisition has exactly one winner, a non-expired owner makes a second writer fail clearly without mutation, success and handled errors release only the matching lease id, and read-only commands neither acquire nor remove a lease. Implement the schema version 1 lease and command wrapper primitives. Verify with `node --test test/writer-lease.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit",
+      "build",
+      "dependency-audit",
+      "threat-review"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "security-sensitive",
+    "verificationProfile": "security-sensitive",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T22:04:59.675Z"
+}

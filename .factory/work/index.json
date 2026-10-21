@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T21:49:09.741Z",
+  "updatedAt": "2026-10-21T22:05:34.473Z",
   "items": [
     {
       "change": "enforce-risk-gates-and-security-stage",
@@ -101,6 +101,46 @@
       "change": "enforce-verification-evidence",
       "id": "5.1",
       "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "1.1",
+      "status": "in_progress"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "1.2",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "2.1",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "2.2",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "3.1",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "4.1",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "4.2",
+      "status": "todo"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "5.1",
+      "status": "todo"
     },
     {
       "change": "persist-bounded-run-sessions",

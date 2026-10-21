@@ -276,3 +276,11 @@ Implementer: bc-f2d26bc7-6fcf-5b41-a1e2-967cfaac57bc
 Red: missing `openspec/changes/enforce-risk-gates-and-security-stage/implementation-notes.md`; `node --test test/risk-gates.test.mjs` 26 pass / 1 fail; `node src/cli.mjs verify run c55fda80-405c-41b0-ae1c-743da4435908 --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:4b6c06f7dc5b3f960482b7ebfdb96a626d68e91233961cfbf13aa52ea4d8edfa).
 Green: `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `npm test` exit 0 (146 pass); `node src/cli.mjs doctor` exit 0; `node --test test/risk-gates.test.mjs` exit 0, 27 pass.
 Scope: integration notes only — no model start, transactional complete, lockout, lease, CI, provenance, observability, review, checkbox, or push.
+
+## 2026-10-21 make-finalization-recoverable/1.1
+
+Attempt: 25abe23f-bfaf-4489-b0cc-8e014bacc45f
+Implementer: bc-dbaa9b47-88a9-5be9-b262-7585198dac69
+Red: `node --test test/finalization-recovery.test.mjs` exit 1 (ERR_MODULE_NOT_FOUND for `src/lib/finalization-recovery.mjs`); `node src/cli.mjs verify run 25abe23f-bfaf-4489-b0cc-8e014bacc45f --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/finalization-recovery.test.mjs` exit 0, 8 pass.
+Scope: journal validation and atomic creation only — schema v1 bind/allowlist/planDigest; corrupt, unsupported, path-traversing, identity-mismatched, revision-mismatched fail closed without marking done. No replay, fault injection, lockout, lease, complete wiring, review, or push.

@@ -1,0 +1,28 @@
+{
+  "id": "5.1",
+  "change": "make-finalization-recoverable",
+  "title": "Run `npx openspec validate make-finalization-recoverable --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add CI or provenance, add observability, change gate/evidence policy, or archive.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Run `npx openspec validate make-finalization-recoverable --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add CI or provenance, add observability, change gate/evidence policy, or archive. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T22:04:59.675Z"
+}
