@@ -8,7 +8,7 @@
 ## 2. Human gate
 
 - [x] 2.1 Add failing tests that `humanGate: true` without a valid `accept` approval makes `run` exit 0 with stop reason `human-gate`, no orchestration request, and the session still open, and that `complete` without a valid `complete` approval exits non-zero and leaves the work item undone. A missing profile or a non-boolean `humanGate` is treated as true. Verify with `node --test test/risk-gates.test.mjs`.
-- [ ] 2.2 Add failing tests that a matching `accept` approval allows the accept transition and a matching `complete` approval allows completion, and that a wrong action, wrong task, stale revision, expired window, or different policy version does not authorize. `humanGate: false` on work that is not security-sensitive still reaches review without an approval. Verify with `node --test test/risk-gates.test.mjs`.
+- [x] 2.2 Add failing tests that a matching `accept` approval allows the accept transition and a matching `complete` approval allows completion, and that a wrong action, wrong task, stale revision, expired window, or different policy version does not authorize. `humanGate: false` on work that is not security-sensitive still reaches review without an approval. Verify with `node --test test/risk-gates.test.mjs`.
 
 ## 3. Security stage
 

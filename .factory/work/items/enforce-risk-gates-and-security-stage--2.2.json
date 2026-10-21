@@ -2,7 +2,7 @@
   "id": "2.2",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Add failing tests that a matching `accept` approval allows the accept transition and a matching `complete` approval allows completion, and that a wrong action, wrong task, stale revision, expired window, or different policy version does not authorize. `humanGate: false` on work that is not security-sensitive still reaches review without an approval. Verify with `node --test test/risk-gates.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "2.1"
   ],
@@ -30,5 +30,5 @@
     ]
   },
   "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
-  "updatedAt": "2026-10-21T20:28:53.849Z"
+  "updatedAt": "2026-10-21T20:42:31.051Z"
 }
