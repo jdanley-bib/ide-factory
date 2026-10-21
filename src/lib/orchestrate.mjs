@@ -14,6 +14,7 @@ import {
   STICKY_STOP_REASONS,
   writeRunSession,
 } from './run-session.mjs';
+import { humanGateAllows } from './risk-gates.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
@@ -232,6 +233,20 @@ export function runFactory(project, env, {
 
     const stage = stageForState(attempt.state, item);
     if (stage.needsAgent) {
+      if (
+        stage.nextState === 'accepted'
+        && !humanGateAllows(project, {
+          action: 'accept',
+          verificationProfile: item.factory?.verificationProfile,
+        })
+      ) {
+        return {
+          code: EXIT_OK,
+          text: renderStop('human-gate', attempt, item),
+          stopReason: 'human-gate',
+          request: null,
+        };
+      }
       if (session.agentSteps >= session.budgets.maxAgentSteps) {
         session = closeRunSession(project, session, 'max-agent-steps');
         return {
@@ -291,13 +306,6 @@ export function runFactory(project, env, {
 
     // Pure file advances are limited; if we cannot advance, stop.
     progressed += 1;
-    if (until === 'human-gate' && item.factory?.verificationProfile === 'release') {
-      return {
-        code: EXIT_OK,
-        text: renderStop('human-gate', attempt, item),
-        stopReason: 'human-gate',
-      };
-    }
   }
 
   return {

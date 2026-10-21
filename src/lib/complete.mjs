@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
+import { humanGateAllows } from './risk-gates.mjs';
 import {
   commandDigest,
   resolveGitBinding,
@@ -30,6 +31,15 @@ export function completeWorkItem(project, change, taskId, attemptId, env = {}) {
   }
   if (attempt.state !== 'accepted' && attempt.state !== 'finalize-failed') {
     throw new Error(`Attempt must be accepted before complete (state=${attempt.state})`);
+  }
+
+  if (!humanGateAllows(project, {
+    action: 'complete',
+    verificationProfile: item.factory?.verificationProfile,
+  })) {
+    throw new Error(
+      'complete requires a valid scoped approval when humanGate is true (or the profile is missing / non-boolean)',
+    );
   }
 
   const config = readConfig(project);

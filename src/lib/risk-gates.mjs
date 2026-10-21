@@ -1,5 +1,6 @@
+import fs from 'node:fs';
 import path from 'node:path';
-import { writeText } from './layout.mjs';
+import { readText, writeText } from './layout.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
@@ -116,4 +117,48 @@ function requireNonEmptyString(record, field) {
   if (typeof record[field] !== 'string' || record[field].length === 0) {
     throw new Error(`approval ${field} must be a non-empty string`);
   }
+}
+
+/**
+ * Read profiles[verificationProfile].humanGate.
+ * Missing profile or a non-boolean humanGate is treated as true (fail closed).
+ *
+ * @param {string} project
+ * @param {string|undefined} verificationProfile
+ * @returns {boolean}
+ */
+export function isHumanGateRequired(project, verificationProfile) {
+  const profilesPath = path.join(project, '.factory', 'profiles.json');
+  let profiles = {};
+  if (fs.existsSync(profilesPath)) {
+    try {
+      profiles = JSON.parse(readText(profilesPath));
+    } catch {
+      profiles = {};
+    }
+  }
+  const profile = profiles[verificationProfile];
+  if (!profile || typeof profile.humanGate !== 'boolean') {
+    return true;
+  }
+  return profile.humanGate;
+}
+
+/**
+ * Whether accept/complete may proceed for this work item's verification profile.
+ * Fail-closed for 2.1: when the gate is required, no approval authorizes yet
+ * (matching success/mismatch matrix is task 2.2).
+ *
+ * @param {string} project
+ * @param {{ action: 'accept'|'complete', verificationProfile?: string }} scope
+ * @returns {boolean}
+ */
+export function humanGateAllows(project, scope) {
+  if (!scope || (scope.action !== 'accept' && scope.action !== 'complete')) {
+    return false;
+  }
+  if (!isHumanGateRequired(project, scope.verificationProfile)) {
+    return true;
+  }
+  return false;
 }

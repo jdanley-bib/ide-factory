@@ -2,7 +2,7 @@
   "id": "2.1",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Add failing tests that `humanGate: true` without a valid `accept` approval makes `run` exit 0 with stop reason `human-gate`, no orchestration request, and the session still open, and that `complete` without a valid `complete` approval exits non-zero and leaves the work item undone. A missing profile or a non-boolean `humanGate` is treated as true. Verify with `node --test test/risk-gates.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [],
   "acceptanceCriteria": [
     "Add failing tests that `humanGate: true` without a valid `accept` approval makes `run` exit 0 with stop reason `human-gate`, no orchestration request, and the session still open, and that `complete` without a valid `complete` approval exits non-zero and leaves the work item undone. A missing profile or a non-boolean `humanGate` is treated as true. Verify with `node --test test/risk-gates.test.mjs`. works as specified and is covered by the verification profile checks."
@@ -23,6 +23,6 @@
     "verificationProfile": "frontend-low",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T20:05:30.939Z"
+  "attemptId": "d989d087-25f9-408b-a6d1-0f593b01c5db",
+  "updatedAt": "2026-10-21T20:19:09.766Z"
 }
