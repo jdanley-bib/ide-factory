@@ -99,3 +99,13 @@ Authorized-by: factory lead aligning the machine queue to the approved task
 Work-item: enforce-risk-gates-and-security-stage/5.1
 Attempt: c55fda80-405c-41b0-ae1c-743da4435908
 Note: The classifier inferred security checks because the integration task names excluded provenance. The human task runs strict OpenSpec validation, `npm test`, and doctor; the registry maps only unit. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts; do not invent scanner argv or forge evidence.
+
+## 2026-10-21 accepted make-finalization-recoverable-4.1-unit-check
+
+Status: accepted
+Id: make-finalization-recoverable-4.1-unit-check
+Authorized-at: 2026-10-21T23:00:00Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: make-finalization-recoverable/4.1
+Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
+Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task implements writer exclusion. The approved task verifies only `node --test test/writer-lease.test.mjs`; the shipped registry maps only unit to `npm test`; and the approved design explicitly excludes new security tooling and gate/evidence policy changes. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security reviewer before the distinct reviewer accepts; do not invent scanner argv or forge security evidence.
