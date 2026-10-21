@@ -2,7 +2,7 @@
   "id": "2.5",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a zero, negative, or non-integer required budget exits 1, writes no zeroed open session, and prints no request, and that a corrupt session file is left byte-for-byte unchanged. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "2.4"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "7e1f372e-1f51-456d-a365-68946f0be648",
-  "updatedAt": "2026-10-21T18:17:04.776Z"
+  "updatedAt": "2026-10-21T18:29:57.589Z"
 }

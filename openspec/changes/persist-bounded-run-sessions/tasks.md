@@ -12,7 +12,7 @@
 - [x] 2.2 Add a failing test that finalizing the configured number of tasks makes the next run exit 0 with `max-tasks` and no request, and that work items already done at session creation do not count. Implement `baselineDoneIds` and verify with `node --test test/run-session.test.mjs`.
 - [x] 2.3 Add failing tests that a session older than its wall-clock budget exits 0 with `wall-clock`, and that a clock earlier than `startedAt` exits 1 with `invalid-session`. Verify with `node --test test/run-session.test.mjs`.
 - [x] 2.4 Add failing tests that a recorded red result does not increment the failure count and that timed-out verification results at the maximum exit 0 with `max-failures` and no request. Verify with `node --test test/run-session.test.mjs`.
-- [ ] 2.5 Add failing tests that a zero, negative, or non-integer required budget exits 1, writes no zeroed open session, and prints no request, and that a corrupt session file is left byte-for-byte unchanged. Verify with `node --test test/run-session.test.mjs`.
+- [x] 2.5 Add failing tests that a zero, negative, or non-integer required budget exits 1, writes no zeroed open session, and prints no request, and that a corrupt session file is left byte-for-byte unchanged. Verify with `node --test test/run-session.test.mjs`.
 
 ## 3. Stops that are not task counters
 
