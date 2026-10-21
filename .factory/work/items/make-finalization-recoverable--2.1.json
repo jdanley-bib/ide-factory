@@ -2,7 +2,7 @@
   "id": "2.1",
   "change": "make-finalization-recoverable",
   "title": "Add failing tests that replay skips an after-digest target, applies a before-digest target, rejects any other digest as a conflict, and repeats an already committed completion without changing bytes or duplicating checkbox, scribe, or attempt history. Implement compare-and-apply recovery, allow a matching finalized attempt with an unfinished journal to resume, and verify with `node --test test/finalization-recovery.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "Add failing tests that replay skips an after-digest target, applies a before-digest target, rejects any other digest as a conflict, and repeats an already committed completion without changing bytes or duplicating checkbox, scribe, or attempt history. Implement compare-and-apply recovery, allow a matching finalized attempt with an unfinished journal to resume, and verify with `node --test test/finalization-recovery.test.mjs`. works as specified and is covered by the verification profile checks."
@@ -24,5 +24,5 @@
     "dependencies": []
   },
   "attemptId": "3a56eca2-2a84-440c-b064-87222e4e7a3c",
-  "updatedAt": "2026-10-21T22:27:05.079Z"
+  "updatedAt": "2026-10-21T22:36:36.718Z"
 }
