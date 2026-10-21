@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { attemptsRoot } from './attempt.mjs';
 import { ledger } from './layout.mjs';
 import { listWorkItems } from './work.mjs';
 
@@ -296,6 +297,94 @@ export function refreshCompletedTasks(project, session, { now = new Date() } = {
   return writeRunSession(project, {
     ...session,
     completedTasks,
+    lastObservedAt: now.toISOString(),
+  });
+}
+
+/**
+ * Stable id for a verification record when counting tool failures.
+ *
+ * @param {string} attemptId
+ * @param {object} record
+ * @returns {string}
+ */
+export function failureRecordId(attemptId, record) {
+  if (record?.id) return String(record.id);
+  const digest = record?.commandDigest ?? '';
+  const startedAt = record?.startedAt ?? '';
+  return `${attemptId}:${startedAt}:${digest}`;
+}
+
+function isCountableVerificationFailure(record) {
+  if (!record || typeof record !== 'object') return false;
+  return record.timedOut === true || record.passed === false;
+}
+
+function recordMatchesRed(record, red) {
+  if (!red || !record) return false;
+  if (red.id && record.id && red.id === record.id) return true;
+  return red.attemptId === record.attemptId
+    && red.startedAt === record.startedAt
+    && red.commandDigest === record.commandDigest;
+}
+
+/**
+ * Distinct timed-out or non-passing verification record ids for a change,
+ * excluding records stored as red evidence.
+ *
+ * @param {string} project
+ * @param {string} change
+ * @returns {string[]}
+ */
+export function collectFailureRecordIds(project, change) {
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return [];
+  const ids = new Set();
+  for (const name of fs.readdirSync(root)) {
+    if (!name.endsWith('.json')) continue;
+    let attempt;
+    try {
+      attempt = JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    if (attempt.change !== change) continue;
+    const red = attempt.evidence?.red;
+    for (const record of attempt.evidence?.verification || []) {
+      if (!isCountableVerificationFailure(record)) continue;
+      if (recordMatchesRed(record, red)) continue;
+      ids.add(failureRecordId(attempt.id, record));
+    }
+  }
+  return [...ids].sort();
+}
+
+/**
+ * Persist failureCount and countedFailureIds from verification records.
+ *
+ * @param {string} project
+ * @param {object} session
+ * @param {{ now?: Date }} [options]
+ * @returns {object}
+ */
+export function refreshFailures(project, session, { now = new Date() } = {}) {
+  const allIds = collectFailureRecordIds(project, session.change);
+  const counted = new Set(session.countedFailureIds || []);
+  let changed = false;
+  for (const id of allIds) {
+    if (!counted.has(id)) {
+      counted.add(id);
+      changed = true;
+    }
+  }
+  const failureCount = counted.size;
+  if (!changed && failureCount === session.failureCount) {
+    return session;
+  }
+  return writeRunSession(project, {
+    ...session,
+    failureCount,
+    countedFailureIds: [...counted].sort(),
     lastObservedAt: now.toISOString(),
   });
 }

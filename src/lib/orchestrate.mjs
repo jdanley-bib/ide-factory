@@ -6,6 +6,7 @@ import { syncTasks } from './queue.mjs';
 import {
   openOrResumeRunSession,
   refreshCompletedTasks,
+  refreshFailures,
   resolveNewSessionBudgets,
   writeRunSession,
 } from './run-session.mjs';
@@ -99,6 +100,16 @@ export function runFactory(project, env, {
       code: EXIT_OK,
       text: `Run stopped (max-tasks) for ${change}.\n`,
       stopReason: 'max-tasks',
+      request: null,
+    };
+  }
+  session = refreshFailures(project, session);
+  if (session.failureCount >= session.budgets.maxFailures) {
+    session = closeRunSession(project, session, 'max-failures');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-failures) for ${change}.\n`,
+      stopReason: 'max-failures',
       request: null,
     };
   }

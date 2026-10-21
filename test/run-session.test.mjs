@@ -5,6 +5,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
 import { readRunSession, validateRunSession } from '../src/lib/run-session.mjs';
 import { updateWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
@@ -400,6 +401,117 @@ test('session past maxWallClockMs exits 0 with wall-clock and no orchestration r
     const finalSession = readRunSession(files[0]);
     assert.equal(finalSession.runId, created.runId);
     assert.equal(finalSession.stopReason, 'wall-clock');
+    assert.equal(finalSession.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function writeCheckRegistry(dir, exitByKind) {
+  const checks = {};
+  for (const [kind, code] of Object.entries(exitByKind)) {
+    checks[kind] = {
+      argv: [process.execPath, '-e', `process.exit(${code})`],
+      cwdPolicy: 'project',
+      timeoutMs: 30_000,
+      artifacts: [],
+    };
+  }
+  fs.writeFileSync(
+    path.join(dir, '.factory/checks.json'),
+    `${JSON.stringify({ schemaVersion: 1, checks }, null, 2)}\n`,
+  );
+}
+
+function appendVerificationRecord(dir, attemptId, record) {
+  const file = attemptPath(dir, attemptId);
+  const attempt = JSON.parse(fs.readFileSync(file, 'utf8'));
+  attempt.evidence.verification = [...(attempt.evidence.verification || []), record];
+  fs.writeFileSync(file, `${JSON.stringify(attempt, null, 2)}\n`);
+}
+
+test('recorded red result does not increment session failure count', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+    writeCheckRegistry(dir, { unit: 1 });
+    const redRun = await idefactory(dir, [
+      'verify', 'run', firstRequest.attemptId, '--check', 'unit', '--red',
+    ]);
+    assert.equal(redRun.code, 0, redRun.err + redRun.out);
+    assert.ok(getAttempt(dir, firstRequest.attemptId).evidence.red);
+
+    const filesAfterRed = listRunSessionFiles(dir);
+    assert.equal(filesAfterRed.length, 1);
+    const afterRed = readRunSession(filesAfterRed[0]);
+    assert.equal(afterRed.failureCount, 0);
+    assert.deepEqual(afterRed.countedFailureIds, []);
+
+    const second = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(second.status, 2, second.stderr + second.stdout);
+    const afterRun = readRunSession(filesAfterRed[0]);
+    assert.equal(afterRun.failureCount, 0, 'red evidence must not increment failure count');
+    assert.deepEqual(afterRun.countedFailureIds, []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('timed-out verification failures at maxFailures exit 0 with max-failures and no request', async () => {
+  const dir = tempProject();
+  const maxFailures = 1;
+  const failureId = 'timeout-record-2-4';
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+
+    appendVerificationRecord(dir, firstRequest.attemptId, {
+      schemaVersion: 1,
+      id: failureId,
+      kind: 'unit',
+      runner: { name: 'idefactory', version: '0.2.0' },
+      argv: [process.execPath, '-e', 'setTimeout(() => {}, 99999)'],
+      commandDigest: 'sha256:timeout-failure-2-4',
+      exitCode: 1,
+      timedOut: true,
+      passed: false,
+      issuer: 'cli',
+      attemptId: firstRequest.attemptId,
+      startedAt: '2026-10-21T18:10:00.000Z',
+      finishedAt: '2026-10-21T18:11:00.000Z',
+      logDigest: 'sha256:timeout-log-2-4',
+      artifactDigests: [],
+      worktreeClean: true,
+    });
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const created = readRunSession(files[0]);
+    fs.writeFileSync(
+      files[0],
+      `${JSON.stringify({
+        ...created,
+        budgets: { ...created.budgets, maxFailures },
+        failureCount: 0,
+        countedFailureIds: [],
+      }, null, 2)}\n`,
+    );
+
+    const capped = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-failures/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /# Orchestration request/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /"action": "agent-step"/);
+
+    const finalSession = readRunSession(files[0]);
+    assert.equal(finalSession.failureCount, maxFailures);
+    assert.deepEqual(finalSession.countedFailureIds, [failureId]);
+    assert.equal(finalSession.stopReason, 'max-failures');
     assert.equal(finalSession.status, 'closed');
   } finally {
     cleanup(dir);

@@ -125,3 +125,11 @@ Implementer: bc-5d39ce56-0b0f-5900-a10e-a4fd698b91f0
 Red: `node --test test/run-session.test.mjs` exit 1 (2 failures: wall-clock exit 2 with request; clock regression exit 2); `node src/cli.mjs verify run 143ad813-9542-4662-acfd-844349500751 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 11 pass.
 Scope: wall-clock budget and clock integrity only — elapsed ≥ maxWallClockMs stops code 0 wall-clock/no request; now < startedAt stops code 1 invalid-session/no request; no failure/unchanged/host enforcement; no review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/2.4
+
+Attempt: 7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a
+Implementer: bc-f1976f28-d282-5a0f-9c75-89cbb2e817b2
+Red: `node --test test/run-session.test.mjs` exit 1 (1 failure: timed-out at maxFailures exit 2 with request, expected 0 max-failures); `node src/cli.mjs verify run 7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 13 pass.
+Scope: failure budget only — distinct timed-out or non-passing verification records increment failureCount and countedFailureIds; evidence.red excluded; at maxFailures stop code 0 max-failures/no request; no unchanged/host/invalid-budget; no review/complete/commit/push.

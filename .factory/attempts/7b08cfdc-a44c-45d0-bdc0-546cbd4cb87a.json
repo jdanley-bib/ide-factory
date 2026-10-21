@@ -1,0 +1,61 @@
+{
+  "id": "7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "2.4",
+  "state": "red-confirmed",
+  "implementerRole": "engineer",
+  "implementerId": "bc-f1976f28-d282-5a0f-9c75-89cbb2e817b2",
+  "reviewerId": null,
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T18:07:25.363Z",
+      "finishedAt": "2026-10-21T18:07:56.377Z",
+      "logDigest": "sha256:c5c92fb6136f6ae5c3ca89db984f56aa0bd8a85d8a13a37be7e304b3c7dc568b",
+      "artifactDigests": [],
+      "attemptId": "7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "f18aaa7b7a121dd6a42cbdd29d6044f116890b23"
+    },
+    "verification": [],
+    "security": [],
+    "review": null,
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T18:05:47.473Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T18:05:47.474Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T18:06:47.958Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T18:08:22.864Z",
+      "state": "red-confirmed"
+    }
+  ],
+  "createdAt": "2026-10-21T18:05:47.473Z",
+  "updatedAt": "2026-10-21T18:08:22.864Z"
+}

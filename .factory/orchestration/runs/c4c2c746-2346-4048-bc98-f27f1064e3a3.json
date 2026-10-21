@@ -4,23 +4,23 @@
   "change": "persist-bounded-run-sessions",
   "status": "open",
   "startedAt": "2026-10-21T17:44:26.895Z",
-  "lastObservedAt": "2026-10-21T18:01:07.774Z",
+  "lastObservedAt": "2026-10-21T18:05:47.474Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 2,
-  "completedTasks": 5,
+  "agentSteps": 3,
+  "completedTasks": 6,
   "failureCount": 0,
   "baselineDoneIds": [],
   "countedFailureIds": [],
   "lastRequestFingerprint": {
     "action": "agent-step",
     "role": "engineer",
-    "taskId": "2.3",
-    "attemptId": "143ad813-9542-4662-acfd-844349500751",
+    "taskId": "2.4",
+    "attemptId": "7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a",
     "attemptState": "assigned",
     "workItemStatus": "todo"
   },
