@@ -1,15 +1,19 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { listTasks } from './backlog.mjs';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
+import { listWorkItems, workCounts } from './work.mjs';
 
 const REQUIRED = [
   '.factory/team.md',
   '.factory/routing.md',
   '.factory/decisions.md',
   '.factory/config.json',
+  '.factory/governance.md',
+  '.factory/profiles.json',
+  '.factory/work/index.json',
   '.cursor/rules/factory.mdc',
   '.cursor/skills/factory-coordinator/SKILL.md',
+  '.cursor/skills/factory-run/SKILL.md',
   '.github/agents/factory.agent.md',
   '.github/skills/factory-coordinator/SKILL.md',
   '.claude/skills/factory-coordinator/SKILL.md',
@@ -36,12 +40,11 @@ export function doctor(project) {
     }
   }
   if (!fs.existsSync(path.join(project, 'openspec'))) warnings.push('openspec/ is not initialized');
-  if (!fs.existsSync(path.join(project, 'backlog', 'config.yml'))) warnings.push('backlog/ is not initialized');
   if (fs.existsSync(path.join(project, 'HALT'))) warnings.push('HALT file is present');
   return { errors, warnings };
 }
 
-export function status(project, env) {
+export function status(project, _env) {
   const halt = fs.existsSync(path.join(project, 'HALT'));
   const active = readJson(path.join(project, '.factory', 'active-change.json'));
   const team = fs.existsSync(path.join(project, '.factory', 'team.md'))
@@ -51,28 +54,33 @@ export function status(project, env) {
     ? readText(path.join(project, '.factory', 'identity', 'now.md')).trim()
     : '(none)';
   const changes = listChanges(project);
-  let backlog = 'unavailable';
-  try {
-    const tasks = listTasks(project, env);
-    const todo = tasks.filter((task) => String(task.status).toLowerCase() === 'to do').length;
-    const progress = tasks.filter((task) => String(task.status).toLowerCase() === 'in progress').length;
-    const done = tasks.filter((task) => String(task.status).toLowerCase() === 'done').length;
-    backlog = `${todo} to do, ${progress} in progress, ${done} done`;
-  } catch (error) {
-    backlog = error.code === 'NO_BACKLOG' ? 'CLI not installed' : `unavailable (${error.message})`;
-  }
+  const change = active?.change || '';
+  const counts = workCounts(project, change || undefined);
+  const workLine = change
+    ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
+    : summarizeAllWork(project);
   return [
     'Factory status',
     `HALT: ${halt ? 'yes' : 'no'}`,
     `Active change: ${active?.change || '(none)'}`,
     `OpenSpec changes: ${changes.join(', ') || '(none)'}`,
-    `Backlog: ${backlog}`,
+    `Work queue: ${workLine}`,
     '',
     team,
     '',
     now,
     '',
   ].join('\n');
+}
+
+function summarizeAllWork(project) {
+  const items = listWorkItems(project);
+  if (!items.length) return 'empty';
+  const counts = { todo: 0, in_progress: 0, done: 0, blocked: 0 };
+  for (const item of items) {
+    if (counts[item.status] !== undefined) counts[item.status] += 1;
+  }
+  return `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`;
 }
 
 export function approve(project, id, note) {

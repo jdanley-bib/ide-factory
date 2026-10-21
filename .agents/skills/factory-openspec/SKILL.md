@@ -1,7 +1,7 @@
 ---
 name: factory-openspec
 description: >
-  Staff a human-authored OpenSpec change into Backlog.md and the factory team.
+  Staff a human-authored OpenSpec change into .factory/work and the factory team.
   Use when the user says apply an OpenSpec change, /factory-plan, or asks the
   team to plan work that already has openspec/changes/<name>/.
   Do not invent a product.
@@ -25,6 +25,8 @@ This skill only staffs a change the human already authored.
 
 The lead compares the design with `.factory/decisions.md`. If they conflict, stop and ask the human. Do not silently rewrite the proposal.
 
+When the change is greenfield UI or app work and the design is silent on toolchain, have the architect (or lead) record a mainstream scaffold in design/tasks before build—for example Vite via `npm create vite@latest`—unless the human already chose another stack.
+
 ## Queue the work
 
 Run:
@@ -33,13 +35,13 @@ Run:
 idefactory sync-tasks <name>
 ```
 
-Backlog.md is the only execution queue. Do not write a second task list under `.factory/`.
+`.factory/work/` is the only execution queue. OpenSpec `tasks.md` remains the human plan.
 
 ## Build
 
-For each synced task, follow `factory-build` one task at a time unless the tasks are independent and a design already exists.
+For each synced work item, follow `factory-build` one item at a time, or use `factory-run` for a bounded multi-item loop when the human asks.
 
-When a backlog task is Done, check the matching box in that change's `tasks.md`.
+Finalize with `idefactory complete` after review accepts. That checks the OpenSpec checkbox.
 
 When every box is checked, tell the human to archive and sync with OpenSpec. Do not archive from this skill.
 

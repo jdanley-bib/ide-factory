@@ -7,7 +7,15 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 export const packageRoot = path.resolve(here, '../..');
 export const templatesRoot = path.join(packageRoot, 'templates');
 
-export const ROLES = ['lead', 'architect', 'engineer', 'reviewer', 'scribe'];
+export const ROLES = [
+  'lead',
+  'architect',
+  'engineer',
+  'test-engineer',
+  'security-reviewer',
+  'reviewer',
+  'scribe',
+];
 
 export const MARKER = '<!-- idefactory:owned -->';
 export const SECTION_START = '<!-- idefactory:start -->';

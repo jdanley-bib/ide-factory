@@ -1,6 +1,5 @@
-# .factory
+# Factory team memory
 
-Shared team memory for Cursor, GitHub Copilot, and Claude Code.
+This directory is shared team state for the IDE factory.
 
-OpenSpec (`openspec/`) is the spec. Backlog.md (`backlog/`) is the only task queue.
-This directory is not a second backlog. The IDE session model does the work.
+OpenSpec (`openspec/`) is the human plan. `.factory/work/` is the only execution queue. Attempts and evidence live under `.factory/attempts/`.

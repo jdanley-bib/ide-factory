@@ -27,9 +27,9 @@ Do not run those commands yourself in order to approve your own request.
 
 ## Files you do not rewrite
 
-- `GOLDEN_RULES.md`
 - Earlier entries in `.factory/decisions.md`
 - Agent histories, except to append a new note
+- `.factory/governance.md` baseline intent (append decisions instead)
 
 ## Lockout
 

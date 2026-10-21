@@ -17,20 +17,23 @@ test('init writes the default team and leaves an application file alone', async 
     assert.equal(result.code, 0);
     assert.equal(fs.readFileSync(path.join(dir, 'app.js'), 'utf8'), 'keep-app\n');
     const team = read(dir, '.factory/team.md');
-    for (const role of ['Lead', 'Architect', 'Engineer', 'Reviewer', 'Scribe']) {
+    for (const role of ['Lead', 'Architect', 'Engineer', 'Test Engineer', 'Security Reviewer', 'Reviewer', 'Scribe']) {
       assert.match(team, new RegExp(role));
     }
     assert.match(team, /does not implement product code/);
     assert.equal(fs.existsSync(path.join(dir, '.factory/decisions.md')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/governance.md')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/profiles.json')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/work/index.json')), true);
     const config = JSON.parse(read(dir, '.factory/config.json'));
     assert.equal(config.runtime, 'ide');
     assert.equal(config.ideation, false);
     assert.equal(fs.existsSync(path.join(dir, '.factory/agents/engineer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/engineer/history.md')), true);
-    assert.match(read(dir, 'GOLDEN_RULES.md'), /Ollama/);
-    assert.match(read(dir, 'GOLDEN_RULES.md'), /web ideation|from the web|autonomous web/i);
-    assert.match(read(dir, 'GOLDEN_RULES.md'), /spend/i);
-    assert.match(read(dir, 'GOLDEN_RULES.md'), /publish/i);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/test-engineer/charter.md')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/security-reviewer/charter.md')), true);
+    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
+    assert.match(read(dir, '.factory/governance.md'), /IDE models only/i);
+    assert.match(read(dir, '.factory/governance.md'), /approve/i);
   } finally {
     cleanup(dir);
   }
@@ -62,34 +65,32 @@ test('re-init preserves decisions, history, squad, and AGENTS.md', async () => {
   }
 });
 
-test('installs the three IDE build commands, a narrow rule, and skills with no model launcher', async () => {
+test('installs the three IDE build commands, factory-run, a narrow rule, and skills with no model launcher', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     for (const rel of [
       '.cursor/commands/factory-build.md',
+      '.cursor/commands/factory-run.md',
       '.github/prompts/factory-build.prompt.md',
+      '.github/prompts/factory-run.prompt.md',
       '.claude/commands/factory-build.md',
+      '.claude/commands/factory-run.md',
       '.cursor/commands/factory-status.md',
       '.cursor/commands/factory-plan.md',
       '.cursor/commands/factory-review.md',
       '.github/agents/factory.agent.md',
       '.claude/skills/factory-coordinator/SKILL.md',
+      '.cursor/skills/factory-run/SKILL.md',
     ]) {
       assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
-    }
-    for (const rel of [
-      '.cursor/commands/factory-build.md',
-      '.github/prompts/factory-build.prompt.md',
-      '.claude/commands/factory-build.md',
-    ]) {
-      assert.match(read(dir, rel), /factory-build skill/);
     }
     assert.match(read(dir, '.cursor/rules/factory.mdc'), /Unrelated requests are left alone/);
     const build = read(dir, '.cursor/skills/factory-build/SKILL.md');
     assert.match(build, /failing test/i);
-    assert.match(build, /verification command/i);
+    assert.match(build, /verification/i);
     assert.match(build, /different role/i);
+    assert.match(build, /idefactory complete/);
     const skillsRoot = path.join(dir, '.cursor/skills');
     for (const name of fs.readdirSync(skillsRoot)) {
       if (!name.startsWith('factory-')) continue;
@@ -126,11 +127,12 @@ test('upgrade refreshes an owned skill and keeps a custom decision', async () =>
   }
 });
 
-test('doctor fails in an empty directory and passes after init', async () => {
+test('doctor fails in an empty directory and passes after init without backlog', async () => {
   const dir = tempProject();
   try {
     assert.notEqual((await idefactory(dir, ['doctor'])).code, 0);
     assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.existsSync(path.join(dir, 'backlog')), false);
     assert.equal((await idefactory(dir, ['doctor'])).code, 0);
   } finally {
     cleanup(dir);
@@ -141,11 +143,13 @@ test('README tells a project how to install and who does the work', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   assert.match(readme, /idefactory init/);
   assert.match(readme, /The IDE's own model does the work/);
+  assert.match(readme, /\.factory\/work/);
 });
 
-test('the CLI process does not execute a model binary on next', () => {
+test('the CLI process does not execute a model binary on next', async () => {
   const dir = tempProject();
   try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
     const bin = path.join(dir, 'bin');
     fs.mkdirSync(bin);
     for (const name of ['ollama', 'cursor-agent']) {
@@ -158,10 +162,8 @@ test('the CLI process does not execute a model binary on next', () => {
       cwd: dir,
       env: {
         ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
+        PATH: `${bin}${path.delimiter}${process.env.PATH}`,
         IDEFACTORY_MODEL_RAN: marker,
-        IDEFACTORY_BACKLOG: path.join(repoRoot, 'support/fake-backlog.mjs'),
-        IDEFACTORY_FAKE_DB: path.join(dir, 'empty-tasks.json'),
       },
       encoding: 'utf8',
     });

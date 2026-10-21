@@ -1,7 +1,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { createTask, listTasks, viewTask } from './backlog.mjs';
-import { halted, ledger, writeText } from './layout.mjs';
+import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
+import { halted, ledger, readText, writeText } from './layout.mjs';
+import {
+  ensureWorkDirs,
+  getWorkItem,
+  listWorkItems,
+  selectReady,
+  upsertWorkItem,
+} from './work.mjs';
 
 export function parseCheckboxes(markdown) {
   const tasks = [];
@@ -25,13 +32,17 @@ export function loadChangeTasks(project, change) {
   if (!fs.existsSync(file)) {
     throw new Error(`OpenSpec change not found: openspec/changes/${change}/tasks.md`);
   }
-  return parseCheckboxes(fs.readFileSync(file, 'utf8'));
+  const markdown = fs.readFileSync(file, 'utf8');
+  return parseCheckboxes(markdown).map((task) => {
+    const { factory, acceptanceCriteria } = parseFactoryBlock(markdown, task.id);
+    return { ...task, factory, acceptanceCriteria, markdown };
+  });
 }
 
-export function syncTasks(project, change, env) {
+export function syncTasks(project, change, _env) {
   if (halted(project)) throw haltError();
+  ensureWorkDirs(project);
   const tasks = loadChangeTasks(project, change);
-  const existing = listTasks(project, env);
   let created = 0;
   let skipped = 0;
   for (const task of tasks) {
@@ -39,11 +50,26 @@ export function syncTasks(project, change, env) {
       skipped += 1;
       continue;
     }
-    if (alreadySynced(existing, change, task.id)) {
+    if (getWorkItem(project, change, task.id)) {
       skipped += 1;
       continue;
     }
-    createTask(project, env, { change, id: task.id, title: task.title });
+    const classified = classifyTask({
+      id: task.id,
+      title: task.title,
+      body: task.title,
+      factory: task.factory,
+    });
+    upsertWorkItem(project, {
+      id: task.id,
+      change,
+      title: task.title,
+      status: 'todo',
+      dependencies: classified.dependencies,
+      acceptanceCriteria: defaultAcceptanceCriteria(task.title, task.acceptanceCriteria),
+      factory: classified,
+      attemptId: null,
+    });
     created += 1;
   }
   writeText(
@@ -57,72 +83,75 @@ export function syncTasks(project, change, env) {
 export function buildPacket(project, env, changeName) {
   if (halted(project)) throw haltError();
   const change = changeName || readActiveChange(project);
-  let tasks = listTasks(project, env).filter((task) => isTodo(task));
-  if (change) {
-    const scoped = tasks.filter((task) => (task.labels || []).includes(change));
-    if (scoped.length) tasks = scoped;
+  const item = change
+    ? selectReady(project, change) || listWorkItems(project, change).find((entry) => entry.status === 'todo')
+    : selectAcrossChanges(project);
+  if (!item) {
+    return { empty: true, text: 'No ready To Do work item.\n' };
   }
-  const ready = tasks.find((task) => task.isReady !== false) || tasks[0];
-  if (!ready) {
-    return { empty: true, text: 'No To Do backlog task.\n' };
-  }
-  const task = ready.description ? ready : { ...ready, ...viewTask(project, ready.id, env) };
-  const role = routeRole(`${task.title}\n${task.description || ''}`);
-  const text = renderPacket({ role, task, change });
-  ledger(project, 'next', { role, task: task.id });
-  return { empty: false, text, role, task };
+  const config = readConfig(project);
+  const role = primaryRole(item);
+  const modelProfile = item.factory?.modelProfile || config.roles?.[role]?.modelProfile || 'coding-standard';
+  const text = renderPacket({ role, item, modelProfile });
+  ledger(project, 'next', { role, change: item.change, task: item.id });
+  return { empty: false, text, role, task: item, item };
 }
 
-function renderPacket({ role, task, change }) {
-  const criteria = (task.acceptanceCriteria || [])
-    .map((item) => `- ${item.text || item}`)
-    .join('\n');
+function selectAcrossChanges(project) {
+  const items = listWorkItems(project);
+  return items.find((item) => item.status === 'todo' && (!item.dependencies || !item.dependencies.length))
+    || items.find((item) => item.status === 'todo')
+    || null;
+}
+
+function renderPacket({ role, item, modelProfile }) {
+  const criteria = (item.acceptanceCriteria || []).map((entry) => `- ${entry}`).join('\n');
+  const roles = (item.factory?.roles || []).join(', ');
   return `# Work packet
 
 Role: ${role}
 Implementing agent: ${role}
+Model profile: ${modelProfile}
 Charter: .factory/agents/${role}/charter.md
 History: .factory/agents/${role}/history.md
 
 Read that charter and that history only. Do not read any other agent's charter.
 
-Task: ${task.id}
-Title: ${task.title}
-Status: ${task.status}
-Change: ${change || '(none selected)'}
+Work item: ${item.change}/${item.id}
+Title: ${item.title}
+Status: ${item.status}
+Change: ${item.change}
+Roles pipeline: ${roles || role}
+Verification profile: ${item.factory?.verificationProfile || '(default)'}
+Checks: ${(item.factory?.checks || []).join(', ') || '(default)'}
 
 Description:
-${task.description || '(no description)'}
+openspec-task: ${item.id}
+
+Change: openspec/changes/${item.change}/tasks.md
+
+${item.title}
 
 Acceptance criteria:
 ${criteria || '- (see the task)'}
 
 Method:
-- Write a failing test before production code.
-- Run a verification command before claiming done.
+- Prefer common scaffolds and libraries over hand-rolled toolchains (for example npm create vite@latest for a SPA).
+- Write a failing test before production code when the profile includes unit or equivalent checks.
+- Record evidence on the attempt via idefactory attempt transition.
+- Run verification profile checks before claiming done.
 - Review is a different role: reviewer. The implementer does not approve their own work.
+- Finalize with idefactory complete ${item.change} ${item.id} --attempt <id>.
 
 The IDE session model does the work. Do not start a model process.
 `;
 }
 
-function routeRole(text) {
-  if (/\b(architect|production architecture|production-architecture)\b/i.test(text)) return 'architect';
-  return 'engineer';
-}
-
-function alreadySynced(tasks, change, id) {
-  return tasks.some((task) => {
-    const labels = task.labels || [];
-    if (!labels.includes(change)) return false;
-    const title = String(task.title || '');
-    const description = String(task.description || '');
-    return title.startsWith(`[${id}]`) || description.includes(`openspec-task: ${id}`);
-  });
-}
-
-function isTodo(task) {
-  return String(task.status || '').toLowerCase() === 'to do' && !task.archived;
+function primaryRole(item) {
+  const roles = item.factory?.roles || [];
+  if (roles.includes('architect')) return 'architect';
+  const implementer = roles.find((role) => !['reviewer', 'scribe', 'security-reviewer', 'test-engineer'].includes(role));
+  return implementer || 'engineer';
 }
 
 function readActiveChange(project) {
@@ -132,6 +161,16 @@ function readActiveChange(project) {
     return JSON.parse(fs.readFileSync(file, 'utf8')).change || '';
   } catch {
     return '';
+  }
+}
+
+function readConfig(project) {
+  const file = path.join(project, '.factory', 'config.json');
+  if (!fs.existsSync(file)) return {};
+  try {
+    return JSON.parse(readText(file));
+  } catch {
+    return {};
   }
 }
 

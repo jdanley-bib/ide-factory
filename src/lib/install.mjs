@@ -1,18 +1,16 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
 import {
   MARKER,
   ROLES,
   ledger,
   mergeMarked,
-  packageRoot,
   readText,
   templatesRoot,
   writeIfMissing,
   writeText,
 } from './layout.mjs';
-import { findBinary, runBacklog } from './backlog.mjs';
+import { runOpenspec } from './openspec-cli.mjs';
 
 const STATE_FILES = [
   'team.md',
@@ -21,6 +19,7 @@ const STATE_FILES = [
   'config.json',
   'governance.md',
   'ceremonies.md',
+  'profiles.json',
   'README.md',
   'identity/now.md',
   'identity/wisdom.md',
@@ -29,15 +28,19 @@ const STATE_FILES = [
 const COMMANDS = [
   {
     name: 'factory-status',
-    description: 'Show factory team, OpenSpec, and backlog status',
+    description: 'Show factory team, OpenSpec, and work queue status',
   },
   {
     name: 'factory-plan',
-    description: 'Staff a human-authored OpenSpec change into Backlog.md',
+    description: 'Staff a human-authored OpenSpec change into .factory/work',
   },
   {
     name: 'factory-build',
-    description: 'Implement the next factory backlog task with the factory-build skill',
+    description: 'Implement the next factory work item with the factory-build skill',
+  },
+  {
+    name: 'factory-run',
+    description: 'Bounded multi-task factory orchestration until a stop condition',
   },
   {
     name: 'factory-review',
@@ -50,13 +53,12 @@ export function initProject(project, options = {}) {
   const created = writeState(project, options);
   writeAdapters(project);
   mergeInstructions(project);
-  const rules = path.join(project, 'GOLDEN_RULES.md');
-  if (!fs.existsSync(rules)) {
-    writeText(rules, readText(path.join(packageRoot, 'GOLDEN_RULES.md')));
-    created.push('GOLDEN_RULES.md');
-  }
+  ensureWorkScaffold(project);
   if (options.withOpenspec) ensureOpenspec(project, options.env || process.env);
-  if (options.withBacklog) ensureBacklog(project, options.env || process.env);
+  if (options.withBacklog) {
+    // Deprecated: Backlog.md is no longer required. Kept for one release as a no-op hint.
+    created.push('(deprecated --with-backlog ignored; use .factory/work)');
+  }
   ledger(project, 'init', { created });
   return created;
 }
@@ -99,7 +101,15 @@ function writeState(project, options) {
   }
   writeIfMissing(path.join(factory, 'approvals', '.gitkeep'), '');
   writeIfMissing(path.join(factory, 'orchestration', '.gitkeep'), '');
+  ensureWorkScaffold(project);
   return created;
+}
+
+function ensureWorkScaffold(project) {
+  const work = path.join(project, '.factory', 'work');
+  writeIfMissing(path.join(work, 'index.json'), JSON.stringify({ version: 1, items: [] }, null, 2));
+  writeIfMissing(path.join(work, 'items', '.gitkeep'), '');
+  writeIfMissing(path.join(project, '.factory', 'attempts', '.gitkeep'), '');
 }
 
 function writeAdapters(project) {
@@ -159,34 +169,15 @@ function mergeInstructions(project) {
 
 function ensureOpenspec(project, env) {
   if (fs.existsSync(path.join(project, 'openspec', 'config.yaml'))) return;
-  const bin = findBinary('openspec', project, env);
-  if (!bin) {
-    throw new Error('openspec CLI not found. Install @fission-ai/openspec, then re-run with --with-openspec.');
-  }
-  const result = spawnSync(bin, [
-    'init', '--tools', 'cursor,github-copilot,claude', '--no-copilot-cloud', '--no-animation',
-  ], { cwd: project, env: { ...env, OPENSPEC_TELEMETRY: '0' }, encoding: 'utf8' });
-  if (result.status !== 0) {
-    throw new Error((result.stderr || result.stdout || 'openspec init failed').trim());
-  }
-}
-
-function ensureBacklog(project, env) {
-  if (fs.existsSync(path.join(project, 'backlog', 'config.yml'))) return;
-  const name = path.basename(project);
   try {
-    runBacklog(project, [
-      'init', name,
-      '--defaults',
-      '--agent-instructions', 'none',
-      '--integration-mode', 'cli',
-      '--auto-open-browser', 'false',
-      '--no-git',
+    runOpenspec(project, [
+      'init',
+      '--tools', 'cursor,github-copilot,claude',
+      '--no-copilot-cloud',
+      '--no-animation',
     ], env);
   } catch (error) {
-    if (error.code === 'NO_BACKLOG') {
-      throw new Error('backlog CLI not found. Install backlog.md, then re-run with --with-backlog.');
-    }
-    throw new Error(error.message || 'backlog init failed');
+    if (error.code === 'NO_OPENSPEC') throw error;
+    throw new Error(error.message || 'openspec init failed');
   }
 }

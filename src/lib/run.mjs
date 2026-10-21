@@ -1,30 +1,39 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
+import { completeWorkItem } from './complete.mjs';
 import { approve, doctor, lockout, reject, status } from './govern.mjs';
 import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
+import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
-The IDE session model does the work. This CLI installs shared state and
-prints work packets. It does not launch a model, and it does not invent products.
+The IDE session model does the work. This CLI installs shared state, manages
+the work queue and attempts, and prints orchestration requests. It does not
+launch a model, and it does not invent products.
 
 Usage:
-  idefactory init [path] [--force-roster] [--with-openspec] [--with-backlog]
+  idefactory init [path] [--force-roster] [--with-openspec]
   idefactory upgrade [path]
   idefactory doctor [path]
   idefactory status [path]
   idefactory sync-tasks <change> [--path dir]
   idefactory next [--change name] [--path dir]
+  idefactory run --change <name> [--until human-gate] [--max-tasks N] [--path dir]
+  idefactory attempt start <change> <taskId> [--path dir]
+  idefactory attempt transition <attemptId> <state> [--evidence json] [--path dir]
+  idefactory attempt show <attemptId> [--path dir]
+  idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory approve <id> --note "text" [--path dir]
   idefactory reject <id> --note "text" [--path dir]
   idefactory lockout --agent <id> --reviewer <id> --reason "text" [--path dir]
   idefactory halt [path]
   idefactory resume [path]
 
-Team memory is .factory/. The human authors OpenSpec changes.
-Backlog.md is the only execution queue.
+Team memory is .factory/. Work queue is .factory/work/.
+The human authors OpenSpec changes.
 `;
 
 export async function run(argv, io = {}) {
@@ -75,6 +84,27 @@ export async function run(argv, io = {}) {
         out(packet.text);
         return 0;
       }
+      case 'run': {
+        const result = runFactory(project, env, {
+          change: parsed.flags.change || parsed.rest[0],
+          until: parsed.flags.until || 'human-gate',
+          maxTasks: parsed.flags['max-tasks'],
+        });
+        out(result.text);
+        return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
+      }
+      case 'attempt':
+        return handleAttempt(project, parsed, out);
+      case 'complete': {
+        const [change, taskId] = parsed.rest;
+        const attemptId = parsed.flags.attempt;
+        if (!change || !taskId || !attemptId) {
+          throw new Error('Usage: idefactory complete <change> <taskId> --attempt <id>');
+        }
+        const result = completeWorkItem(project, change, taskId, attemptId, env);
+        out(`Completed ${change}/${taskId} attempt ${result.attempt.id}`);
+        return 0;
+      }
       case 'approve': {
         const file = approve(project, parsed.rest[0], parsed.flags.note || '');
         out(`Recorded approval ${file}`);
@@ -96,7 +126,7 @@ export async function run(argv, io = {}) {
       }
       case 'halt':
         fs.writeFileSync(path.join(project, 'HALT'), 'stop\n');
-        out('HALT is set. next and sync-tasks will refuse to run.');
+        out('HALT is set. Factory mutating commands will refuse to run.');
         return 0;
       case 'resume': {
         const haltFile = path.join(project, 'HALT');
@@ -113,6 +143,49 @@ export async function run(argv, io = {}) {
     err(error.message || String(error));
     return 1;
   }
+}
+
+function handleAttempt(project, parsed, out) {
+  if (halted(project) && parsed.rest[0] !== 'show') {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const sub = parsed.rest[0];
+  if (sub === 'start') {
+    const change = parsed.rest[1];
+    const taskId = parsed.rest[2];
+    if (!change || !taskId) throw new Error('Usage: idefactory attempt start <change> <taskId>');
+    const attempt = startAttempt(project, change, taskId);
+    out(JSON.stringify(attempt, null, 2));
+    return 0;
+  }
+  if (sub === 'transition') {
+    const attemptId = parsed.rest[1];
+    const state = parsed.rest[2];
+    if (!attemptId || !state) {
+      throw new Error('Usage: idefactory attempt transition <attemptId> <state> [--evidence json]');
+    }
+    let evidence = {};
+    if (parsed.flags.evidence) {
+      evidence = typeof parsed.flags.evidence === 'string'
+        ? JSON.parse(parsed.flags.evidence)
+        : parsed.flags.evidence;
+    }
+    const attempt = transitionAttempt(project, attemptId, state, {
+      evidence,
+      actorId: evidence.implementerId || evidence.reviewerId || null,
+    });
+    out(JSON.stringify(attempt, null, 2));
+    return 0;
+  }
+  if (sub === 'show') {
+    const attemptId = parsed.rest[1];
+    if (!attemptId) throw new Error('Usage: idefactory attempt show <attemptId>');
+    const attempt = getAttempt(project, attemptId);
+    if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
+    out(JSON.stringify(attempt, null, 2));
+    return 0;
+  }
+  throw new Error('Usage: idefactory attempt start|transition|show ...');
 }
 
 function reportDoctor(project, out, err) {

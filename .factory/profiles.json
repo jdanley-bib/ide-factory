@@ -1,0 +1,26 @@
+{
+  "docs": {
+    "checks": ["docs"],
+    "humanGate": false
+  },
+  "frontend-low": {
+    "checks": ["unit", "build"],
+    "humanGate": false
+  },
+  "frontend-interactive": {
+    "checks": ["unit", "build", "playwright", "accessibility"],
+    "humanGate": false
+  },
+  "backend-api": {
+    "checks": ["unit", "integration", "contract"],
+    "humanGate": false
+  },
+  "security-sensitive": {
+    "checks": ["unit", "build", "dependency-audit", "secret-scan", "sast", "threat-review"],
+    "humanGate": false
+  },
+  "release": {
+    "checks": ["unit", "build", "integration", "packaging"],
+    "humanGate": true
+  }
+}
