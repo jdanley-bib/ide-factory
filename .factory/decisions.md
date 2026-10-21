@@ -49,3 +49,13 @@ Authorized-by: factory lead aligning the machine queue to the human task and app
 Work-item: enforce-risk-gates-and-security-stage/2.2
 Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
 Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task tests approval security. The human task verifies only `node --test test/risk-gates.test.mjs`; the registry maps only unit to `npm test`; and the approved design explicitly forbids inventing scanner argv. Set completion checks to unit. Retain the security-sensitive route and independent security review, but do not forge build, dependency-audit, or threat-review evidence.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-3.1-unit-check
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-3.1-unit-check
+Authorized-at: 2026-10-21T20:42:32Z
+Authorized-by: factory lead aligning the machine queue to the human task and approved scope
+Work-item: enforce-risk-gates-and-security-stage/3.1
+Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
+Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task tests the security stage. The human task verifies with `node --test test/risk-gates.test.mjs test/orchestration.test.mjs`; the registry maps only unit to `npm test`; and the design forbids inventing scanner argv. Set completion checks to unit. Retain security-sensitive routing and independent security review; do not forge build, dependency-audit, or threat-review evidence.
