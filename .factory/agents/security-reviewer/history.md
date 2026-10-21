@@ -76,3 +76,13 @@ Verdict: ACCEPT
 Product: 11ccb4b
 Commands: `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `node --test test/risk-gates.test.mjs` exit 0 (27 pass).
 Threat review: Integration notes (11ccb4b) honestly record strict OpenSpec validate, `npm test` (146 pass), and `doctor: ok`; focused risk-gates test locks those three command strings. Diff is notes + engineer history + one assertion test only — no transactional finalization, lockout resolution, leases, CI, provenance, observability, or archive. Distinct from implementer. `evidence.security` left empty — no forged check evidence. Attempt state not transitioned.
+
+## 2026-10-21 make-finalization-recoverable/4.1
+
+Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
+Reviewer: bc-dbd9d8e9-f00e-5a5a-b0b8-a06ac81ec074
+Implementer: bc-a4e7d563-f44e-5b02-90bd-aae81e6abc87
+Verdict: ACCEPT
+Product: 33e2181c180ac8e1f5bc65bba02af33a7d66a335
+Commands: `node --test test/writer-lease.test.mjs` exit 0 (7 pass).
+Threat review: Manual review of schema v1 lease primitives in `src/lib/writer-lease.mjs` (task 4.1 only). Atomic acquire uses exclusive `mkdir` of `.factory/orchestration/writer.lease`; EEXIST fails closed with `LEASE_HELD` and does not run the contender mutation. Live-owner path never mutates factory state beyond bootstrap `mkdir` of orchestration. Release checks stored `leaseId` before `rmSync` and leaves a successor id untouched (tested for success and handled-error paths). Lease path is fixed under project `.factory/orchestration/writer.lease` with no caller-controlled segments; project root remains the existing CLI trust boundary (no realpath/symlink escape hardening in this slice — consistent with deferred 4.2 corrupt/HALT/takeover work). Read-only wrapper rejects non-read-only commands and neither acquires nor deletes a held lease. Heartbeat, expired rename takeover, corrupt-lease recovery error, HALT bypass, and CLI dispatch wiring are out of 4.1 scope. Residual: check-then-`rmSync` release has a TOCTOU window once rename-based stale takeover lands in 4.2 — flag for that task. Per decision `make-finalization-recoverable-4.1-unit-check`, `.factory/checks.json` stays unit-only; `evidence.security` left empty — no forged threat-review/dependency-audit records. Attempt state not transitioned; product not edited; not accepted as product reviewer; complete not run; not pushed.
