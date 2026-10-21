@@ -106,3 +106,10 @@ Attempt: 7b2f2844-928e-4eb7-8461-674bc47ed750
 Reviewer: bc-573b4a1c-04a3-5fb7-acfa-9b11d80786b9
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs test/orchestration.test.mjs` exit 0, 24 pass. CLI red present; clean-head unit pass at 760a29a; N then N+1 max-agent-steps; persist-before-emit; `--max-tasks 1` first request exit 2.
+
+## 2026-10-21 persist-bounded-run-sessions/2.2
+
+Attempt: c7fa68b1-97c2-49f7-8fab-9b7dbd1a3c7e
+Reviewer: bc-dc822b6e-2be9-5e5b-9cab-b51e43611b85
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 9 pass. CLI red present (exit 1, baselineDoneIds mismatch); clean-head unit pass at ba2aa77; baselineDoneIds at create excludes pre-done work; one in-session finalize then cap exits 0 with `max-tasks` and no request.
