@@ -92,3 +92,10 @@ Attempt: c25f30f4-06f7-4c2e-a65e-90261f9ca384
 Reviewer: bc-8fee5780-6f98-59d5-beed-7f231e6437d5
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 5 pass. CLI red present; clean-head unit pass at c156c80; create/resume scope only.
+
+## 2026-10-21 persist-bounded-run-sessions/1.3
+
+Attempt: 11409764-fcdc-4ef3-ae0e-22916ac1ef69
+Reviewer: bc-67734fc6-6f8d-5584-bd6b-c5c22e08b94e
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 7 pass. CLI red present; clean-head unit pass at 219d57e; unmatched-open and high-water fail closed; best-effort ledger remains.
