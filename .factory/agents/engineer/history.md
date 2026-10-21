@@ -196,3 +196,11 @@ Attempt: d450408a-cfe6-4852-b36f-4c1dc5e651e9
 Implementer: bc-9b81fa19-3ec7-5143-a288-69feae5e339d
 Red: `node --test test/run-session.test.mjs` exit 1, 1 fail (`--new-run baselines historical failure ids`: `--new-run` stopped with max-failures instead of orchestration request).
 Green: `node --test test/run-session.test.mjs` exit 0, 34 pass.
+
+## 2026-10-21 persist-bounded-run-sessions/5.1
+
+Attempt: 6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6
+Implementer: bc-ae8483c8-42ea-5aa9-8256-d83a75f8468b
+Red: missing `openspec/changes/persist-bounded-run-sessions/implementation-notes.md`; `node --test test/run-session.test.mjs` 34 pass / 1 fail; `node src/cli.mjs verify run … --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `npx openspec validate persist-bounded-run-sessions --strict` exit 0; `npm test` exit 0 (115 pass); `node src/cli.mjs doctor` exit 0; `node --test test/run-session.test.mjs` exit 0, 35 pass.
+Scope: integration notes only — no model start, risk gate, transactional complete, lockout, CI, provenance, review, or complete.

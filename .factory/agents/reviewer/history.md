@@ -184,3 +184,10 @@ Implementer: bc-9b81fa19-3ec7-5143-a288-69feae5e339d
 Reviewer: bc-cf816a83-3aff-566e-95fa-1dd20746067d
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 34 pass. New test baselines historical failures on `--new-run`; production limited to `baselineFailureIds` in validate/create/refreshFailures; red exclusion unchanged (`validSession` without field still validates).
+
+## 2026-10-21 persist-bounded-run-sessions/5.1
+
+Attempt: 6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6
+Reviewer: bc-5cd232d8-f88d-56c4-8f27-b001704b23f4
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 35 pass. Implementation notes record strict validate, npm test, and doctor (all exit 0); new test asserts those commands. CLI red present (issuer cli, kind unit, exitCode 1, passed false). No risk gate, security-stage, transactional complete, lockout, CI, provenance, or archive. Did not run `verify run`. Transitions verifying → awaiting-review → accepted.

@@ -1338,3 +1338,18 @@ test('resume flag higher than stored max-agent-steps budget does not raise the s
     cleanup(dir);
   }
 });
+
+test('implementation notes record strict validate, npm test, and doctor', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/persist-bounded-run-sessions/implementation-notes.md',
+  );
+  assert.ok(
+    fs.existsSync(notesPath),
+    `missing implementation notes: ${notesPath}`,
+  );
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  assert.match(notes, /npx openspec validate persist-bounded-run-sessions --strict/);
+  assert.match(notes, /npm test/);
+  assert.match(notes, /node src\/cli\.mjs doctor/);
+});
