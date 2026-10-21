@@ -2,10 +2,10 @@
   "id": "1185d1bd-ff1f-437d-a8af-065599d8d07a",
   "change": "enforce-risk-gates-and-security-stage",
   "taskId": "1.2",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-623988f2-aed4-5dd5-b3bd-dffc0338625c",
-  "reviewerId": null,
+  "reviewerId": "bc-92fb38bc-096b-521f-846d-6bb64f062043",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "9c2d8fbfd50a53a7406992437be60a72102f6226"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:15:13.578Z",
+        "finishedAt": "2026-10-21T20:16:14.122Z",
+        "logDigest": "sha256:8b47dd7149d8455900ac7bbf1f4f321e7a2c5a520878a2c276c1f49f9b34594c",
+        "artifactDigests": [],
+        "attemptId": "1185d1bd-ff1f-437d-a8af-065599d8d07a",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "bd25891644151f59ce474f8de45579a47f350476"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-92fb38bc-096b-521f-846d-6bb64f062043",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs exit 0, 8 pass. CLI red issuer cli exitCode 1 passed false at 9c2d8fb; clean-head unit pass at bd25891. Approve with full scope writes JSON+decisions; omitted scope and dirty non-run-state append nothing and write no token.",
+      "at": "2026-10-21T20:17:50.254Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-21T20:14:25.586Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T20:16:23.789Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T20:17:50.206Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:17:50.254Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T20:11:53.633Z",
-  "updatedAt": "2026-10-21T20:14:25.586Z"
+  "updatedAt": "2026-10-21T20:17:50.254Z"
 }

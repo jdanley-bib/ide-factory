@@ -198,3 +198,10 @@ Attempt: e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d
 Reviewer: bc-e391f52a-dc68-5ad2-b902-5ad00b473b1d
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs` exit 0, 5 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 5be8842); clean-head unit pass at 6bef0ac. Scoped-approval validator covers required fields, bad action, >24h expiry, self-approver; reject paths write no file. Transitions verifying → awaiting-review → accepted.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/1.2
+
+Attempt: 1185d1bd-ff1f-437d-a8af-065599d8d07a
+Reviewer: bc-92fb38bc-096b-521f-846d-6bb64f062043
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs` exit 0, 8 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 9c2d8fb); clean-head unit pass at bd25891. Approve with full scope writes JSON+decisions; omitted scope and dirty non-run-state append nothing and write no token. Transitions verifying → awaiting-review → accepted.
