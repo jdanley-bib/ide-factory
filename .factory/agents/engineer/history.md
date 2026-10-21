@@ -181,3 +181,11 @@ Implementer: bc-6845af6a-3531-51c0-a362-d67febcb6b98
 Red: `node --test test/install.test.mjs` exit 1, 1 fail (`init writes positive run-budget defaults in config`: missing defaultMaxAgentSteps); `node src/cli.mjs verify run e63c39e8-9c29-419e-af8e-769c141de8d5 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:e5744152b721e296a5662b006ef14a7cec92ab11ea29238804638b9a7f980946).
 Green: `node --test test/install.test.mjs` exit 0, 12 pass.
 Scope: config template run-budget defaults and install tests only — templates/factory/config.json gains defaultMaxAgentSteps/defaultMaxTasks/defaultMaxWallClockMs/defaultMaxFailures; re-init config bytes unchanged; repo `.factory/config.json` untouched; no skill/review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/4.2
+
+Attempt: 98c38e90-8523-4cfa-a251-fe216a73532e
+Implementer: bc-2ed30185-e5cb-59d0-8dc8-c48b94715190
+Red: `node --test test/run-session.test.mjs` exit 1, 1 fail (factory-run skills missing bounded stop names); `node src/cli.mjs verify run 98c38e90-8523-4cfa-a251-fe216a73532e --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:cbad5b1ae6ed16e903d65e835104dbad0939d4cbc64ae8ce4dd0d04356691a74).
+Green: `node --test test/run-session.test.mjs` exit 0, 33 pass; `npm test` exit 0, 113 pass.
+Scope: five factory-run SKILL copies + run-session skill test only — loop resumes without `--new-run`; human-only new session section; no review/complete/commit/push.

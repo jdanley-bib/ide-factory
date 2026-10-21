@@ -1168,6 +1168,47 @@ test('HALT with an existing session leaves session bytes unchanged and prints no
   }
 });
 
+const FACTORY_RUN_SKILL_COPIES = [
+  '.cursor/skills/factory-run/SKILL.md',
+  '.github/skills/factory-run/SKILL.md',
+  '.agents/skills/factory-run/SKILL.md',
+  '.claude/skills/factory-run/SKILL.md',
+  'templates/skills/factory-run/SKILL.md',
+];
+
+const BOUNDED_RUN_SKILL_STOPS = [
+  'max-agent-steps',
+  'max-tasks',
+  'wall-clock',
+  'max-failures',
+  'unchanged-state',
+];
+
+function factoryRunSkillLoopSection(text) {
+  const start = text.indexOf('## Loop');
+  assert.notEqual(start, -1, 'factory-run skill must have a Loop section');
+  const afterLoop = text.indexOf('\n## ', start + 1);
+  return afterLoop === -1 ? text.slice(start) : text.slice(start, afterLoop);
+}
+
+test('shipped factory-run skill copies name bounded stop reasons and resume without --new-run', () => {
+  for (const rel of FACTORY_RUN_SKILL_COPIES) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    for (const stop of BOUNDED_RUN_SKILL_STOPS) {
+      assert.match(text, new RegExp(stop), `${rel} must name stop ${stop}`);
+    }
+    const loop = factoryRunSkillLoopSection(text);
+    assert.doesNotMatch(loop, /--new-run/, `${rel} loop must not pass --new-run`);
+    if (text.includes('--new-run')) {
+      assert.match(
+        text,
+        /human[\s\S]*--new-run|--new-run[\s\S]*human|New session \(human only\)/i,
+        `${rel} must describe --new-run only as an explicit human action`,
+      );
+    }
+  }
+});
+
 test('resume flag higher than stored max-agent-steps budget does not raise the stored cap', async () => {
   const dir = tempProject();
   const storedCap = 2;
