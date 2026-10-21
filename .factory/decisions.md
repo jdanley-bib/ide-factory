@@ -79,3 +79,13 @@ Authorized-by: factory lead aligning the machine queue to the approved task
 Work-item: enforce-risk-gates-and-security-stage/4.1
 Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
 Note: The classifier inferred security checks because the task names the `security-sensitive` profile. The human task only edits the profile template and verifies `node --test test/install.test.mjs`; the shipped registry has no scanner argv. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts, without forged security evidence.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-4.2-unit-check
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-4.2-unit-check
+Authorized-at: 2026-10-21T21:22:52Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: enforce-risk-gates-and-security-stage/4.2
+Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
+Note: The classifier inferred security checks because the task documents `human-gate`. The human task only updates five factory-run skill copies and verifies them through `test/risk-gates.test.mjs`; the registry maps only unit. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts; do not invent scanner argv or forge evidence.
