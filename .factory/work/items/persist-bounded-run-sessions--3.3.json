@@ -2,7 +2,7 @@
   "id": "3.3",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a complete request does not increment agent steps, and that `HALT` exits with an error, leaves session files unchanged, and prints no request. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "3.2"
   ],
@@ -27,6 +27,6 @@
       "3.2"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T17:34:41.267Z"
+  "attemptId": "d21c6018-7133-4b58-a5f2-3a53c613c50d",
+  "updatedAt": "2026-10-21T18:44:00.018Z"
 }

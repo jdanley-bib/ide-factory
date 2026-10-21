@@ -197,6 +197,24 @@ export function runFactory(project, env, {
     }
 
     if (attempt.state === 'accepted') {
+      const fingerprint = {
+        action: 'complete',
+        role: 'scribe',
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      };
+      if (fingerprintsEqual(session.lastRequestFingerprint, fingerprint)) {
+        session = closeRunSession(project, session, 'unchanged-state');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (unchanged-state) for ${change}.\n`,
+          stopReason: 'unchanged-state',
+          request: null,
+        };
+      }
+      session = persistCompleteBeforeRequest(project, session, fingerprint);
       return {
         code: EXIT_NEEDS_AGENT,
         text: renderRequest({
@@ -313,6 +331,14 @@ function persistAgentStepBeforeRequest(project, session, fingerprint) {
     agentSteps: written.agentSteps,
   });
   return written;
+}
+
+function persistCompleteBeforeRequest(project, session, fingerprint) {
+  return writeRunSession(project, {
+    ...session,
+    lastObservedAt: new Date().toISOString(),
+    lastRequestFingerprint: fingerprint,
+  });
 }
 
 function closeRunSession(project, session, stopReason, extra = {}) {

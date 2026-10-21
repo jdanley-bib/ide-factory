@@ -157,3 +157,11 @@ Implementer: bc-4e3daf72-7186-5143-ba6c-b11288bcacad
 Red: `node --test test/run-session.test.mjs` exit 1, 4 fail (max-tokens at ceiling, host-usage-unavailable, config+env ceiling, invalid host/ceiling); `node src/cli.mjs verify run 30e9c0f2-5077-43b7-9143-ac9eff1d5874 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 28 pass.
 Scope: optional `--max-tokens`/`--max-cost` or config ceilings; compare only CLI/env-exposed host metrics; missing metric for configured ceiling → exit 1 `host-usage-unavailable`; at ceiling → exit 0 `max-tokens`/`max-cost` with stored observed value; no ceiling → omit host fields; positive ceilings and non-negative exposed metrics validated fail-closed — no HALT/complete/review/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/3.3
+
+Attempt: d21c6018-7133-4b58-a5f2-3a53c613c50d
+Implementer: bc-f3b5c95b-9398-5acb-99cd-3c40bc7f48a5
+Red: `node --test test/run-session.test.mjs` exit 1, 2 fail (complete fingerprint not persisted; repeat complete not unchanged-state); HALT cases already green; `node src/cli.mjs verify run d21c6018-7133-4b58-a5f2-3a53c613c50d --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 32 pass.
+Scope: complete request persists scribe fingerprint without incrementing agentSteps; repeat complete → unchanged-state; HALT before create and on existing session (regression tests only) — no skill/default/review/complete/commit/push.

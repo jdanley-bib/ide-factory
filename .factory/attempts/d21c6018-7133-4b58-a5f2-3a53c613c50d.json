@@ -1,0 +1,64 @@
+{
+  "id": "d21c6018-7133-4b58-a5f2-3a53c613c50d",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "3.3",
+  "state": "red-confirmed",
+  "implementerRole": "engineer",
+  "implementerId": "bc-f3b5c95b-9398-5acb-99cd-3c40bc7f48a5",
+  "reviewerId": null,
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T18:46:51.470Z",
+      "finishedAt": "2026-10-21T18:47:49.067Z",
+      "logDigest": "sha256:5d0300761cd522851acb51e4eb98c650bb39f4aa6823624b7db2b9082808ad4c",
+      "artifactDigests": [],
+      "attemptId": "d21c6018-7133-4b58-a5f2-3a53c613c50d",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "d3ad0df53d10fcdcfe7a2fd999ab265d6dae0c73"
+    },
+    "verification": [],
+    "security": [],
+    "review": null,
+    "changedFiles": [
+      "test/run-session.test.mjs",
+      "src/lib/orchestrate.mjs"
+    ],
+    "baseRev": "d3ad0df53d10fcdcfe7a2fd999ab265d6dae0c73"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T18:44:00.018Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T18:44:00.019Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T18:45:32.539Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T18:47:51.494Z",
+      "state": "red-confirmed"
+    }
+  ],
+  "createdAt": "2026-10-21T18:44:00.018Z",
+  "updatedAt": "2026-10-21T18:47:51.494Z"
+}

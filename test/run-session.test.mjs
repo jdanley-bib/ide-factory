@@ -153,6 +153,107 @@ function advanceAttemptState(dir, attemptId, state) {
   fs.writeFileSync(file, `${JSON.stringify(attempt, null, 2)}\n`);
 }
 
+function git(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    shell: false,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'idefactory-test',
+      GIT_AUTHOR_EMAIL: 'test@example.com',
+      GIT_COMMITTER_NAME: 'idefactory-test',
+      GIT_COMMITTER_EMAIL: 'test@example.com',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
+function ensureFactoryGitignore(dir) {
+  const file = path.join(dir, '.gitignore');
+  const lines = [
+    '.factory/attempts/*',
+    '!.factory/attempts/.gitkeep',
+    '.factory/work/',
+    '.factory/ledger.jsonl',
+    '.factory/orchestration/*',
+    '!.factory/orchestration/.gitkeep',
+  ];
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const extras = lines.filter((line) => !existing.split('\n').includes(line));
+  if (extras.length > 0) {
+    fs.writeFileSync(file, `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${extras.join('\n')}\n`);
+  }
+}
+
+function ensureCleanGitCommit(dir) {
+  if (!fs.existsSync(path.join(dir, '.git'))) {
+    git(dir, ['init']);
+    git(dir, ['config', 'user.email', 'test@example.com']);
+    git(dir, ['config', 'user.name', 'idefactory-test']);
+  }
+  ensureFactoryGitignore(dir);
+  git(dir, ['add', '-A']);
+  const porcelain = spawnSync('git', ['status', '--porcelain'], {
+    cwd: dir,
+    encoding: 'utf8',
+    shell: false,
+  });
+  assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+  if (porcelain.stdout.trim().length > 0) {
+    git(dir, ['commit', '-m', 'checkpoint']);
+  }
+}
+
+async function recordRed(dir, attemptId) {
+  writeCheckRegistry(dir, { unit: 1 });
+  const result = await idefactory(dir, [
+    'verify', 'run', attemptId, '--check', 'unit', '--red',
+  ]);
+  assert.equal(result.code, 0, result.err + result.out);
+  assert.ok(getAttempt(dir, attemptId).evidence.red);
+}
+
+async function recordPassingChecks(dir, attemptId) {
+  writeCheckRegistry(dir, { unit: 0 });
+  ensureCleanGitCommit(dir);
+  const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit']);
+  assert.equal(result.code, 0, result.err + result.out);
+  assert.equal(
+    getAttempt(dir, attemptId).evidence.verification.find((e) => e.kind === 'unit')?.passed,
+    true,
+  );
+}
+
+async function acceptDemoAttempt(dir, attemptId) {
+  await recordRed(dir, attemptId);
+  const current = getAttempt(dir, attemptId);
+  if (current.state === 'assigned') {
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'implementing',
+      '--evidence', JSON.stringify({ implementerId: 'engineer-1' }),
+    ])).code, 0);
+  }
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'red-confirmed',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
+  await recordPassingChecks(dir, attemptId);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'verifying',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'awaiting-review',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'accepted',
+    '--evidence', JSON.stringify({ reviewerId: 'reviewer-1', verdict: 'ACCEPT' }),
+  ])).code, 0);
+}
+
 test('first idefactory run for a change writes .factory/orchestration/runs/<run-id>.json', async () => {
   const dir = tempProject();
   try {
@@ -939,6 +1040,129 @@ test('nonpositive token ceiling or negative host tokens fail closed with invalid
     ]) {
       assertInvalidBudgetRun(dir, args, label);
     }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('accepted attempt emits complete request without incrementing agent steps', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    writeCheckRegistry(dir, { unit: 1 });
+
+    const first = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+    assert.equal(firstRequest.action, 'agent-step');
+
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', firstRequest.attemptId, 'implementing',
+      '--evidence', JSON.stringify({ implementerId: 'engineer-1' }),
+    ])).code, 0);
+
+    const second = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(second.status, 2, second.stderr + second.stdout);
+    assert.equal(parseOrchestrationJson(second.stdout).action, 'agent-step');
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const beforeComplete = readRunSession(files[0]);
+    assert.equal(beforeComplete.agentSteps, 2);
+
+    await acceptDemoAttempt(dir, firstRequest.attemptId);
+
+    const completeRun = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(completeRun.status, 2, completeRun.stderr + completeRun.stdout);
+    assert.match(completeRun.stdout, /# Orchestration request/);
+    const completeRequest = parseOrchestrationJson(completeRun.stdout);
+    assert.equal(completeRequest.action, 'complete');
+    assert.equal(completeRequest.role, 'scribe');
+
+    const afterComplete = readRunSession(files[0]);
+    assert.equal(afterComplete.agentSteps, 2, 'complete request must not increment agent steps');
+    assert.deepEqual(afterComplete.lastRequestFingerprint, {
+      action: 'complete',
+      role: 'scribe',
+      taskId: firstRequest.taskId,
+      attemptId: firstRequest.attemptId,
+      attemptState: 'accepted',
+      workItemStatus: 'in_progress',
+    });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('repeat complete request with unchanged attempt exits 0 unchanged-state without incrementing steps', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    writeCheckRegistry(dir, { unit: 1 });
+
+    const first = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const attemptId = parseOrchestrationJson(first.stdout).attemptId;
+    await acceptDemoAttempt(dir, attemptId);
+
+    const completeRun = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(completeRun.status, 2, completeRun.stderr + completeRun.stdout);
+    assert.equal(parseOrchestrationJson(completeRun.stdout).action, 'complete');
+
+    const files = listRunSessionFiles(dir);
+    const afterFirstComplete = readRunSession(files[0]);
+    assert.equal(afterFirstComplete.agentSteps, 1);
+
+    const repeat = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(repeat.status, 0, repeat.stderr + repeat.stdout);
+    assert.match(`${repeat.stderr}\n${repeat.stdout}`, /unchanged-state/);
+    assert.doesNotMatch(`${repeat.stderr}\n${repeat.stdout}`, /# Orchestration request/);
+
+    const afterRepeat = readRunSession(files[0]);
+    assert.equal(afterRepeat.agentSteps, 1);
+    assert.equal(afterRepeat.stopReason, 'unchanged-state');
+    assert.equal(afterRepeat.status, 'closed');
+    assert.deepEqual(afterRepeat.lastRequestFingerprint, afterFirstComplete.lastRequestFingerprint);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('HALT before first run creates no session and prints no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    fs.writeFileSync(path.join(dir, 'HALT'), 'stop\n');
+    assert.deepEqual(listRunSessionFiles(dir), []);
+
+    const result = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(result.status, 1, result.stderr + result.stdout);
+    assert.match(`${result.stderr}\n${result.stdout}`, /HALT/);
+    assert.doesNotMatch(`${result.stderr}\n${result.stdout}`, /# Orchestration request/);
+    assert.deepEqual(listRunSessionFiles(dir), []);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('HALT with an existing session leaves session bytes unchanged and prints no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const originalBytes = fs.readFileSync(files[0], 'utf8');
+
+    fs.writeFileSync(path.join(dir, 'HALT'), 'stop\n');
+    const halted = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(halted.status, 1, halted.stderr + halted.stdout);
+    assert.match(`${halted.stderr}\n${halted.stdout}`, /HALT/);
+    assert.doesNotMatch(`${halted.stderr}\n${halted.stdout}`, /# Orchestration request/);
+    assert.equal(fs.readFileSync(files[0], 'utf8'), originalBytes);
+    assert.equal(listRunSessionFiles(dir).length, 1);
   } finally {
     cleanup(dir);
   }
