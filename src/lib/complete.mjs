@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
-import { humanGateAllows } from './risk-gates.mjs';
+import {
+  assertPassingCliSecurityEvidence,
+  humanGateAllows,
+} from './risk-gates.mjs';
 import {
   commandDigest,
   resolveGitBinding,
@@ -57,6 +60,7 @@ export function completeWorkItem(project, change, taskId, attemptId, env = {}) {
 
   const requiredChecks = requiredChecksFor(project, item);
   assertChecksPassed(project, attempt, requiredChecks);
+  assertPassingCliSecurityEvidence(project, attempt, item);
 
   try {
     updateWorkItem(project, change, taskId, { status: 'done' });

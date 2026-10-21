@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText, writeText } from './layout.mjs';
-import { resolveGitBinding } from './verification-evidence.mjs';
+import {
+  commandDigest,
+  isSecurityPatternedCheck,
+  resolveGitBinding,
+  validateCheckRecord,
+} from './verification-evidence.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const DEFAULT_POLICY_VERSION = 1;
@@ -242,4 +247,136 @@ function resolveNowMs(now) {
   if (now instanceof Date) return now.getTime();
   if (typeof now === 'number' && Number.isFinite(now)) return now;
   return Date.now();
+}
+
+export function requiresSecurityStage(item) {
+  // verificationProfile alone does not trigger the security stage.
+  if (!item?.factory) return false;
+  if (item.factory.securityProfile === 'security-sensitive') return true;
+  return (item.factory.checks || []).some((check) => isSecurityPatternedCheck(check));
+}
+
+/**
+ * Required CLI security evidence kinds for security-stage work.
+ * When the profile is security-sensitive and no check is security-patterned,
+ * the required kind is threat-review.
+ */
+export function requiredSecurityKinds(item) {
+  if (!requiresSecurityStage(item)) return [];
+  const patterned = [...new Set(
+    (item.factory?.checks || []).filter((check) => isSecurityPatternedCheck(check)),
+  )];
+  if (patterned.length > 0) return patterned;
+  return ['threat-review'];
+}
+
+/**
+ * Fail closed unless each required kind has a passing CLI security record
+ * bound to this attempt and the current clean HEAD. Red and unverified
+ * caller-written rows do not count.
+ */
+export function assertPassingCliSecurityEvidence(project, attempt, item) {
+  const required = requiredSecurityKinds(item);
+  if (required.length === 0) return;
+
+  const registryPath = path.join(project, '.factory', 'checks.json');
+  if (!fs.existsSync(registryPath)) {
+    throw new Error('security evidence requires check registry: .factory/checks.json');
+  }
+  let rawRegistry;
+  try {
+    rawRegistry = JSON.parse(readText(registryPath));
+  } catch {
+    throw new Error('invalid check registry JSON');
+  }
+  const rawChecks = rawRegistry?.checks && typeof rawRegistry.checks === 'object'
+    && !Array.isArray(rawRegistry.checks)
+    ? rawRegistry.checks
+    : {};
+
+  const { sourceRevision: headSha, worktreeClean } = resolveGitBinding(project);
+  if (!worktreeClean || !headSha) {
+    throw new Error('security evidence requires a clean git worktree at the current HEAD');
+  }
+
+  const security = attempt.evidence?.security || [];
+  const red = attempt.evidence?.red;
+
+  for (const kind of required) {
+    const rawEntry = rawChecks[kind];
+    if (rawEntry === undefined) {
+      throw new Error(`Missing passing CLI security evidence for: ${kind}`);
+    }
+    if (!Array.isArray(rawEntry?.argv) || rawEntry.argv.length === 0) {
+      throw new Error(`Security check kind has no argv mapping: ${kind}`);
+    }
+    if (!rawEntry.argv.every((part) => typeof part === 'string' && part.length > 0)) {
+      throw new Error(`Security check kind has no argv mapping: ${kind}`);
+    }
+    const registryDigest = commandDigest(rawEntry.argv);
+
+    const candidates = security.filter((entry) => entry.kind === kind || entry.check === kind);
+    let passed = false;
+    let failureReason = null;
+    for (const record of candidates) {
+      if (red && recordsMatch(red, record)) {
+        failureReason = failureReason || `red result is not security evidence for: ${kind}`;
+        continue;
+      }
+      try {
+        validateCheckRecord(record);
+      } catch {
+        continue;
+      }
+      const reason = cliSecurityFailureReason(record, {
+        attemptId: attempt.id,
+        registryDigest,
+        headSha,
+      });
+      if (!reason) {
+        passed = true;
+        break;
+      }
+      failureReason = failureReason || reason;
+    }
+    if (!passed) {
+      throw new Error(failureReason || `Missing passing CLI security evidence for: ${kind}`);
+    }
+  }
+}
+
+function cliSecurityFailureReason(record, { attemptId, registryDigest, headSha }) {
+  if (record.issuer !== 'cli') {
+    return 'security evidence requires issuer cli';
+  }
+  if (record.exitCode !== 0) {
+    return `security attestation exit code must be 0 for: ${record.kind || 'check'}`;
+  }
+  if (record.timedOut !== false) {
+    return 'security attestation must not be timedOut';
+  }
+  if (record.passed !== true) {
+    return `security attestation must be a pass for: ${record.kind || 'check'}`;
+  }
+  if (record.commandDigest !== registryDigest) {
+    return 'security attestation commandDigest does not match current registry argv';
+  }
+  if (record.attemptId !== attemptId) {
+    return 'security attestation attemptId does not match attempt';
+  }
+  if (record.sourceRevision !== headSha) {
+    return 'security attestation sourceRevision does not match current clean HEAD';
+  }
+  return null;
+}
+
+function recordsMatch(a, b) {
+  if (!a || !b) return false;
+  return a.kind === b.kind
+    && a.attemptId === b.attemptId
+    && a.commandDigest === b.commandDigest
+    && a.exitCode === b.exitCode
+    && a.logDigest === b.logDigest
+    && a.startedAt === b.startedAt
+    && a.finishedAt === b.finishedAt;
 }

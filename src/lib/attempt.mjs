@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ledger, writeText } from './layout.mjs';
+import {
+  assertPassingCliSecurityEvidence,
+  requiresSecurityStage,
+} from './risk-gates.mjs';
 import { getWorkItem, updateWorkItem } from './work.mjs';
 
 export const ATTEMPT_STATES = [
@@ -123,14 +127,6 @@ function rejectCallerSuppliedCheckResults(evidence) {
   }
 }
 
-function requiresSecurityStage(item) {
-  // verificationProfile alone does not trigger the security stage.
-  if (!item?.factory) return false;
-  if (item.factory.securityProfile === 'security-sensitive') return true;
-  return (item.factory.checks || []).some((check) =>
-    /security|sast|threat|secret|audit/i.test(String(check)));
-}
-
 function validateEvidence(project, attempt, nextState, evidence) {
   if (nextState === 'red-confirmed') {
     const storedRed = attempt.evidence?.red;
@@ -147,6 +143,10 @@ function validateEvidence(project, attempt, nextState, evidence) {
         'security-sensitive work cannot transition verifying → awaiting-review; remain in verifying and use security-checking',
       );
     }
+  }
+  if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    assertPassingCliSecurityEvidence(project, attempt, item);
   }
   if (nextState === 'accepted') {
     if (!evidence.reviewerId && !attempt.reviewerId) {

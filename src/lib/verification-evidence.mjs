@@ -26,6 +26,11 @@ export function commandDigest(argv) {
   return `sha256:${hex}`;
 }
 
+/** Security-patterned check kinds (threat-review, sast, secret, audit, …). */
+export function isSecurityPatternedCheck(check) {
+  return /security|sast|threat|secret|audit/i.test(String(check));
+}
+
 /**
  * Canonical JSON for attestation signatures: UTF-8, recursively sorted object
  * keys, no insignificant whitespace. Arrays keep order. Strings and numbers
@@ -220,6 +225,8 @@ export async function verifyRun(project, attemptId, options = {}) {
     if (exitCode !== 0) {
       attempt.evidence.red = record;
     }
+  } else if (isSecurityPatternedCheck(kind)) {
+    attempt.evidence.security = [...(attempt.evidence.security || []), record];
   } else {
     attempt.evidence.verification = [...(attempt.evidence.verification || []), record];
   }

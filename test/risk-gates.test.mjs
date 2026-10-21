@@ -776,3 +776,285 @@ test('security-sensitive verifying still requests security-reviewer on next run'
     cleanup(dir);
   }
 });
+
+async function advanceToSecurityChecking(dir, attemptId) {
+  await advanceToVerifying(dir, attemptId);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'security-checking',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
+  assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+}
+
+async function recordPassingSecurityCheck(dir, attemptId, kind = 'threat-review') {
+  writeCheckRegistry(dir, { unit: 0, [kind]: 0 });
+  ensureFactoryGitignore(dir);
+  ensureCleanGitCommit(dir);
+  const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', kind]);
+  assert.equal(result.code, 0, result.err + result.out);
+  return getAttempt(dir, attemptId);
+}
+
+test('security-checking to awaiting-review rejected without passing CLI security record', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const shipped = JSON.parse(
+      fs.readFileSync(path.join(dir, '.factory', 'checks.json'), 'utf8'),
+    );
+    assert.equal(shipped.checks.unit !== undefined, true);
+    assert.equal(shipped.checks['threat-review'], undefined);
+
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    const beforeRaw = fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    );
+    const bad = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(bad.code, 0, bad.err + bad.out);
+    assert.match(bad.err, /security|threat-review|evidence/i);
+    assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+    assert.equal(
+      fs.readFileSync(path.join(dir, '.factory', 'attempts', `${attemptId}.json`), 'utf8'),
+      beforeRaw,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('passing CLI security record bound to attempt and clean revision allows awaiting-review', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    const afterVerify = await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
+    const security = afterVerify.evidence.security || [];
+    assert.equal(security.length, 1);
+    assert.equal(security[0].kind, 'threat-review');
+    assert.equal(security[0].issuer, 'cli');
+    assert.equal(security[0].exitCode, 0);
+    assert.equal(security[0].attemptId, attemptId);
+    assert.equal(security[0].passed, true);
+    assert.equal((afterVerify.evidence.verification || []).some((r) => r.kind === 'threat-review'), false);
+
+    const ok = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.equal(ok.code, 0, ok.err + ok.out);
+    assert.equal(getAttempt(dir, attemptId).state, 'awaiting-review');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('recorded red security result does not authorize awaiting-review', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    writeCheckRegistry(dir, { unit: 0, 'threat-review': 1 });
+    ensureFactoryGitignore(dir);
+    ensureCleanGitCommit(dir);
+    const red = await idefactory(dir, [
+      'verify', 'run', attemptId, '--check', 'threat-review', '--red',
+    ]);
+    assert.equal(red.code, 0, red.err + red.out);
+    const attempt = getAttempt(dir, attemptId);
+    assert.ok(attempt.evidence.red);
+    assert.equal(attempt.evidence.red.kind, 'threat-review');
+    assert.equal(attempt.evidence.red.exitCode, 1);
+    assert.equal(attempt.evidence.red.passed, false);
+    assert.equal((attempt.evidence.security || []).length, 0);
+
+    const beforeRaw = fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    );
+    const bad = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(bad.code, 0, bad.err + bad.out);
+    assert.match(bad.err, /security|threat-review|evidence|red/i);
+    assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+    assert.equal(
+      fs.readFileSync(path.join(dir, '.factory', 'attempts', `${attemptId}.json`), 'utf8'),
+      beforeRaw,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('caller-supplied security payload is rejected on security-checking transition', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    const beforeRaw = fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    );
+    const bad = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({
+        security: [{
+          kind: 'threat-review',
+          issuer: 'cli',
+          exitCode: 0,
+          passed: true,
+          attemptId,
+        }],
+      }),
+    ]);
+    assert.notEqual(bad.code, 0, bad.err + bad.out);
+    assert.match(bad.err, /caller-supplied|security|check result/i);
+    assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+    assert.equal(
+      fs.readFileSync(path.join(dir, '.factory', 'attempts', `${attemptId}.json`), 'utf8'),
+      beforeRaw,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('default required security kind is threat-review when no security-patterned check', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const item = getWorkItem(dir, 'demo', '3.2');
+    assert.equal(item.factory?.securityProfile, 'security-sensitive');
+    assert.equal(
+      (item.factory?.checks || []).some((c) => /security|sast|threat|secret|audit/i.test(c)),
+      false,
+    );
+
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    // A temporary non-threat security-kind pass must not satisfy the default threat-review requirement.
+    writeCheckRegistry(dir, { unit: 0, sast: 0 });
+    ensureFactoryGitignore(dir);
+    ensureCleanGitCommit(dir);
+    const sast = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'sast']);
+    assert.equal(sast.code, 0, sast.err + sast.out);
+    assert.equal(getAttempt(dir, attemptId).evidence.security?.[0]?.kind, 'sast');
+
+    const stillBlocked = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(stillBlocked.code, 0, stillBlocked.err + stillBlocked.out);
+    assert.match(stillBlocked.err, /threat-review/i);
+    assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+
+    await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
+    const ok = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.equal(ok.code, 0, ok.err + ok.out);
+    assert.equal(getAttempt(dir, attemptId).state, 'awaiting-review');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses security-required work lacking CLI security evidence', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.2',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    patchProfiles(dir, (profiles) => {
+      profiles['frontend-low'].humanGate = false;
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+    await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ])).code, 0);
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'accepted',
+      '--evidence', JSON.stringify({ reviewerId: APPROVER, verdict: 'ACCEPT' }),
+    ])).code, 0);
+
+    const attemptPath = path.join(dir, '.factory', 'attempts', `${attemptId}.json`);
+    const accepted = JSON.parse(fs.readFileSync(attemptPath, 'utf8'));
+    accepted.evidence.security = [];
+    fs.writeFileSync(attemptPath, `${JSON.stringify(accepted, null, 2)}\n`);
+
+    // Re-bind unit at the current clean HEAD so complete fails on missing security evidence,
+    // not a stale verification attestation.
+    writeCheckRegistry(dir, { unit: 0, 'threat-review': 0 });
+    ensureFactoryGitignore(dir);
+    ensureCleanGitCommit(dir);
+    const unit = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit']);
+    assert.equal(unit.code, 0, unit.err + unit.out);
+    assert.equal((getAttempt(dir, attemptId).evidence.security || []).length, 0);
+
+    const done = await idefactory(dir, ['complete', 'demo', '3.2', '--attempt', attemptId]);
+    assert.notEqual(done.code, 0, done.err + done.out);
+    assert.match(done.err, /security|threat-review|evidence/i);
+    assert.equal(getWorkItem(dir, 'demo', '3.2').status, 'in_progress');
+    assert.notEqual(getAttempt(dir, attemptId).state, 'finalized');
+  } finally {
+    cleanup(dir);
+  }
+});

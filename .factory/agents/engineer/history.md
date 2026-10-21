@@ -244,3 +244,11 @@ Implementer: bc-a95794d1-0bea-5a09-b8af-429f21713938
 Red: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 1 (3 failures: security-sensitive verifying→awaiting-review still allowed); `node src/cli.mjs verify run 934b44b7-55ff-47e4-8ddf-9313707ab641 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0, 38 pass.
 Scope: mandatory security stage only — security-sensitive (securityProfile or security-patterned checks) rejects verifying→awaiting-review and stays verifying; verificationProfile alone does not require the stage; next run still requests security-reviewer. No security evidence gate (3.2), scanner argv, checkbox, review, complete, or push.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.2
+
+Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
+Implementer: bc-ce850c12-8e69-57a8-a2f1-f6cdd422ec79
+Red: `node --test test/risk-gates.test.mjs` exit 1 (5 failures: missing CLI security gate / security bucket / complete skip); `node src/cli.mjs verify run 30dbe229-266c-4a72-922e-ceebdc47f490 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/risk-gates.test.mjs` exit 0, 25 pass; with orchestration 44 pass.
+Scope: security-checking→awaiting-review requires passing CLI security record bound to attempt/clean HEAD; default kind threat-review when no security-patterned check; red and caller-supplied security payloads rejected; verify routes security-patterned kinds to evidence.security; complete refuses security-required work lacking that evidence. No shipped scanner argv, checkbox, review, complete, or push.
