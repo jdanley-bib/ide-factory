@@ -22,6 +22,20 @@ export const BUILTIN_RUN_BUDGETS = {
   maxFailures: 5,
 };
 
+/** Stop reasons that stay exhausted until `--new-run` (design.md). */
+export const STICKY_STOP_REASONS = new Set([
+  'max-agent-steps',
+  'max-tasks',
+  'wall-clock',
+  'max-failures',
+  'unchanged-state',
+  'max-tokens',
+  'max-cost',
+  'invalid-budget',
+  'invalid-session',
+  'host-usage-unavailable',
+]);
+
 export class InvalidBudgetError extends Error {
   constructor(message = 'invalid-budget') {
     super(message);
@@ -173,6 +187,37 @@ export function latestRunSession(project, change) {
  * @param {{ maxTasks?: number|string, maxAgentSteps?: number|string }} [flags]
  * @returns {object}
  */
+/**
+ * On resume, CLI flags may tighten stored budgets but never raise them.
+ *
+ * @param {object} storedBudgets
+ * @param {{ maxTasks?: number|string, maxAgentSteps?: number|string }} [flags]
+ * @param {object} [config]
+ * @returns {object}
+ */
+export function mergeResumeBudgets(storedBudgets, { maxTasks, maxAgentSteps } = {}, config = {}) {
+  const merged = { ...storedBudgets };
+  if (maxAgentSteps !== undefined && maxAgentSteps !== '') {
+    const requested = resolveCliBudget(
+      maxAgentSteps,
+      undefined,
+      merged.maxAgentSteps,
+      'max-agent-steps',
+    );
+    merged.maxAgentSteps = Math.min(merged.maxAgentSteps, requested);
+  }
+  if (maxTasks !== undefined && maxTasks !== '') {
+    const requested = resolveCliBudget(
+      maxTasks,
+      undefined,
+      merged.maxTasks,
+      'max-tasks',
+    );
+    merged.maxTasks = Math.min(merged.maxTasks, requested);
+  }
+  return merged;
+}
+
 export function resolveNewSessionBudgets(config = {}, { maxTasks, maxAgentSteps } = {}) {
   const run = config.run || {};
   return {
@@ -452,21 +497,36 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
  * agent-step high-water above the file refuses resume (file left unchanged).
  *
  * @param {string} project
- * @param {{ change: string, budgets: object, now?: Date }} options
+ * @param {{ change: string, budgets: object, now?: Date, newRun?: boolean, resumeFlags?: object, config?: object }} options
  * @returns {object}
  */
-export function openOrResumeRunSession(project, { change, budgets, now = new Date() } = {}) {
+export function openOrResumeRunSession(project, {
+  change,
+  budgets,
+  now = new Date(),
+  newRun = false,
+  resumeFlags = {},
+  config = {},
+} = {}) {
   if (!change) throw new Error('openOrResumeRunSession requires change');
   const existing = latestRunSession(project, change);
+  if (newRun && existing) {
+    return createRunSession(project, { change, budgets, now });
+  }
   if (existing) {
+    if (existing.status === 'closed' && STICKY_STOP_REASONS.has(existing.stopReason)) {
+      return existing;
+    }
     const highWater = ledgerAgentStepHighWater(project, existing.runId);
     if (highWater > existing.agentSteps) {
       throw new Error(
         `invalid-session: ledger agent-step high-water ${highWater} exceeds session file agentSteps ${existing.agentSteps}`,
       );
     }
+    const mergedBudgets = mergeResumeBudgets(existing.budgets, resumeFlags, config);
     return writeRunSession(project, {
       ...existing,
+      budgets: mergedBudgets,
       lastObservedAt: now.toISOString(),
     });
   }

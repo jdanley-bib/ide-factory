@@ -9,6 +9,7 @@ import {
   refreshCompletedTasks,
   refreshFailures,
   resolveNewSessionBudgets,
+  STICKY_STOP_REASONS,
   writeRunSession,
 } from './run-session.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
@@ -17,25 +18,12 @@ export const EXIT_OK = 0;
 export const EXIT_ERROR = 1;
 export const EXIT_NEEDS_AGENT = 2;
 
-/** Sticky stop reasons that stay exhausted until --new-run (design.md). */
-const STICKY_STOP_REASONS = new Set([
-  'max-agent-steps',
-  'max-tasks',
-  'wall-clock',
-  'max-failures',
-  'unchanged-state',
-  'max-tokens',
-  'max-cost',
-  'invalid-budget',
-  'invalid-session',
-  'host-usage-unavailable',
-]);
-
 export function runFactory(project, env, {
   change,
   until = 'human-gate',
   maxTasks,
   maxAgentSteps,
+  newRun = false,
 } = {}) {
   if (halted(project)) {
     const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
@@ -67,7 +55,14 @@ export function runFactory(project, env, {
     throw err;
   }
   const now = new Date();
-  let session = openOrResumeRunSession(project, { change, budgets: sessionBudgets, now });
+  let session = openOrResumeRunSession(project, {
+    change,
+    budgets: sessionBudgets,
+    now,
+    newRun,
+    resumeFlags: { maxTasks, maxAgentSteps },
+    config,
+  });
   if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
     return {
       code: EXIT_OK,
@@ -143,7 +138,7 @@ export function runFactory(project, env, {
     }
 
     const inProgress = listWorkItems(project, change).find((item) => item.status === 'in_progress');
-    const item = inProgress || selectReady(project, change);
+    let item = inProgress || selectReady(project, change);
     if (!item) {
       return {
         code: EXIT_ERROR,
@@ -157,6 +152,7 @@ export function runFactory(project, env, {
       const role = primaryRole(item);
       const modelProfile = item.factory?.modelProfile || profileForRole(config, role);
       attempt = startAttempt(project, change, item.id, { role, modelProfile });
+      item = getWorkItem(project, change, item.id);
     }
 
     if (attempt.state === 'rejected') {
@@ -209,6 +205,23 @@ export function runFactory(project, env, {
         checks: item.factory?.checks || [],
         verificationProfile: item.factory?.verificationProfile,
       };
+      const fingerprint = {
+        action: 'agent-step',
+        role: stage.role,
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      };
+      if (fingerprintsEqual(session.lastRequestFingerprint, fingerprint)) {
+        session = closeRunSession(project, session, 'unchanged-state');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (unchanged-state) for ${change}.\n`,
+          stopReason: 'unchanged-state',
+          request: null,
+        };
+      }
       session = persistAgentStepBeforeRequest(project, session, {
         action: 'agent-step',
         role: stage.role,
@@ -242,6 +255,16 @@ export function runFactory(project, env, {
     text: `Stopped after max-tasks=${limit} for ${change}.\n`,
     stopReason: 'max-tasks',
   };
+}
+
+function fingerprintsEqual(a, b) {
+  if (!a || !b) return false;
+  return a.action === b.action
+    && a.role === b.role
+    && a.taskId === b.taskId
+    && a.attemptId === b.attemptId
+    && a.attemptState === b.attemptState
+    && a.workItemStatus === b.workItemStatus;
 }
 
 function persistAgentStepBeforeRequest(project, session, fingerprint) {

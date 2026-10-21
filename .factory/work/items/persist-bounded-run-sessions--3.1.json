@@ -2,7 +2,7 @@
   "id": "3.1",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a second process seeing the same attempt, role, and work-item status exits 0 with `unchanged-state` and no request, and that `--new-run` after `max-agent-steps` opens a new run id at zero steps while the previous file remains. A resume flag higher than the stored budget must not raise it. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [],
   "acceptanceCriteria": [
     "Add failing tests that a second process seeing the same attempt, role, and work-item status exits 0 with `unchanged-state` and no request, and that `--new-run` after `max-agent-steps` opens a new run id at zero steps while the previous file remains. A resume flag higher than the stored budget must not raise it. Verify with `node --test test/run-session.test.mjs`. works as specified and is covered by the verification profile checks."
@@ -23,6 +23,6 @@
     "verificationProfile": "frontend-low",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T17:34:41.265Z"
+  "attemptId": "1fe9b9fc-4fa7-4721-8bed-1b85f057acd4",
+  "updatedAt": "2026-10-21T18:29:57.674Z"
 }

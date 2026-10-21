@@ -179,6 +179,7 @@ test('second process resumes the same run id and agent-step count', async () => 
     await seedDemoChange(dir);
     const first = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
     assert.equal(first.code, 2, first.err + first.out);
+    advanceAttemptState(dir, parseOrchestrationJson(first.out).attemptId, 'implementing');
 
     const filesAfterFirst = listRunSessionFiles(dir);
     assert.equal(filesAfterFirst.length, 1);
@@ -449,6 +450,7 @@ test('recorded red result does not increment session failure count', async () =>
     const afterRed = readRunSession(filesAfterRed[0]);
     assert.equal(afterRed.failureCount, 0);
     assert.deepEqual(afterRed.countedFailureIds, []);
+    advanceAttemptState(dir, firstRequest.attemptId, 'implementing');
 
     const second = spawnRun(dir, ['--max-tasks', '1']);
     assert.equal(second.status, 2, second.stderr + second.stdout);
@@ -649,6 +651,218 @@ test('session missing required counter on resume exits 1 with unchanged bytes an
     assert.equal(second.status, 1, second.stderr + second.stdout);
     assert.doesNotMatch(`${second.stderr}\n${second.stdout}`, /# Orchestration request/);
     assert.equal(fs.readFileSync(files[0], 'utf8'), original);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function expectedFingerprint(request, attemptState, workItemStatus) {
+  return {
+    action: request.action,
+    role: request.role,
+    taskId: request.taskId,
+    attemptId: request.attemptId,
+    attemptState,
+    workItemStatus,
+  };
+}
+
+test('second process with same attempt role and work-item status exits 0 unchanged-state with no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-agent-steps', '5']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+    assert.equal(firstRequest.action, 'agent-step');
+
+    const filesAfterFirst = listRunSessionFiles(dir);
+    assert.equal(filesAfterFirst.length, 1);
+    const afterFirst = readRunSession(filesAfterFirst[0]);
+    assert.deepEqual(
+      afterFirst.lastRequestFingerprint,
+      expectedFingerprint(firstRequest, firstRequest.state, 'in_progress'),
+    );
+    assert.equal(afterFirst.agentSteps, 1);
+
+    const second = spawnRun(dir, ['--max-agent-steps', '5']);
+    assert.equal(second.status, 0, second.stderr + second.stdout);
+    assert.match(`${second.stderr}\n${second.stdout}`, /unchanged-state/);
+    assert.doesNotMatch(`${second.stderr}\n${second.stdout}`, /# Orchestration request/);
+
+    const afterSecond = readRunSession(filesAfterFirst[0]);
+    assert.equal(afterSecond.agentSteps, 1, 'unchanged-state must not increment agent steps');
+    assert.equal(afterSecond.stopReason, 'unchanged-state');
+    assert.equal(afterSecond.status, 'closed');
+    assert.deepEqual(afterSecond.lastRequestFingerprint, afterFirst.lastRequestFingerprint);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('after implementing CLI red and red-confirmed transition repeat run exits 0 unchanged-state', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    writeCheckRegistry(dir, { unit: 1 });
+
+    const first = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+    assert.equal(
+      (await idefactory(dir, [
+        'attempt', 'transition', firstRequest.attemptId, 'implementing',
+      ])).code,
+      0,
+    );
+
+    const second = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(second.status, 2, second.stderr + second.stdout);
+    const secondRequest = parseOrchestrationJson(second.stdout);
+    assert.equal(secondRequest.state, 'implementing');
+
+    const redRun = await idefactory(dir, [
+      'verify', 'run', firstRequest.attemptId, '--check', 'unit', '--red',
+    ]);
+    assert.equal(redRun.code, 0, redRun.err + redRun.out);
+    assert.ok(getAttempt(dir, firstRequest.attemptId).evidence.red);
+
+    assert.equal(
+      (await idefactory(dir, [
+        'attempt', 'transition', firstRequest.attemptId, 'red-confirmed',
+      ])).code,
+      0,
+    );
+
+    const third = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(third.status, 2, third.stderr + third.stdout);
+    const thirdRequest = parseOrchestrationJson(third.stdout);
+    assert.equal(thirdRequest.state, 'red-confirmed');
+
+    const files = listRunSessionFiles(dir);
+    const afterThird = readRunSession(files[0]);
+    assert.equal(afterThird.agentSteps, 3);
+    assert.deepEqual(
+      afterThird.lastRequestFingerprint,
+      expectedFingerprint(thirdRequest, 'red-confirmed', 'in_progress'),
+    );
+
+    const fourth = spawnRun(dir, ['--max-agent-steps', '10']);
+    assert.equal(fourth.status, 0, fourth.stderr + fourth.stdout);
+    assert.match(`${fourth.stderr}\n${fourth.stdout}`, /unchanged-state/);
+    assert.doesNotMatch(`${fourth.stderr}\n${fourth.stdout}`, /# Orchestration request/);
+
+    const afterFourth = readRunSession(files[0]);
+    assert.equal(afterFourth.agentSteps, 3);
+    assert.equal(afterFourth.stopReason, 'unchanged-state');
+    assert.equal(afterFourth.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('sticky max-agent-steps session does not reset on a later process without --new-run', async () => {
+  const dir = tempProject();
+  const N = 1;
+  try {
+    await seedDemoChange(dir);
+    const capped = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(capped.status, 2, capped.stderr + capped.stdout);
+    advanceAttemptState(dir, parseOrchestrationJson(capped.stdout).attemptId, 'implementing');
+
+    const stopped = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(stopped.status, 0, stopped.stderr + stopped.stdout);
+    assert.match(`${stopped.stderr}\n${stopped.stdout}`, /max-agent-steps/);
+
+    const filesAfterStop = listRunSessionFiles(dir);
+    assert.equal(filesAfterStop.length, 1);
+    const closedBytes = fs.readFileSync(filesAfterStop[0], 'utf8');
+    const closedSession = readRunSession(filesAfterStop[0]);
+    assert.equal(closedSession.stopReason, 'max-agent-steps');
+    assert.equal(closedSession.agentSteps, N);
+
+    const again = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(again.status, 0, again.stderr + again.stdout);
+    assert.match(`${again.stderr}\n${again.stdout}`, /max-agent-steps/);
+    assert.doesNotMatch(`${again.stderr}\n${again.stdout}`, /# Orchestration request/);
+    assert.equal(listRunSessionFiles(dir).length, 1);
+    assert.equal(fs.readFileSync(filesAfterStop[0], 'utf8'), closedBytes);
+    assert.equal(readRunSession(filesAfterStop[0]).agentSteps, N);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('--new-run after max-agent-steps opens a new run id at zero steps and keeps the previous file', async () => {
+  const dir = tempProject();
+  const N = 1;
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    advanceAttemptState(dir, parseOrchestrationJson(first.stdout).attemptId, 'implementing');
+
+    const stopped = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(stopped.status, 0, stopped.stderr + stopped.stdout);
+
+    const filesAfterStop = listRunSessionFiles(dir);
+    assert.equal(filesAfterStop.length, 1);
+    const previousPath = filesAfterStop[0];
+    const previousSession = readRunSession(previousPath);
+    const previousBytes = fs.readFileSync(previousPath, 'utf8');
+    assert.equal(previousSession.stopReason, 'max-agent-steps');
+    assert.equal(previousSession.agentSteps, N);
+
+    const fresh = spawnRun(dir, ['--max-agent-steps', String(N), '--new-run']);
+    assert.equal(fresh.status, 2, fresh.stderr + fresh.stdout);
+    assert.match(fresh.stdout, /# Orchestration request/);
+
+    const filesAfterNew = listRunSessionFiles(dir);
+    assert.equal(filesAfterNew.length, 2);
+    assert.equal(fs.readFileSync(previousPath, 'utf8'), previousBytes);
+
+    const latest = readRunSession(
+      filesAfterNew.sort((a, b) => readRunSession(b).startedAt.localeCompare(readRunSession(a).startedAt))[0],
+    );
+    assert.notEqual(latest.runId, previousSession.runId);
+    assert.equal(latest.agentSteps, 1);
+    assert.equal(latest.status, 'open');
+    assert.equal(latest.stopReason, null);
+    assert.equal(latest.budgets.maxAgentSteps, N);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('resume flag higher than stored max-agent-steps budget does not raise the stored cap', async () => {
+  const dir = tempProject();
+  const storedCap = 2;
+  const higherFlag = 5;
+  try {
+    await seedDemoChange(dir);
+
+    const first = spawnRun(dir, ['--max-agent-steps', String(storedCap)]);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    advanceAttemptState(dir, parseOrchestrationJson(first.stdout).attemptId, 'implementing');
+
+    const second = spawnRun(dir, ['--max-agent-steps', String(storedCap)]);
+    assert.equal(second.status, 2, second.stderr + second.stdout);
+    advanceAttemptState(dir, parseOrchestrationJson(second.stdout).attemptId, 'red-confirmed');
+
+    const files = listRunSessionFiles(dir);
+    const sessionMid = readRunSession(files[0]);
+    assert.equal(sessionMid.budgets.maxAgentSteps, storedCap);
+    assert.equal(sessionMid.agentSteps, 2);
+
+    const third = spawnRun(dir, ['--max-agent-steps', String(higherFlag)]);
+    assert.equal(third.status, 0, third.stderr + third.stdout);
+    assert.match(`${third.stderr}\n${third.stdout}`, /max-agent-steps/);
+    assert.doesNotMatch(`${third.stderr}\n${third.stdout}`, /# Orchestration request/);
+
+    const finalSession = readRunSession(files[0]);
+    assert.equal(finalSession.budgets.maxAgentSteps, storedCap);
+    assert.equal(finalSession.agentSteps, storedCap);
+    assert.equal(finalSession.stopReason, 'max-agent-steps');
   } finally {
     cleanup(dir);
   }

@@ -141,3 +141,11 @@ Implementer: bc-454b4c19-6657-5629-9670-5d0bfd19a75f
 Red: `node --test test/run-session.test.mjs` exit 1 (3 failures: invalid budgets exit 2 with session/request; bare `--max-agent-steps` truthiness; config defaultMaxFailures 0); `node src/cli.mjs verify run 7e1f372e-1f51-456d-a365-68946f0be648 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 18 pass.
 Scope: invalid-budget and corrupt-session only — zero/negative/non-integer CLI or config budgets exit 1 invalid-budget/no zeroed session/no request; bare boolean CLI flags rejected; corrupt JSON or missing counter unchanged/no request; no unchanged/host/review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/3.1
+
+Attempt: 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4
+Implementer: bc-3f374696-0140-575c-8c29-0678fad461f9
+Red: `node --test test/run-session.test.mjs` exit 1, 4 fail (unchanged-state, sticky bytes, --new-run); `node src/cli.mjs verify run 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 23 pass; `node --test test/orchestration.test.mjs` exit 0, 16 pass.
+Scope: unchanged-state fingerprint (action/role/task/attempt/state/work-item status), sticky closed sessions without file rewrite, `--new-run`, resume budget tighten-only — no host/HALT/default/skill/review/complete/commit/push.
