@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that the first `idefactory run` for a change writes `.factory/orchestration/runs/<run-id>.json`, and that a second process resumes the same run id and agent-step count. Implement resume and verify with `node --test test/run-session.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "1.1"
   ],
@@ -27,6 +27,6 @@
       "1.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T17:34:41.258Z"
+  "attemptId": "c25f30f4-06f7-4c2e-a65e-90261f9ca384",
+  "updatedAt": "2026-10-21T17:39:18.474Z"
 }

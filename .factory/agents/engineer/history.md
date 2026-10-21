@@ -85,3 +85,11 @@ Attempt: 1dd1b142-2dc7-4317-a6f6-eea9e5019472
 Implementer: bc-4ee1c51e-7df4-5fc9-b731-b6c83c54f755
 Red: `node --test test/run-session.test.mjs` exit 1 (3 assertion failures vs stub); `node src/cli.mjs verify run 1dd1b142-2dc7-4317-a6f6-eea9e5019472 --check unit --red` stored exitCode 1 / passed:false.
 Green: `node --test test/run-session.test.mjs` exit 0, 3 pass.
+
+## 2026-10-21 persist-bounded-run-sessions/1.2
+
+Attempt: c25f30f4-06f7-4c2e-a65e-90261f9ca384
+Implementer: bc-f41b503f-dbea-5dd2-93db-3f0f9f724e58
+Red: `node --test test/run-session.test.mjs` exit 1 (2 assertion failures: no session file on first run / resume); `node src/cli.mjs verify run c25f30f4-06f7-4c2e-a65e-90261f9ca384 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 5 pass.
+Scope: create/resume only — no budgets/tripwires/stuck/host enforcement.

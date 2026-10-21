@@ -3,6 +3,7 @@ import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
+import { openOrResumeRunSession, resolveNewSessionBudgets } from './run-session.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
@@ -30,6 +31,8 @@ export function runFactory(project, env, {
 
   syncTasks(project, change, env);
   const config = readConfig(project);
+  const sessionBudgets = resolveNewSessionBudgets(config, { maxTasks });
+  openOrResumeRunSession(project, { change, budgets: sessionBudgets });
   const limit = Number(maxTasks || config.run?.defaultMaxTasks || 20);
   let progressed = 0;
 
