@@ -107,6 +107,9 @@ export function validateRunSession(session) {
     completedTasks: session.completedTasks,
     failureCount: session.failureCount,
     baselineDoneIds: Array.isArray(session.baselineDoneIds) ? [...session.baselineDoneIds] : [],
+    baselineFailureIds: Array.isArray(session.baselineFailureIds)
+      ? [...session.baselineFailureIds]
+      : [],
     countedFailureIds: Array.isArray(session.countedFailureIds)
       ? [...session.countedFailureIds]
       : [],
@@ -502,10 +505,12 @@ export function collectFailureRecordIds(project, change) {
  * @returns {object}
  */
 export function refreshFailures(project, session, { now = new Date() } = {}) {
+  const baseline = new Set(session.baselineFailureIds || []);
   const allIds = collectFailureRecordIds(project, session.change);
   const counted = new Set(session.countedFailureIds || []);
   let changed = false;
   for (const id of allIds) {
+    if (baseline.has(id)) continue;
     if (!counted.has(id)) {
       counted.add(id);
       changed = true;
@@ -536,6 +541,7 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
   if (!change) throw new Error('createRunSession requires change');
   const startedAt = now.toISOString();
   const baselineDoneIds = doneWorkItemIds(project, change);
+  const baselineFailureIds = collectFailureRecordIds(project, change);
   const session = writeRunSession(project, {
     schemaVersion: SUPPORTED_SCHEMA_VERSION,
     runId: randomUUID(),
@@ -548,6 +554,7 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
     completedTasks: 0,
     failureCount: 0,
     baselineDoneIds,
+    baselineFailureIds,
     countedFailureIds: [],
     lastRequestFingerprint: null,
     stopReason: null,

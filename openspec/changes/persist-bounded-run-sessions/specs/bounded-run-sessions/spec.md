@@ -47,7 +47,7 @@ The run command SHALL measure elapsed time from the session start time. When tha
 - **AND** the persisted stop reason is `wall-clock`
 
 ### Requirement: Failure budget
-The run command SHALL increment its failure count for each distinct timed-out or non-passing verification result. A recorded red result SHALL NOT increment that count. At the configured maximum, the command SHALL emit no request and SHALL persist stop reason `max-failures`.
+The run command SHALL count distinct timed-out or non-passing verification results recorded after the session's failure baseline. A new session SHALL baseline every countable failure id that already exists and SHALL start at failure count zero. A recorded red result SHALL NOT increment that count. At the configured maximum, the command SHALL emit no request and SHALL persist stop reason `max-failures`.
 
 #### Scenario: Red result is not a failure
 - **WHEN** the only new check result is a recorded red result
@@ -57,6 +57,11 @@ The run command SHALL increment its failure count for each distinct timed-out or
 - **WHEN** timed-out checks have already put the failure count at its maximum
 - **THEN** the next run prints no orchestration request
 - **AND** the persisted stop reason is `max-failures`
+
+#### Scenario: New session ignores historical failures
+- **WHEN** countable non-passing verification results already exist and a new run starts
+- **THEN** the new session failure count is zero
+- **AND** a non-passing verification result recorded during that session increments the count
 
 ### Requirement: Invalid budget
 When the resolved agent-step, completed-task, wall-clock, or failure budget is missing, non-integer, or non-positive, the run command SHALL exit with an error, emit no request, and SHALL NOT create a session whose counters start at zero.

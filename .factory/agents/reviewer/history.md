@@ -177,3 +177,10 @@ Attempt: 98c38e90-8523-4cfa-a251-fe216a73532e
 Reviewer: bc-e1e6f7ab-79fb-50dc-9494-f0c2f28f5c69
 Verdict: ACCEPT
 Product: 006525d (five factory-run SKILL copies + run-session test asserting stops and loop resume). Inspected skill Loop uses `idefactory run --change <name> --until human-gate` without `--new-run`; Stop conditions list all five bounded stops; New session (human only) documents `--new-run` for sticky resets. Re-ran focused `node --test test/run-session.test.mjs` (33 pass, including shipped factory-run skill copies test). CLI red 045b1db exitCode 1 passed:false issuer cli; unit pass 006525d worktreeClean passed:true (reviewer re-verify logDigest sha256:949f7a9c…). Transitions verifying → awaiting-review → accepted.
+
+## 2026-10-21 persist-bounded-run-sessions/failure-baseline (--new-run)
+
+Implementer: bc-9b81fa19-3ec7-5143-a288-69feae5e339d
+Reviewer: bc-cf816a83-3aff-566e-95fa-1dd20746067d
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 34 pass. New test baselines historical failures on `--new-run`; production limited to `baselineFailureIds` in validate/create/refreshFailures; red exclusion unchanged (`validSession` without field still validates).

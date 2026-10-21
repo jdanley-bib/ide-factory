@@ -189,3 +189,10 @@ Implementer: bc-2ed30185-e5cb-59d0-8dc8-c48b94715190
 Red: `node --test test/run-session.test.mjs` exit 1, 1 fail (factory-run skills missing bounded stop names); `node src/cli.mjs verify run 98c38e90-8523-4cfa-a251-fe216a73532e --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:cbad5b1ae6ed16e903d65e835104dbad0939d4cbc64ae8ce4dd0d04356691a74).
 Green: `node --test test/run-session.test.mjs` exit 0, 33 pass; `npm test` exit 0, 113 pass.
 Scope: five factory-run SKILL copies + run-session skill test only — loop resumes without `--new-run`; human-only new session section; no review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/failure-baseline
+
+Attempt: d450408a-cfe6-4852-b36f-4c1dc5e651e9
+Implementer: bc-9b81fa19-3ec7-5143-a288-69feae5e339d
+Red: `node --test test/run-session.test.mjs` exit 1, 1 fail (`--new-run baselines historical failure ids`: `--new-run` stopped with max-failures instead of orchestration request).
+Green: `node --test test/run-session.test.mjs` exit 0, 34 pass.

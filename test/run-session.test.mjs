@@ -563,6 +563,102 @@ test('recorded red result does not increment session failure count', async () =>
   }
 });
 
+test('--new-run baselines historical failure ids so failureCount stays zero until new failures', async () => {
+  const dir = tempProject();
+  const maxFailures = 1;
+  const historicalFailureId = 'historical-timeout-4-5';
+  const newSessionFailureId = 'new-session-timeout-4-5';
+  try {
+    await seedDemoChange(dir);
+    const configPath = path.join(dir, '.factory', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.run = { ...config.run, defaultMaxFailures: maxFailures };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+
+    appendVerificationRecord(dir, firstRequest.attemptId, {
+      schemaVersion: 1,
+      id: historicalFailureId,
+      kind: 'unit',
+      runner: { name: 'idefactory', version: '0.2.0' },
+      argv: [process.execPath, '-e', 'process.exit(1)'],
+      commandDigest: 'sha256:historical-failure-4-5',
+      exitCode: 1,
+      timedOut: true,
+      passed: false,
+      issuer: 'cli',
+      attemptId: firstRequest.attemptId,
+      startedAt: '2026-10-21T19:00:00.000Z',
+      finishedAt: '2026-10-21T19:01:00.000Z',
+      logDigest: 'sha256:historical-log-4-5',
+      artifactDigests: [],
+      worktreeClean: true,
+    });
+
+    const capped = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-failures/);
+
+    const filesAfterCap = listRunSessionFiles(dir);
+    assert.equal(filesAfterCap.length, 1);
+    const closedSession = readRunSession(filesAfterCap[0]);
+    assert.equal(closedSession.stopReason, 'max-failures');
+    assert.deepEqual(closedSession.countedFailureIds, [historicalFailureId]);
+
+    const fresh = spawnRun(dir, ['--max-tasks', '1', '--new-run']);
+    assert.equal(fresh.status, 2, fresh.stderr + fresh.stdout);
+    assert.match(fresh.stdout, /# Orchestration request/);
+    assert.doesNotMatch(`${fresh.stderr}\n${fresh.stdout}`, /max-failures/);
+
+    const filesAfterNew = listRunSessionFiles(dir);
+    assert.equal(filesAfterNew.length, 2);
+    const latest = readRunSession(
+      filesAfterNew.sort((a, b) => readRunSession(b).startedAt.localeCompare(readRunSession(a).startedAt))[0],
+    );
+    assert.notEqual(latest.runId, closedSession.runId);
+    assert.equal(latest.failureCount, 0);
+    assert.deepEqual(latest.baselineFailureIds, [historicalFailureId]);
+    assert.deepEqual(latest.countedFailureIds, []);
+
+    appendVerificationRecord(dir, firstRequest.attemptId, {
+      schemaVersion: 1,
+      id: newSessionFailureId,
+      kind: 'unit',
+      runner: { name: 'idefactory', version: '0.2.0' },
+      argv: [process.execPath, '-e', 'process.exit(1)'],
+      commandDigest: 'sha256:new-session-failure-4-5',
+      exitCode: 1,
+      timedOut: true,
+      passed: false,
+      issuer: 'cli',
+      attemptId: firstRequest.attemptId,
+      startedAt: '2026-10-21T19:10:00.000Z',
+      finishedAt: '2026-10-21T19:11:00.000Z',
+      logDigest: 'sha256:new-session-log-4-5',
+      artifactDigests: [],
+      worktreeClean: true,
+    });
+
+    const cappedAgain = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(cappedAgain.status, 0, cappedAgain.stderr + cappedAgain.stdout);
+    assert.match(`${cappedAgain.stderr}\n${cappedAgain.stdout}`, /max-failures/);
+    assert.doesNotMatch(`${cappedAgain.stderr}\n${cappedAgain.stdout}`, /# Orchestration request/);
+
+    const finalSession = readRunSession(
+      filesAfterNew.sort((a, b) => readRunSession(b).startedAt.localeCompare(readRunSession(a).startedAt))[0],
+    );
+    assert.equal(finalSession.failureCount, maxFailures);
+    assert.deepEqual(finalSession.countedFailureIds, [newSessionFailureId]);
+    assert.equal(finalSession.stopReason, 'max-failures');
+    assert.equal(finalSession.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('timed-out verification failures at maxFailures exit 0 with max-failures and no request', async () => {
   const dir = tempProject();
   const maxFailures = 1;

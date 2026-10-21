@@ -36,7 +36,7 @@ Resolution order for a new session is the CLI flag, then config, then a built-in
 
 Built-in defaults, used when the key is absent: `defaultMaxAgentSteps` 20, `defaultMaxTasks` 20, `defaultMaxWallClockMs` 14400000, and `defaultMaxFailures` 5. Zero, negative, and non-integer values are invalid. There is no unlimited value. Token and cost ceilings have no default; they exist only when `run.maxTokens`, `run.maxCost`, `--max-tokens`, or `--max-cost` is set.
 
-`--max-tasks` and `defaultMaxTasks` mean work items that move to done during the session, not loop iterations. The in-memory `progressed` counter goes away. `baselineDoneIds` is the done-id set at session creation, so work already done is not charged.
+`--max-tasks` and `defaultMaxTasks` mean work items that move to done during the session, not loop iterations. The in-memory `progressed` counter goes away. `baselineDoneIds` is the done-id set at session creation, so work already done is not charged. `baselineFailureIds` is the countable failure-id set at session creation, including a session opened with `--new-run`. Those historical ids never increment the new session. `failureCount` starts at zero and counts only ids observed after that baseline. A failure recorded during the new session still closes it at `max-failures`. Sessions written before this field existed validate with an empty baseline.
 
 Alternative considered: re-read config on every entry so an operator can extend a live run. Rejected because that is a silent budget reset.
 
