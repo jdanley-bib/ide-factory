@@ -8,6 +8,7 @@ import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
+import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -55,131 +56,149 @@ export async function run(argv, io = {}) {
     return 0;
   }
   const project = projectDir(parsed.flags, parsed.rest, cwd, cmd);
+  const commandKey = cliCommandKey(cmd, parsed.rest);
+  const execute = () => dispatchCommand(cmd, {
+    project,
+    parsed,
+    env,
+    out,
+    err,
+  });
   try {
-    switch (cmd) {
-      case 'init': {
-        const created = initProject(project, {
-          forceRoster: Boolean(parsed.flags['force-roster']),
-          withOpenspec: Boolean(parsed.flags['with-openspec']),
-          withBacklog: Boolean(parsed.flags['with-backlog']),
-          env,
-        });
-        out(`Initialized ${project}`);
-        if (created.length) out(`Created: ${created.join(', ')}`);
-        else out('Team state already present. Adapters refreshed.');
-        return 0;
-      }
-      case 'upgrade':
-        upgradeProject(project);
-        out(`Upgraded adapters in ${project}`);
-        return 0;
-      case 'doctor':
-        return reportDoctor(project, out, err);
-      case 'status':
-        out(status(project, env));
-        return 0;
-      case 'sync-tasks': {
-        const change = parsed.rest[0];
-        const result = syncTasks(project, change, env);
-        out(`Synced ${result.change}: created ${result.created}, skipped ${result.skipped}.`);
-        return 0;
-      }
-      case 'next': {
-        const packet = buildPacket(project, env, parsed.flags.change || '');
-        out(packet.text);
-        return 0;
-      }
-      case 'run': {
-        const result = runFactory(project, env, {
-          change: parsed.flags.change || parsed.rest[0],
-          until: parsed.flags.until || 'human-gate',
-          maxTasks: parsed.flags['max-tasks'],
-          maxAgentSteps: parsed.flags['max-agent-steps'],
-          maxTokens: parsed.flags['max-tokens'],
-          maxCost: parsed.flags['max-cost'],
-          hostTokens: parsed.flags['host-tokens'],
-          hostCost: parsed.flags['host-cost'],
-          newRun: Boolean(parsed.flags['new-run']),
-        });
-        out(result.text);
-        return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
-      }
-      case 'attempt':
-        return handleAttempt(project, parsed, out);
-      case 'verify':
-        return await handleVerify(project, parsed, out);
-      case 'complete': {
-        const [change, taskId] = parsed.rest;
-        const attemptId = parsed.flags.attempt;
-        if (!change || !taskId || !attemptId) {
-          throw new Error('Usage: idefactory complete <change> <taskId> --attempt <id>');
-        }
-        const result = completeWorkItem(project, change, taskId, attemptId, env);
-        out(`Completed ${change}/${taskId} attempt ${result.attempt.id}`);
-        return 0;
-      }
-      case 'approve': {
-        const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
-          change: parsed.flags.change,
-          task: parsed.flags.task,
-          action: parsed.flags.action,
-          approver: parsed.flags.approver,
-          expiry: parsed.flags.expiry,
-        });
-        out(`Recorded approval ${file}`);
-        return 0;
-      }
-      case 'reject': {
-        const file = reject(project, parsed.rest[0], parsed.flags.note || '');
-        out(`Recorded rejection ${file}`);
-        return 0;
-      }
-      case 'lockout': {
-        const sub = parsed.rest[0];
-        if (sub === 'resolve') {
-          const id = parsed.rest[1];
-          if (!id) {
-            throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "text"');
-          }
-          const result = resolveLockout(project, id, {
-            resolver: parsed.flags.resolver,
-            reason: parsed.flags.reason,
-          });
-          out(`Resolved lockout ${result.id}`);
-          return 0;
-        }
-        if (sub && sub !== 'create') {
-          throw new Error(
-            'Usage: idefactory lockout create --agent <id> --reason "text"\n'
-            + '       idefactory lockout resolve <id> --resolver <id> --reason "text"',
-          );
-        }
-        const result = createLockout(project, {
-          agent: parsed.flags.agent,
-          reviewer: parsed.flags.reviewer,
-          reason: parsed.flags.reason,
-        });
-        out(`Created lockout ${result.id}`);
-        return 0;
-      }
-      case 'halt':
-        fs.writeFileSync(path.join(project, 'HALT'), 'stop\n');
-        out('HALT is set. Factory mutating commands will refuse to run.');
-        return 0;
-      case 'resume': {
-        const haltFile = path.join(project, 'HALT');
-        if (fs.existsSync(haltFile)) fs.unlinkSync(haltFile);
-        out('HALT removed.');
-        return 0;
-      }
-      default:
-        err(`Unknown command: ${cmd}`);
-        err(HELP);
-        return 1;
+    // HALT bypasses the writer lease so emergency stop cannot be blocked.
+    if (cmd === 'halt') return await execute();
+    if (isMutatingCommand(commandKey)) {
+      return await withWriterLease(project, commandKey, execute);
     }
+    return await execute();
   } catch (error) {
     err(error.message || String(error));
     return 1;
+  }
+}
+
+async function dispatchCommand(cmd, ctx) {
+  const { project, parsed, env, out, err } = ctx;
+  switch (cmd) {
+    case 'init': {
+      const created = initProject(project, {
+        forceRoster: Boolean(parsed.flags['force-roster']),
+        withOpenspec: Boolean(parsed.flags['with-openspec']),
+        withBacklog: Boolean(parsed.flags['with-backlog']),
+        env,
+      });
+      out(`Initialized ${project}`);
+      if (created.length) out(`Created: ${created.join(', ')}`);
+      else out('Team state already present. Adapters refreshed.');
+      return 0;
+    }
+    case 'upgrade':
+      upgradeProject(project);
+      out(`Upgraded adapters in ${project}`);
+      return 0;
+    case 'doctor':
+      return reportDoctor(project, out, err);
+    case 'status':
+      out(status(project, env));
+      return 0;
+    case 'sync-tasks': {
+      const change = parsed.rest[0];
+      const result = syncTasks(project, change, env);
+      out(`Synced ${result.change}: created ${result.created}, skipped ${result.skipped}.`);
+      return 0;
+    }
+    case 'next': {
+      const packet = buildPacket(project, env, parsed.flags.change || '');
+      out(packet.text);
+      return 0;
+    }
+    case 'run': {
+      const result = runFactory(project, env, {
+        change: parsed.flags.change || parsed.rest[0],
+        until: parsed.flags.until || 'human-gate',
+        maxTasks: parsed.flags['max-tasks'],
+        maxAgentSteps: parsed.flags['max-agent-steps'],
+        maxTokens: parsed.flags['max-tokens'],
+        maxCost: parsed.flags['max-cost'],
+        hostTokens: parsed.flags['host-tokens'],
+        hostCost: parsed.flags['host-cost'],
+        newRun: Boolean(parsed.flags['new-run']),
+      });
+      out(result.text);
+      return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
+    }
+    case 'attempt':
+      return handleAttempt(project, parsed, out);
+    case 'verify':
+      return await handleVerify(project, parsed, out);
+    case 'complete': {
+      const [change, taskId] = parsed.rest;
+      const attemptId = parsed.flags.attempt;
+      if (!change || !taskId || !attemptId) {
+        throw new Error('Usage: idefactory complete <change> <taskId> --attempt <id>');
+      }
+      const result = completeWorkItem(project, change, taskId, attemptId, env);
+      out(`Completed ${change}/${taskId} attempt ${result.attempt.id}`);
+      return 0;
+    }
+    case 'approve': {
+      const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
+        change: parsed.flags.change,
+        task: parsed.flags.task,
+        action: parsed.flags.action,
+        approver: parsed.flags.approver,
+        expiry: parsed.flags.expiry,
+      });
+      out(`Recorded approval ${file}`);
+      return 0;
+    }
+    case 'reject': {
+      const file = reject(project, parsed.rest[0], parsed.flags.note || '');
+      out(`Recorded rejection ${file}`);
+      return 0;
+    }
+    case 'lockout': {
+      const sub = parsed.rest[0];
+      if (sub === 'resolve') {
+        const id = parsed.rest[1];
+        if (!id) {
+          throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "text"');
+        }
+        const result = resolveLockout(project, id, {
+          resolver: parsed.flags.resolver,
+          reason: parsed.flags.reason,
+        });
+        out(`Resolved lockout ${result.id}`);
+        return 0;
+      }
+      if (sub && sub !== 'create') {
+        throw new Error(
+          'Usage: idefactory lockout create --agent <id> --reason "text"\n'
+          + '       idefactory lockout resolve <id> --resolver <id> --reason "text"',
+        );
+      }
+      const result = createLockout(project, {
+        agent: parsed.flags.agent,
+        reviewer: parsed.flags.reviewer,
+        reason: parsed.flags.reason,
+      });
+      out(`Created lockout ${result.id}`);
+      return 0;
+    }
+    case 'halt':
+      fs.writeFileSync(path.join(project, 'HALT'), 'stop\n');
+      out('HALT is set. Factory mutating commands will refuse to run.');
+      return 0;
+    case 'resume': {
+      const haltFile = path.join(project, 'HALT');
+      if (fs.existsSync(haltFile)) fs.unlinkSync(haltFile);
+      out('HALT removed.');
+      return 0;
+    }
+    default:
+      err(`Unknown command: ${cmd}`);
+      err(HELP);
+      return 1;
   }
 }
 

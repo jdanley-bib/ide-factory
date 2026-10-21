@@ -324,3 +324,11 @@ Implementer: bc-a4e7d563-f44e-5b02-90bd-aae81e6abc87
 Red: `node --test test/writer-lease.test.mjs` exit 1 (ERR_MODULE_NOT_FOUND for `src/lib/writer-lease.mjs`); `node src/cli.mjs verify run 42a06afe-b7f8-44c0-ab0d-94b797b650ce --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:3d545b810c2375b32266627534ec00e921ddb10dca24c6a5cba5273d69d6d291).
 Green: `node --test test/writer-lease.test.mjs` exit 0, 7 pass.
 Scope: schema v1 writer lease primitives only — atomic mkdir acquire, LEASE_HELD exclusion without mutation, matching-id release on success/handled error, read-only wrapper that neither acquires nor removes. No heartbeat, stale takeover, corrupt refusal, HALT bypass, CLI dispatch wiring, review, accept, complete, or push.
+
+## 2026-10-21 make-finalization-recoverable/4.2
+
+Attempt: 29c52e9a-6ec4-4fdd-a733-7b7248bce462
+Implementer: bc-03a962db-89ec-5031-86e3-ffbba1993901
+Red: `node --test test/writer-lease.test.mjs` exit 1 (6 failures: heartbeat, five-minute stale takeover, owner-loss, corrupt/unsupported LEASE_RECOVERY, CLI wrap/cliCommandKey, release/takeover); `node src/cli.mjs verify run 29c52e9a-6ec4-4fdd-a733-7b7248bce462 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:c98e8af0e566fa12a790234f983e4926ad27d01034db7dc5537a3a2b510a9f2d).
+Green: `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 41 pass.
+Scope: fake-clock one-minute heartbeat, five-minute expiry with one-winner atomic stale-directory rename takeover, owner-loss rejection, corrupt/unsupported LEASE_RECOVERY without delete, HALT lease bypass, top-level CLI wrap of all mutating commands without nested acquisition, read-only unleased, release rename TOCTOU fix vs successor. No review, accept, complete, or push.
