@@ -134,3 +134,10 @@ Attempt: 7e1f372e-1f51-456d-a365-68946f0be648
 Reviewer: bc-0373c28a-15e3-5030-bfba-132a9a544054
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 18 pass. Simulated red: parent orchestrate/run-session at ef3370 + new tests → 3 fail (invalid budgets exit 2 with session/request; bare flag; config defaultMaxFailures 0). CLI red present; clean-head unit pass at ec98e49; invalid-budget exit 1 before openOrResumeRunSession; corrupt/missing-counter bytes unchanged no request.
+
+## 2026-10-21 persist-bounded-run-sessions/3.1
+
+Attempt: 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4
+Reviewer: bc-fb94fb40-9294-527a-9f85-698cd39d71f3
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 23 pass. Simulated red: parent orchestrate/run-session/run at 24ec84e + new tests → 4 fail (unchanged-state ×2, sticky bytes, --new-run). CLI red present (exitCode 1, issuer cli, baseRev 24ec84e); clean-head unit pass at 569f647; fingerprint unchanged-state exit 0 no request no increment; sticky closed session no rewrite; --new-run keeps prior file; mergeResumeBudgets never raises stored cap.
