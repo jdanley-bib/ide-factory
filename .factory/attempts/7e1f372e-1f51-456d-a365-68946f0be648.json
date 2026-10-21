@@ -2,10 +2,10 @@
   "id": "7e1f372e-1f51-456d-a365-68946f0be648",
   "change": "persist-bounded-run-sessions",
   "taskId": "2.5",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-454b4c19-6657-5629-9670-5d0bfd19a75f",
-  "reviewerId": null,
+  "reviewerId": "bc-0373c28a-15e3-5030-bfba-132a9a544054",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "ef3370eb24e2adb5ccde1061a2093ede071e78d3"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T18:27:14.998Z",
+        "finishedAt": "2026-10-21T18:27:46.136Z",
+        "logDigest": "sha256:48e4c05513fd570a2f81b1aff678e90dc1c5f54a6306e012f742d62a1b30b0c0",
+        "artifactDigests": [],
+        "attemptId": "7e1f372e-1f51-456d-a365-68946f0be648",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "ec98e496c5ca0019eeb256ffc2a83d67417d8fac"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-0373c28a-15e3-5030-bfba-132a9a544054",
+      "notes": "Independent review: simulated red 3 fail at ef3370; run-session 18/18 pass; invalid-budget exit 1 before session/request; corrupt bytes unchanged; bare flags rejected.",
+      "at": "2026-10-21T18:29:06.747Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-21T18:23:44.890Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T18:29:06.685Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T18:29:06.717Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T18:29:06.747Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T18:17:04.776Z",
-  "updatedAt": "2026-10-21T18:23:44.890Z"
+  "updatedAt": "2026-10-21T18:29:06.747Z"
 }
