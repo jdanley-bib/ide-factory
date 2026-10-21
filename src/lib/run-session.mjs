@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ledger } from './layout.mjs';
+import { listWorkItems } from './work.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 
@@ -252,7 +253,56 @@ export function ledgerAgentStepHighWater(project, runId) {
 }
 
 /**
+ * Done work-item ids for a change (stable sort).
+ *
+ * @param {string} project
+ * @param {string} change
+ * @returns {string[]}
+ */
+export function doneWorkItemIds(project, change) {
+  return listWorkItems(project, change)
+    .filter((item) => item.status === 'done')
+    .map((item) => item.id)
+    .sort();
+}
+
+/**
+ * Count work items that became done after session creation (not in baseline).
+ *
+ * @param {string} project
+ * @param {object} session
+ * @returns {number}
+ */
+export function countCompletedTasksDuringSession(project, session) {
+  const baseline = new Set(session.baselineDoneIds || []);
+  return doneWorkItemIds(project, session.change)
+    .filter((id) => !baseline.has(id))
+    .length;
+}
+
+/**
+ * Persist refreshed completedTasks from current done ids minus baselineDoneIds.
+ *
+ * @param {string} project
+ * @param {object} session
+ * @param {{ now?: Date }} [options]
+ * @returns {object}
+ */
+export function refreshCompletedTasks(project, session, { now = new Date() } = {}) {
+  const completedTasks = countCompletedTasksDuringSession(project, session);
+  if (completedTasks === session.completedTasks) {
+    return session;
+  }
+  return writeRunSession(project, {
+    ...session,
+    completedTasks,
+    lastObservedAt: now.toISOString(),
+  });
+}
+
+/**
  * Create a new open session file for the change.
+ * Captures baselineDoneIds from work already done so they are not charged.
  * Appends best-effort `run-session-opened` to the ledger (non-blocking).
  *
  * @param {string} project
@@ -262,6 +312,7 @@ export function ledgerAgentStepHighWater(project, runId) {
 export function createRunSession(project, { change, budgets, now = new Date() } = {}) {
   if (!change) throw new Error('createRunSession requires change');
   const startedAt = now.toISOString();
+  const baselineDoneIds = doneWorkItemIds(project, change);
   const session = writeRunSession(project, {
     schemaVersion: SUPPORTED_SCHEMA_VERSION,
     runId: randomUUID(),
@@ -273,7 +324,7 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
     agentSteps: 0,
     completedTasks: 0,
     failureCount: 0,
-    baselineDoneIds: [],
+    baselineDoneIds,
     countedFailureIds: [],
     lastRequestFingerprint: null,
     stopReason: null,

@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { readRunSession, validateRunSession } from '../src/lib/run-session.mjs';
+import { updateWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 function validSession(overrides = {}) {
@@ -104,20 +105,24 @@ function listRunSessionFiles(project) {
     .map((name) => path.join(runsDir, name));
 }
 
-async function seedDemoChange(dir) {
+function demoTaskBlock(id, title) {
+  return [
+    `- [ ] ${id} ${title}`,
+    '  factory:',
+    '    kind: general',
+    '    checks: [unit]',
+    '    verificationProfile: frontend-low',
+    '    roles: [engineer, reviewer, scribe]',
+    '',
+  ].join('\n');
+}
+
+async function seedDemoChange(dir, tasksBody) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'openspec/changes/demo/tasks.md'),
-    [
-      '- [ ] 1.1 Add parser',
-      '  factory:',
-      '    kind: general',
-      '    checks: [unit]',
-      '    verificationProfile: frontend-low',
-      '    roles: [engineer, reviewer, scribe]',
-      '',
-    ].join('\n'),
+    tasksBody || demoTaskBlock('1.1', 'Add parser'),
   );
   assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
 }
@@ -305,6 +310,59 @@ test('max-agent-steps N allows N cross-process requests then process N+1 stops w
     assert.equal(finalSession.runId, runId);
     assert.equal(finalSession.agentSteps, N);
     assert.equal(finalSession.stopReason, 'max-agent-steps');
+    assert.equal(finalSession.status, 'closed');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('max-tasks counts only tasks finalized during the session; baseline done ids are excluded', async () => {
+  const dir = tempProject();
+  const maxTasks = 1;
+  try {
+    await seedDemoChange(
+      dir,
+      [
+        demoTaskBlock('1.1', 'Already done before session'),
+        demoTaskBlock('1.2', 'Finalize during session'),
+        demoTaskBlock('1.3', 'Still open after cap'),
+      ].join('\n'),
+    );
+    // Work already done at session creation must not count toward max-tasks.
+    updateWorkItem(dir, 'demo', '1.1', { status: 'done' });
+
+    const first = spawnRun(dir, ['--max-tasks', String(maxTasks)]);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+    assert.match(first.stdout, /# Orchestration request/);
+    const firstRequest = parseOrchestrationJson(first.stdout);
+    assert.equal(firstRequest.action, 'agent-step');
+    assert.equal(firstRequest.taskId, '1.2');
+
+    const filesAfterFirst = listRunSessionFiles(dir);
+    assert.equal(filesAfterFirst.length, 1);
+    const created = readRunSession(filesAfterFirst[0]);
+    assert.equal(created.budgets.maxTasks, maxTasks);
+    assert.deepEqual(created.baselineDoneIds, ['1.1']);
+    assert.equal(created.completedTasks, 0);
+    assert.equal(created.status, 'open');
+    assert.equal(created.stopReason, null);
+
+    // Finalize the configured number of tasks during the session.
+    updateWorkItem(dir, 'demo', '1.2', { status: 'done' });
+
+    const capped = spawnRun(dir, ['--max-tasks', String(maxTasks)]);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-tasks/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /# Orchestration request/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /"action": "agent-step"/);
+
+    const filesAfterCap = listRunSessionFiles(dir);
+    assert.equal(filesAfterCap.length, 1);
+    const finalSession = readRunSession(filesAfterCap[0]);
+    assert.equal(finalSession.runId, created.runId);
+    assert.deepEqual(finalSession.baselineDoneIds, ['1.1']);
+    assert.equal(finalSession.completedTasks, maxTasks);
+    assert.equal(finalSession.stopReason, 'max-tasks');
     assert.equal(finalSession.status, 'closed');
   } finally {
     cleanup(dir);

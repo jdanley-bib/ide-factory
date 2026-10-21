@@ -5,6 +5,7 @@ import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
   openOrResumeRunSession,
+  refreshCompletedTasks,
   resolveNewSessionBudgets,
   writeRunSession,
 } from './run-session.mjs';
@@ -70,6 +71,17 @@ export function runFactory(project, env, {
   }
 
   syncTasks(project, change, env);
+  session = refreshCompletedTasks(project, session);
+  if (session.completedTasks >= session.budgets.maxTasks) {
+    session = closeRunSession(project, session, 'max-tasks');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-tasks) for ${change}.\n`,
+      stopReason: 'max-tasks',
+      request: null,
+    };
+  }
+
   const limit = Number(maxTasks || config.run?.defaultMaxTasks || 20);
   let progressed = 0;
 

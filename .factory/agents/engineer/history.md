@@ -109,3 +109,11 @@ Implementer: bc-c00819ae-5928-5ff4-a321-77696732de1f
 Red: `node --test test/run-session.test.mjs` exit 1 (maxAgentSteps stayed 20; `--max-agent-steps` unwired); `node src/cli.mjs verify run 7b2f2844-928e-4eb7-8461-674bc47ed750 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs test/orchestration.test.mjs` exit 0, 24 pass.
 Scope: agent-step budget across processes only — persist increment before request; first-request `--max-tasks 1` still exit 2; no completed-task/wall-clock/failure/unchanged/host enforcement.
+
+## 2026-10-21 persist-bounded-run-sessions/2.2
+
+Attempt: c7fa68b1-97c2-49f7-8fab-9b7dbd1a3c7e
+Implementer: bc-516efcf5-e89c-5c53-a7c7-515b03e50b57
+Red: `node --test test/run-session.test.mjs` exit 1 (baselineDoneIds [] !== ['1.1']); `node src/cli.mjs verify run c7fa68b1-97c2-49f7-8fab-9b7dbd1a3c7e --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 9 pass.
+Scope: completed-task budget only — baselineDoneIds at create; count newly finalized during session; stop max-tasks with no request; already-done at creation excluded. No wall-clock/failure/unchanged/host; no review/complete/commit/push.
