@@ -17,7 +17,7 @@
 
 ## 4. Install and skill text
 
-- [ ] 4.1 Set `security-sensitive.humanGate` to true in the profile template and keep `release.humanGate` true. Add failing install tests that a new init writes both values and a second init leaves an existing `profiles.json` byte-for-byte unchanged. Do not edit this repo's `.factory/profiles.json`. Verify with `node --test test/install.test.mjs`.
+- [x] 4.1 Set `security-sensitive.humanGate` to true in the profile template and keep `release.humanGate` true. Add failing install tests that a new init writes both values and a second init leaves an existing `profiles.json` byte-for-byte unchanged. Do not edit this repo's `.factory/profiles.json`. Verify with `node --test test/install.test.mjs`.
 - [ ] 4.2 Update the factory-run skill copies under `.cursor/skills`, `.github/skills`, `.agents/skills`, `.claude/skills`, and `templates/skills` so each describes `human-gate` as the stop for a true profile `humanGate` and does not limit that stop to the release profile. The loop still does not pass `--new-run`. Verify by reading those five files in `node --test test/risk-gates.test.mjs`.
 
 ## 5. Integration
