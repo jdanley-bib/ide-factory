@@ -419,10 +419,59 @@ function hashArtifacts(projectRoot, artifacts) {
 }
 
 /**
- * Resolve HEAD and worktree cleanliness for source-revision binding.
- * A pass requires a resolvable HEAD and an empty `git status --porcelain`.
+ * Factory run-state paths that verify/complete mutate. Dirt here must not
+ * block a source-revision pass; source, tests, OpenSpec, and checks.json still do.
  */
-function resolveGitBinding(cwd) {
+const FACTORY_RUN_STATE_PREFIXES = [
+  '.factory/attempts/',
+  '.factory/work/',
+  '.factory/orchestration/',
+];
+const FACTORY_RUN_STATE_FILES = new Set([
+  '.factory/ledger.jsonl',
+]);
+
+function normalizeGitPath(relPath) {
+  return String(relPath || '')
+    .replace(/\\/g, '/')
+    .replace(/^\.\//, '');
+}
+
+function unquoteGitPath(value) {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed.slice(1, -1).replace(/\\([\\"ntr])/g, (_, ch) => {
+      if (ch === 'n') return '\n';
+      if (ch === 't') return '\t';
+      if (ch === 'r') return '\r';
+      return ch;
+    });
+  }
+  return trimmed;
+}
+
+function porcelainPaths(line) {
+  if (!line || line.length < 3) return [];
+  const rest = line.slice(3);
+  if (rest.includes(' -> ')) {
+    return rest.split(' -> ').map(unquoteGitPath).map(normalizeGitPath);
+  }
+  return [normalizeGitPath(unquoteGitPath(rest))];
+}
+
+function isFactoryRunStatePath(relPath) {
+  const normalized = normalizeGitPath(relPath);
+  if (FACTORY_RUN_STATE_FILES.has(normalized)) return true;
+  return FACTORY_RUN_STATE_PREFIXES.some(
+    (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
+  );
+}
+
+/**
+ * Resolve HEAD and worktree cleanliness for source-revision binding.
+ * A pass requires a resolvable HEAD and no dirty non-run-state paths.
+ */
+export function resolveGitBinding(cwd) {
   const headResult = spawnSync('git', ['rev-parse', 'HEAD'], {
     cwd,
     encoding: 'utf8',
@@ -444,7 +493,11 @@ function resolveGitBinding(cwd) {
   if (statusResult.status !== 0) {
     return { sourceRevision: sha, worktreeClean: false };
   }
-  const worktreeClean = (statusResult.stdout || '').trim() === '';
+  const lines = (statusResult.stdout || '').split('\n').filter((line) => line.length > 0);
+  const worktreeClean = lines.every((line) => {
+    const paths = porcelainPaths(line);
+    return paths.length > 0 && paths.every(isFactoryRunStatePath);
+  });
   return { sourceRevision: sha, worktreeClean };
 }
 

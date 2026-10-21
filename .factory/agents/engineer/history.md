@@ -57,3 +57,10 @@ Attempt: dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665
 Implementer: bc-1fa3e1cb-9266-5ee6-b7d9-2c07a3acd782
 Red: verify --check unit --red exit 1, and assertion expected reject for caller verification.
 Green: `node --test test/orchestration.test.mjs` exit 0, 9 pass.
+
+## 2026-10-21 enforce-verification-evidence/4.2
+
+Attempt: 1b6bdd69-d6b1-408e-aa05-c10d9ed94a7d
+Implementer: bc-38d8d8c1-19e9-530e-982b-87c7e9f5d6fe
+Red: forged passed:true was accepted before the gate; attempt-only dirt blocked a pass.
+Green: orchestration and verification-evidence tests exit 0, 44 pass.

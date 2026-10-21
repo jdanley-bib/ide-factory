@@ -3,7 +3,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { getAttempt } from '../src/lib/attempt.mjs';
+import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
+import { commandDigest } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
 
@@ -24,6 +25,24 @@ function git(cwd, args) {
   return result.stdout.trim();
 }
 
+/** Ignore factory run-state so verify/complete mutations do not dirty the worktree. */
+function ensureFactoryGitignore(dir) {
+  const file = path.join(dir, '.gitignore');
+  const lines = [
+    '.factory/attempts/*',
+    '!.factory/attempts/.gitkeep',
+    '.factory/work/',
+    '.factory/ledger.jsonl',
+    '.factory/orchestration/*',
+    '!.factory/orchestration/.gitkeep',
+  ];
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const extras = lines.filter((line) => !existing.split('\n').includes(line));
+  if (extras.length > 0) {
+    fs.writeFileSync(file, `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${extras.join('\n')}\n`);
+  }
+}
+
 /** Init git if needed and commit the full worktree so verifyRun can record a pass. */
 function ensureCleanGitCommit(dir) {
   if (!fs.existsSync(path.join(dir, '.git'))) {
@@ -31,6 +50,7 @@ function ensureCleanGitCommit(dir) {
     git(dir, ['config', 'user.email', 'test@example.com']);
     git(dir, ['config', 'user.name', 'idefactory-test']);
   }
+  ensureFactoryGitignore(dir);
   git(dir, ['add', '-A']);
   const porcelain = spawnSync('git', ['status', '--porcelain'], {
     cwd: dir,
@@ -124,8 +144,8 @@ async function advanceToVerifying(dir, attemptId, {
   ])).code, 0);
 }
 
-async function acceptAttempt(dir, attemptId) {
-  await advanceToVerifying(dir, attemptId);
+async function acceptAttempt(dir, attemptId, options = {}) {
+  await advanceToVerifying(dir, attemptId, options);
   await idefactory(dir, [
     'attempt', 'transition', attemptId, 'awaiting-review',
     '--evidence', JSON.stringify({}),
@@ -135,6 +155,23 @@ async function acceptAttempt(dir, attemptId) {
     '--evidence', JSON.stringify({ reviewerId: 'reviewer-1', verdict: 'ACCEPT' }),
   ]);
   assert.equal(accepted.code, 0, accepted.err);
+}
+
+function writeAttemptEvidence(dir, attemptId, patchEvidence) {
+  const file = attemptPath(dir, attemptId);
+  const attempt = JSON.parse(fs.readFileSync(file, 'utf8'));
+  attempt.evidence = { ...attempt.evidence, ...patchEvidence };
+  fs.writeFileSync(file, `${JSON.stringify(attempt, null, 2)}\n`);
+}
+
+async function assertCompleteLeavesUnfinished(dir, attemptId, errPattern) {
+  const beforeStatus = getWorkItem(dir, 'demo', '1.1').status;
+  const done = await idefactory(dir, ['complete', 'demo', '1.1', '--attempt', attemptId]);
+  assert.notEqual(done.code, 0, `expected complete to fail; stdout=${done.out}`);
+  assert.match(done.err, errPattern);
+  assert.equal(getWorkItem(dir, 'demo', '1.1').status, beforeStatus);
+  assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
+  assert.notEqual(getAttempt(dir, attemptId).state, 'finalized');
 }
 
 function parseOrchestrationJson(out) {
@@ -357,6 +394,8 @@ test('complete refuses missing verification evidence', async () => {
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const attempt = JSON.parse(started.out);
     await advanceToVerifying(dir, attempt.id, { passChecks: {} });
+    writeCheckRegistry(dir, { unit: 0 });
+    ensureCleanGitCommit(dir);
     await idefactory(dir, [
       'attempt', 'transition', attempt.id, 'awaiting-review',
       '--evidence', '{}',
@@ -367,7 +406,7 @@ test('complete refuses missing verification evidence', async () => {
     ]);
     const done = await idefactory(dir, ['complete', 'demo', '1.1', '--attempt', attempt.id]);
     assert.notEqual(done.code, 0);
-    assert.match(done.err, /Missing passing check/i);
+    assert.match(done.err, /Missing passing check|attestation|issuer/i);
     assert.equal(getWorkItem(dir, 'demo', '1.1').status, 'in_progress');
     assert.notEqual(getAttempt(dir, attempt.id).state, 'finalized');
   } finally {
@@ -440,6 +479,253 @@ test('lockout blocks complete', async () => {
     const done = await idefactory(dir, ['complete', 'demo', '1.1', '--attempt', attempt.id]);
     assert.notEqual(done.code, 0);
     assert.match(done.err, /lockout/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses forged passed:true without verification-command attestation', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: {} });
+    writeCheckRegistry(dir, { unit: 0 });
+    ensureCleanGitCommit(dir);
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [{ kind: 'unit', command: 'npm test', passed: true }],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /attestation|issuer|exitCode|verification/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses unknown check kind', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit, totally-unknown-check]',
+      '    verificationProfile: frontend-low',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: { unit: 0 } });
+    const stored = getAttempt(dir, attempt.id);
+    const unit = stored.evidence.verification.find((entry) => entry.kind === 'unit');
+    assert.ok(unit);
+    // Old boolean gate would accept a forged pass for the unknown kind.
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [
+        unit,
+        { kind: 'totally-unknown-check', command: 'true', passed: true },
+      ],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /unknown|unmapped|totally-unknown-check/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses kind with no argv mapping', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit, bare-kind]',
+      '    verificationProfile: frontend-low',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: { unit: 0 } });
+    const unitArgv = [process.execPath, '-e', 'process.exit(0)'];
+    const registry = {
+      schemaVersion: 1,
+      checks: {
+        unit: {
+          argv: unitArgv,
+          cwdPolicy: 'project',
+          timeoutMs: 30_000,
+          artifacts: [],
+        },
+        'bare-kind': {
+          cwdPolicy: 'project',
+          timeoutMs: 30_000,
+          artifacts: [],
+        },
+      },
+    };
+    fs.writeFileSync(
+      path.join(dir, '.factory/checks.json'),
+      `${JSON.stringify(registry, null, 2)}\n`,
+    );
+    const head = ensureCleanGitCommit(dir);
+    const stored = getAttempt(dir, attempt.id);
+    const unit = stored.evidence.verification.find((entry) => entry.kind === 'unit');
+    assert.ok(unit);
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [
+        { ...unit, sourceRevision: head, worktreeClean: true },
+        {
+          schemaVersion: 1,
+          kind: 'bare-kind',
+          issuer: 'cli',
+          runner: { name: 'idefactory', version: '0.0.0' },
+          argv: ['true'],
+          commandDigest: commandDigest(['true']),
+          exitCode: 0,
+          timedOut: false,
+          attemptId: attempt.id,
+          sourceRevision: head,
+          worktreeClean: true,
+          passed: true,
+          startedAt: new Date().toISOString(),
+          finishedAt: new Date().toISOString(),
+          logDigest: 'sha256:' + '0'.repeat(64),
+          artifactDigests: [],
+        },
+      ],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /argv|mapping|bare-kind/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses non-zero exit code attestation', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: {} });
+    writeCheckRegistry(dir, { unit: 0 });
+    const head = ensureCleanGitCommit(dir);
+    const argv = [process.execPath, '-e', 'process.exit(0)'];
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [{
+        schemaVersion: 1,
+        kind: 'unit',
+        issuer: 'cli',
+        runner: { name: 'idefactory', version: '0.0.0' },
+        argv,
+        commandDigest: commandDigest(argv),
+        exitCode: 1,
+        timedOut: false,
+        attemptId: attempt.id,
+        sourceRevision: head,
+        worktreeClean: true,
+        passed: true,
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        logDigest: 'sha256:' + '0'.repeat(64),
+        artifactDigests: [],
+      }],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /exit|pass|unit/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses missing exit code on attestation', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: {} });
+    writeCheckRegistry(dir, { unit: 0 });
+    const head = ensureCleanGitCommit(dir);
+    const argv = [process.execPath, '-e', 'process.exit(0)'];
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [{
+        schemaVersion: 1,
+        kind: 'unit',
+        issuer: 'cli',
+        runner: { name: 'idefactory', version: '0.0.0' },
+        argv,
+        commandDigest: commandDigest(argv),
+        timedOut: false,
+        attemptId: attempt.id,
+        sourceRevision: head,
+        worktreeClean: true,
+        passed: true,
+        startedAt: new Date().toISOString(),
+        finishedAt: new Date().toISOString(),
+        logDigest: 'sha256:' + '0'.repeat(64),
+        artifactDigests: [],
+      }],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /exitCode|exit code/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses command-digest mismatch against current registry', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: { unit: 0 } });
+    writeCheckRegistry(dir, { unit: 0 });
+    // Rewrite argv so the stored digest no longer matches the registry.
+    fs.writeFileSync(
+      path.join(dir, '.factory/checks.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        checks: {
+          unit: {
+            argv: [process.execPath, '-e', 'process.exit(0); /* changed */'],
+            cwdPolicy: 'project',
+            timeoutMs: 30_000,
+            artifacts: [],
+          },
+        },
+      }, null, 2)}\n`,
+    );
+    ensureCleanGitCommit(dir);
+    // Re-bind stored attestation to the new HEAD but keep the old commandDigest.
+    const head = git(dir, ['rev-parse', 'HEAD']);
+    const stored = getAttempt(dir, attempt.id);
+    const record = stored.evidence.verification.find((entry) => entry.kind === 'unit');
+    assert.ok(record);
+    writeAttemptEvidence(dir, attempt.id, {
+      verification: [{ ...record, sourceRevision: head, worktreeClean: true, passed: true }],
+    });
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /digest|commandDigest|registry/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('complete refuses source revision other than current clean HEAD', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: { unit: 0 } });
+    fs.writeFileSync(path.join(dir, 'stale-marker.txt'), 'after verify\n');
+    ensureCleanGitCommit(dir);
+    const head = git(dir, ['rev-parse', 'HEAD']);
+    const stored = getAttempt(dir, attempt.id);
+    const record = stored.evidence.verification.find((entry) => entry.kind === 'unit');
+    assert.ok(record);
+    assert.notEqual(record.sourceRevision, head);
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /sourceRevision|revision|HEAD/i);
   } finally {
     cleanup(dir);
   }

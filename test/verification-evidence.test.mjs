@@ -383,6 +383,60 @@ test('dirty worktree does not record a passing result', async () => {
   }
 });
 
+test('factory run-state dirt does not block a pass; source dirt still does', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 0);
+    // Track attempt JSON (no gitignore) so porcelain shows factory run-state dirt.
+    ensureCleanGitCommit(dir);
+    const attemptFile = path.join(dir, '.factory/attempts', `${attempt.id}.json`);
+    assert.ok(fs.existsSync(attemptFile));
+    const parsed = JSON.parse(fs.readFileSync(attemptFile, 'utf8'));
+    parsed.updatedAt = new Date().toISOString();
+    fs.writeFileSync(attemptFile, `${JSON.stringify(parsed, null, 2)}\n`);
+
+    const porcelain = spawnSync('git', ['status', '--porcelain'], {
+      cwd: dir,
+      encoding: 'utf8',
+      shell: false,
+    });
+    assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+    assert.match(porcelain.stdout, /\.factory\/attempts\//);
+    assert.doesNotMatch(porcelain.stdout, /dirty\.txt|checks\.json/);
+
+    const passResult = await idefactory(dir, [
+      'verify', 'run', attempt.id, '--check', 'unit',
+    ]);
+    assert.equal(passResult.code, 0, passResult.err + passResult.out);
+    const passRecord = getAttempt(dir, attempt.id).evidence.verification.at(-1);
+    assert.equal(passRecord?.passed, true);
+    assert.equal(passRecord?.worktreeClean, true);
+
+    fs.writeFileSync(path.join(dir, 'dirty.txt'), 'uncommitted source\n');
+    const dirtySource = await idefactory(dir, [
+      'verify', 'run', attempt.id, '--check', 'unit',
+    ]);
+    assert.equal(dirtySource.code, 0, dirtySource.err + dirtySource.out);
+    const sourceRecord = getAttempt(dir, attempt.id).evidence.verification.at(-1);
+    assert.notEqual(sourceRecord?.passed, true);
+
+    fs.unlinkSync(path.join(dir, 'dirty.txt'));
+    ensureCleanGitCommit(dir);
+    const checksPath = path.join(dir, '.factory/checks.json');
+    const checks = JSON.parse(fs.readFileSync(checksPath, 'utf8'));
+    checks.checks.unit.timeoutMs = (checks.checks.unit.timeoutMs || 30_000) + 1;
+    fs.writeFileSync(checksPath, `${JSON.stringify(checks, null, 2)}\n`);
+    const dirtyChecks = await idefactory(dir, [
+      'verify', 'run', attempt.id, '--check', 'unit',
+    ]);
+    assert.equal(dirtyChecks.code, 0, dirtyChecks.err + dirtyChecks.out);
+    const checksRecord = getAttempt(dir, attempt.id).evidence.verification.at(-1);
+    assert.notEqual(checksRecord?.passed, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('unresolvable HEAD does not record a passing result', async () => {
   const dir = tempProject();
   try {

@@ -2,7 +2,7 @@
   "id": "4.1",
   "change": "enforce-verification-evidence",
   "title": "Add a failing test that `attempt transition` rejects a payload containing red, verification, or security results and leaves the attempt unchanged, while still accepting reviewer notes. Implement that rejection and verify with `node --test test/orchestration.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "Add a failing test that `attempt transition` rejects a payload containing red, verification, or security results and leaves the attempt unchanged, while still accepting reviewer notes. Implement that rejection and verify with `node --test test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
@@ -26,5 +26,5 @@
     "dependencies": []
   },
   "attemptId": "dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665",
-  "updatedAt": "2026-10-21T16:34:15.502Z"
+  "updatedAt": "2026-10-21T16:44:12.269Z"
 }

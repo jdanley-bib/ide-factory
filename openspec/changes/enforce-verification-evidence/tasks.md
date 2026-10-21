@@ -18,7 +18,7 @@
 
 ## 4. Fail-closed completion
 
-- [ ] 4.1 Add a failing test that `attempt transition` rejects a payload containing red, verification, or security results and leaves the attempt unchanged, while still accepting reviewer notes. Implement that rejection and verify with `node --test test/orchestration.test.mjs`.
+- [x] 4.1 Add a failing test that `attempt transition` rejects a payload containing red, verification, or security results and leaves the attempt unchanged, while still accepting reviewer notes. Implement that rejection and verify with `node --test test/orchestration.test.mjs`.
 - [ ] 4.2 Add failing completion tests for a forged `passed: true`, an unknown check kind, a kind with no argv mapping, a non-zero or missing exit code, a command-digest mismatch, and a source revision other than the current clean HEAD. Each case must leave the work item unfinished. Implement the gate and verify with `node --test test/orchestration.test.mjs`.
 - [ ] 4.3 Change existing successful-completion fixtures to create a clean git worktree, register every required check, and obtain evidence from `verify run` or a signature-valid import. Verify the accepted attempt still finalizes by running `node --test test/orchestration.test.mjs`.
 
