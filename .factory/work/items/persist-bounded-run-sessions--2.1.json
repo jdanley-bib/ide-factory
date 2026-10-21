@@ -1,0 +1,28 @@
+{
+  "id": "2.1",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add a failing cross-process test that `--max-agent-steps N` allows N processes to print one agent-step request each, and process N+1 exits 0 with persisted stop reason `max-agent-steps` and no orchestration request. Persist the incremented count before the request is printed. Keep the existing first-request test that passes `--max-tasks 1` expecting exit 2. Verify with `node --test test/run-session.test.mjs test/orchestration.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing cross-process test that `--max-agent-steps N` allows N processes to print one agent-step request each, and process N+1 exits 0 with persisted stop reason `max-agent-steps` and no orchestration request. Persist the incremented count before the request is printed. Keep the existing first-request test that passes `--max-tasks 1` expecting exit 2. Verify with `node --test test/run-session.test.mjs test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T17:34:41.261Z"
+}

@@ -78,3 +78,10 @@ Attempt: 8152331d-3d0a-49ec-9726-4448883624c9
 Implementer: bc-c7302652-ec5f-552a-9db8-1d1448116c75
 Red: missing implementation notes file.
 Green: strict validate exit 0, npm test exit 0 (77 pass), doctor exit 0.
+
+## 2026-10-21 persist-bounded-run-sessions/1.1
+
+Attempt: 1dd1b142-2dc7-4317-a6f6-eea9e5019472
+Implementer: bc-4ee1c51e-7df4-5fc9-b731-b6c83c54f755
+Red: `node --test test/run-session.test.mjs` exit 1 (3 assertion failures vs stub); `node src/cli.mjs verify run 1dd1b142-2dc7-4317-a6f6-eea9e5019472 --check unit --red` stored exitCode 1 / passed:false.
+Green: `node --test test/run-session.test.mjs` exit 0, 3 pass.

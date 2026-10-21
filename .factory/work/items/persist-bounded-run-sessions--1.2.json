@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add failing tests that the first `idefactory run` for a change writes `.factory/orchestration/runs/<run-id>.json`, and that a second process resumes the same run id and agent-step count. Implement resume and verify with `node --test test/run-session.test.mjs`.",
+  "status": "todo",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "Add failing tests that the first `idefactory run` for a change writes `.factory/orchestration/runs/<run-id>.json`, and that a second process resumes the same run id and agent-step count. Implement resume and verify with `node --test test/run-session.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T17:34:41.258Z"
+}

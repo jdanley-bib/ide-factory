@@ -1,0 +1,32 @@
+{
+  "id": "2.4",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add failing tests that a recorded red result does not increment the failure count and that timed-out verification results at the maximum exit 0 with `max-failures` and no request. Verify with `node --test test/run-session.test.mjs`.",
+  "status": "todo",
+  "dependencies": [
+    "2.3"
+  ],
+  "acceptanceCriteria": [
+    "Add failing tests that a recorded red result does not increment the failure count and that timed-out verification results at the maximum exit 0 with `max-failures` and no request. Verify with `node --test test/run-session.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "2.3"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T17:34:41.263Z"
+}

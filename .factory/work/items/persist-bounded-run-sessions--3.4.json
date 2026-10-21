@@ -1,0 +1,37 @@
+{
+  "id": "3.4",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add a failing test that the security-reviewer route still exits 2 with one security-reviewer request when the session has remaining budget. Verify with `node --test test/orchestration.test.mjs`.",
+  "status": "todo",
+  "dependencies": [
+    "3.3"
+  ],
+  "acceptanceCriteria": [
+    "Add a failing test that the security-reviewer route still exits 2 with one security-reviewer request when the session has remaining budget. Verify with `node --test test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "security",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit",
+      "build",
+      "dependency-audit",
+      "threat-review"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "security-sensitive",
+    "verificationProfile": "security-sensitive",
+    "dependencies": [
+      "3.3"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T17:34:41.267Z"
+}

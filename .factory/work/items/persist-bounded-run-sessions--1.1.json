@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add failing tests that a schema version 1 session records run id, change, start time, budgets, agent-step count, completed-task count, failure count, last request fingerprint, and stop reason, and that an unsupported schema version or non-JSON body is rejected without a replacement file. Implement that validator and verify with `node --test test/run-session.test.mjs`.",
+  "status": "in_progress",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that a schema version 1 session records run id, change, start time, budgets, agent-step count, completed-task count, failure count, last request fingerprint, and stop reason, and that an unsupported schema version or non-JSON body is rejected without a replacement file. Implement that validator and verify with `node --test test/run-session.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "1dd1b142-2dc7-4317-a6f6-eea9e5019472",
+  "updatedAt": "2026-10-21T17:34:41.387Z"
+}

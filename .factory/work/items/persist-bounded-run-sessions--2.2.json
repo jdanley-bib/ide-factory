@@ -1,0 +1,32 @@
+{
+  "id": "2.2",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add a failing test that finalizing the configured number of tasks makes the next run exit 0 with `max-tasks` and no request, and that work items already done at session creation do not count. Implement `baselineDoneIds` and verify with `node --test test/run-session.test.mjs`.",
+  "status": "todo",
+  "dependencies": [
+    "2.1"
+  ],
+  "acceptanceCriteria": [
+    "Add a failing test that finalizing the configured number of tasks makes the next run exit 0 with `max-tasks` and no request, and that work items already done at session creation do not count. Implement `baselineDoneIds` and verify with `node --test test/run-session.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "2.1"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T17:34:41.262Z"
+}
