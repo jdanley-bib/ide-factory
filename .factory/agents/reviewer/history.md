@@ -163,3 +163,10 @@ Reviewer: bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef
 Verdict: ACCEPT
 Transition: security-checking → awaiting-review → accepted (post security-reviewer bc-96987f34-07ea-5d89-8044-753b42bcde59).
 Re-ran `node --test test/orchestration.test.mjs test/run-session.test.mjs` exit 0, 49 pass; `npm test` exit 0, 110 pass. CLI red at 5e02d383 (exitCode 1, issuer cli, passed:false); unit pass at 039d456 worktreeClean. Simulated red: re-applied 358012f auto-reopen of sticky unchanged-state → orchestration suite 1 fail (`security-reviewer route in fresh session…`, exit 0 unchanged-state instead of exit 2). Product net: test-only at HEAD; sticky unchanged-state preserved; `--new-run` yields one security-reviewer request at exit 2 with budget remaining. evidence.security empty; no new enforcement/tooling.
+
+## 2026-10-21 persist-bounded-run-sessions/4.1
+
+Attempt: e63c39e8-9c29-419e-af8e-769c141de8d5
+Reviewer: bc-9b0951c5-ad67-55a5-a0e2-573a102cb4fb
+Verdict: ACCEPT
+Product: 2c5b4fb (template four positive run defaults; install tests). Re-ran `node --test test/install.test.mjs` 12/12 pass. CLI red ac2b105 passed:false worktreeClean:false; simulated red ac2b105+tests only 1 fail; unit verify 2c5b4fb passed:true. Repo `.factory/config.json` unchanged. Transitions verifying → awaiting-review → accepted.
