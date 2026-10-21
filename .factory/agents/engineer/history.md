@@ -300,3 +300,11 @@ Implementer: bc-00133855-88d8-53b4-9d4d-a6a578edb96b
 Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing exports compareAndApplyTarget/recoverFinalization); `node src/cli.mjs verify run 3a56eca2-2a84-440c-b064-87222e4e7a3c --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:b5b6b7b1f602b75b0e5806041f16fd05c2a3f8846666af6026f42aec0fa70945).
 Green: `node --test test/finalization-recovery.test.mjs` exit 0, 17 pass.
 Scope: compare-and-apply recovery only — skip after-digest, apply before-digest, conflict otherwise; recoverFinalization resumes finalized+unfinished journal and repeats already-committed without duplicating checkbox/scribe/attempt history; journal apply bytes aligned to validated create shape. No fault injection, lockout, lease, complete wiring, review, or push.
+
+## 2026-10-21 make-finalization-recoverable/2.2
+
+Attempt: 53b91f30-220d-425e-8f86-e9b3dbbc18ab
+Implementer: bc-f9136866-3cd3-54a7-b04b-49280da24f59
+Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing exports finalizationFaultBoundaries/runJournaledFinalization); orchestration finalized+unfinished journal exited 0 max-tasks instead of needs-complete; `node src/cli.mjs verify run 53b91f30-220d-425e-8f86-e9b3dbbc18ab --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:060bfc130d40aa90e99a93627df3f3f12f68cc50da5f1da0a54a489baa4a1ea7).
+Green: `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 40 pass.
+Scope: library-only fault hook at journal and every pre-commit/ready-journal/before-commit boundary; table-driven recovery invariants; orchestration needs-complete for finalized+matching unfinished journal. No lockout, lease, complete wiring, review, or push.

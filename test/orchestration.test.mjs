@@ -4,6 +4,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
+import {
+  buildFinalizationPlan,
+  createFinalizationJournal,
+} from '../src/lib/finalization-recovery.mjs';
+import { writeText } from '../src/lib/layout.mjs';
 import { commandDigest } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
@@ -853,6 +858,50 @@ test('complete refuses source revision other than current clean HEAD', async () 
     assert.ok(record);
     assert.notEqual(record.sourceRevision, head);
     await assertCompleteLeavesUnfinished(dir, attempt.id, /sourceRevision|revision|HEAD/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('run emits needs-complete for finalized attempt with matching unfinished journal', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const attempt = JSON.parse(started.out);
+    await acceptAttempt(dir, attempt.id, { passChecks: { unit: 0 } });
+
+    const sourceRevision = ensureCleanGitCommit(dir);
+    const plan = buildFinalizationPlan(dir, {
+      change: 'demo',
+      taskId: '1.1',
+      attemptId: attempt.id,
+      sourceRevision,
+      completionDate: '2026-10-21',
+      finalizedAt: '2026-10-21T22:00:00.000Z',
+    });
+    createFinalizationJournal(dir, plan.journal, {
+      change: 'demo',
+      taskId: '1.1',
+      attemptId: attempt.id,
+      sourceRevision,
+    });
+    // Crash after attempt finalization: attempt is finalized, journal unfinished, item not done.
+    writeText(path.join(dir, plan.targets[3].path), plan.targets[3].afterBytes);
+    assert.equal(getAttempt(dir, attempt.id).state, 'finalized');
+    assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
+
+    const result = await idefactory(dir, ['run', '--change', 'demo', '--new-run']);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.match(result.out, /# Orchestration request/);
+    assert.match(result.out, /Action: complete/);
+    const request = parseOrchestrationJson(result.out);
+    assert.equal(request.action, 'complete');
+    assert.equal(request.role, 'scribe');
+    assert.equal(request.attemptId, attempt.id);
+    assert.equal(request.taskId, '1.1');
+    assert.equal(getWorkItem(dir, 'demo', '1.1').status, 'in_progress');
+    assert.equal(getAttempt(dir, attempt.id).state, 'finalized');
   } finally {
     cleanup(dir);
   }

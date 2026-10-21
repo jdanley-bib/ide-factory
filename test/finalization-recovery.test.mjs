@@ -9,11 +9,13 @@ import {
   compareAndApplyTarget,
   contentDigest,
   createFinalizationJournal,
+  finalizationFaultBoundaries,
   finalizationJournalPath,
   planDigest,
   readFinalizationJournal,
   recoverFinalization,
   replayFinalizationTargets,
+  runJournaledFinalization,
   validateFinalizationJournal,
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
@@ -30,6 +32,8 @@ const PLAN_TASK_ID = '1.2';
 const PLAN_ATTEMPT_ID = '46a2aac4-ca25-4b93-a9db-ee047d77be5c';
 const RECOVERY_TASK_ID = '2.1';
 const RECOVERY_ATTEMPT_ID = '3a56eca2-2a84-440c-b064-87222e4e7a3c';
+const FAULT_TASK_ID = '2.2';
+const FAULT_ATTEMPT_ID = '53b91f30-220d-425e-8f86-e9b3dbbc18ab';
 
 function sha256Digest(text) {
   const hex = createHash('sha256').update(text, 'utf8').digest('hex');
@@ -832,6 +836,188 @@ test('recoverFinalization conflict keeps the work item not done', () => {
       /conflict/i,
     );
     assert.notEqual(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function seedFaultFixture(dir) {
+  writeText(
+    path.join(dir, 'openspec', 'changes', CHANGE, 'tasks.md'),
+    [
+      '# Tasks',
+      '',
+      '## 2. Replay and crash recovery',
+      '',
+      `- [ ] ${FAULT_TASK_ID} Add a library-only fault hook and table-driven failing tests`,
+      '',
+    ].join('\n'),
+  );
+  writeText(path.join(dir, '.factory', 'agents', 'scribe', 'history.md'), '# History\n\n(none yet)\n');
+  writeText(path.join(dir, '.factory', 'identity', 'now.md'), '# Now\n\nIdle.\n');
+  const attempt = {
+    id: FAULT_ATTEMPT_ID,
+    change: CHANGE,
+    taskId: FAULT_TASK_ID,
+    state: 'accepted',
+    implementerRole: 'engineer',
+    implementerId: 'bc-engineer',
+    reviewerId: 'bc-reviewer',
+    modelProfile: 'coding-standard',
+    evidence: {
+      red: { issuer: 'cli', kind: 'unit', passed: false, exitCode: 1 },
+      verification: [],
+      security: [],
+      review: { verdict: 'ACCEPT', reviewerId: 'bc-reviewer', notes: '', at: '2026-10-21T21:00:00.000Z' },
+      changedFiles: [],
+      baseRev: null,
+    },
+    history: [
+      { at: '2026-10-21T20:00:00.000Z', state: 'planned' },
+      { at: '2026-10-21T21:00:00.000Z', state: 'accepted' },
+    ],
+    createdAt: '2026-10-21T20:00:00.000Z',
+    updatedAt: '2026-10-21T21:00:00.000Z',
+  };
+  writeText(
+    path.join(dir, '.factory', 'attempts', `${FAULT_ATTEMPT_ID}.json`),
+    `${JSON.stringify(attempt, null, 2)}\n`,
+  );
+  upsertWorkItem(dir, {
+    id: FAULT_TASK_ID,
+    change: CHANGE,
+    title: 'fault injection boundaries',
+    status: 'in_progress',
+    dependencies: ['2.1'],
+    acceptanceCriteria: [],
+    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    attemptId: FAULT_ATTEMPT_ID,
+  });
+  return attempt;
+}
+
+function faultPlanOptions(overrides = {}) {
+  return {
+    change: CHANGE,
+    taskId: FAULT_TASK_ID,
+    attemptId: FAULT_ATTEMPT_ID,
+    sourceRevision: SOURCE_REVISION,
+    completionDate: COMPLETION_DATE,
+    finalizedAt: FINALIZED_AT,
+    ...overrides,
+  };
+}
+
+function snapshotFinalState(dir, plan) {
+  return Object.fromEntries(
+    [...plan.targets, plan.commit].map((target) => {
+      const absolute = path.join(dir, target.path);
+      return [target.path, fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : null];
+    }),
+  );
+}
+
+test('finalizationFaultBoundaries lists journal, every pre-commit target, ready-journal, and before-commit', () => {
+  const boundaries = finalizationFaultBoundaries();
+  assert.ok(boundaries.includes('before-journal-create'));
+  assert.ok(boundaries.includes('after-journal-create'));
+  for (const name of ['tasks', 'scribe', 'identity', 'attempt', 'index', 'ready-journal']) {
+    assert.ok(boundaries.includes(`before-target:${name}`), `missing before-target:${name}`);
+    assert.ok(boundaries.includes(`after-target:${name}`), `missing after-target:${name}`);
+  }
+  assert.ok(boundaries.includes('before-commit'));
+  assert.equal(boundaries.at(-1), 'before-commit');
+});
+
+test('injected fault at every finalization boundary leaves item not done and uninjected retry reaches one byte-consistent state', () => {
+  const boundaries = finalizationFaultBoundaries();
+  assert.ok(boundaries.length >= 15, 'expected before/after journal, before/after each target, before-commit');
+
+  for (const boundary of boundaries) {
+    const dir = tempProject();
+    try {
+      seedFaultFixture(dir);
+      const plan = buildFinalizationPlan(dir, faultPlanOptions());
+      const injectOnce = (name) => {
+        if (name === boundary) {
+          throw new Error(`injected fault at ${boundary}`);
+        }
+      };
+
+      assert.throws(
+        () => runJournaledFinalization(dir, {
+          ...faultPlanOptions(),
+          plan,
+          faultHook: injectOnce,
+        }),
+        new RegExp(`injected fault at ${boundary.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`),
+      );
+      assert.notEqual(
+        getWorkItem(dir, CHANGE, FAULT_TASK_ID).status,
+        'done',
+        `item must not be done after fault at ${boundary}`,
+      );
+
+      const recovered = runJournaledFinalization(dir, {
+        ...faultPlanOptions(),
+        plan,
+      });
+      assert.ok(
+        recovered.status === 'committed' || recovered.status === 'resumed',
+        `unexpected recovery status ${recovered.status} after ${boundary}`,
+      );
+      assert.equal(getWorkItem(dir, CHANGE, FAULT_TASK_ID).status, 'done');
+      const afterFirst = snapshotFinalState(dir, plan);
+
+      const again = runJournaledFinalization(dir, {
+        ...faultPlanOptions(),
+        plan,
+      });
+      assert.equal(again.status, 'already-committed');
+      assert.deepEqual(
+        snapshotFinalState(dir, plan),
+        afterFirst,
+        `byte-consistent final state after recovery from ${boundary}`,
+      );
+      assert.equal(
+        countMatches(
+          fs.readFileSync(path.join(dir, plan.targets[1].path), 'utf8'),
+          new RegExp(`Attempt:\\s*${FAULT_ATTEMPT_ID}`, 'g'),
+        ),
+        1,
+      );
+      assert.equal(
+        JSON.parse(fs.readFileSync(path.join(dir, plan.targets[3].path), 'utf8'))
+          .history.filter((entry) => entry.state === 'finalized').length,
+        1,
+      );
+    } finally {
+      cleanup(dir);
+    }
+  }
+});
+
+test('runJournaledFinalization without faultHook reaches committed final state', () => {
+  const dir = tempProject();
+  try {
+    seedFaultFixture(dir);
+    const plan = buildFinalizationPlan(dir, faultPlanOptions());
+    const result = runJournaledFinalization(dir, {
+      ...faultPlanOptions(),
+      plan,
+    });
+    assert.equal(result.status, 'committed');
+    assert.equal(getWorkItem(dir, CHANGE, FAULT_TASK_ID).status, 'done');
+    for (const target of plan.targets) {
+      assert.equal(
+        fs.readFileSync(path.join(dir, target.path), 'utf8'),
+        target.afterBytes,
+      );
+    }
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.commit.path), 'utf8'),
+      plan.commit.afterBytes,
+    );
   } finally {
     cleanup(dir);
   }

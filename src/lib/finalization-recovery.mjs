@@ -17,6 +17,31 @@ const REQUIRED_FIELDS = [
   'targets',
 ];
 
+/** Stable names for the six allowlisted pre-commit targets (ordered). */
+const TARGET_BOUNDARY_NAMES = Object.freeze([
+  'tasks',
+  'scribe',
+  'identity',
+  'attempt',
+  'index',
+  'ready-journal',
+]);
+
+/**
+ * Named fault-injection boundaries for library-only crash testing.
+ * Production CLI must not pass a fault hook.
+ *
+ * @returns {string[]}
+ */
+export function finalizationFaultBoundaries() {
+  const boundaries = ['before-journal-create', 'after-journal-create'];
+  for (const name of TARGET_BOUNDARY_NAMES) {
+    boundaries.push(`before-target:${name}`, `after-target:${name}`);
+  }
+  boundaries.push('before-commit');
+  return boundaries;
+}
+
 /**
  * Ordered allowlisted finalization target paths for a bound change/task/attempt.
  *
@@ -461,6 +486,88 @@ export function replayFinalizationTargets(project, targets) {
 }
 
 /**
+ * Run journaled finalization with an optional library-only fault hook.
+ * Fires named boundaries before/after journal creation, before/after every
+ * pre-commit target (including ready-journal), and immediately before the
+ * work-item commit. The production CLI must omit `faultHook`.
+ *
+ * @param {string} project
+ * @param {{
+ *   change: string,
+ *   taskId: string,
+ *   attemptId: string,
+ *   sourceRevision: string,
+ *   completionDate?: string,
+ *   finalizedAt?: string,
+ *   plan?: object,
+ *   faultHook?: ((boundary: string) => void) | null,
+ * }} options
+ * @returns {{
+ *   status: 'committed' | 'resumed' | 'already-committed',
+ *   attempt: object,
+ *   item: object,
+ *   actions: { action: string, path: string }[],
+ * }}
+ */
+export function runJournaledFinalization(project, options = {}) {
+  if (!project || typeof project !== 'string') {
+    throw new Error('project is required to run journaled finalization');
+  }
+  const change = requireOptionString(options, 'change');
+  const taskId = requireOptionString(options, 'taskId');
+  const attemptId = requireOptionString(options, 'attemptId');
+  const sourceRevision = requireOptionString(options, 'sourceRevision');
+  const faultHook = typeof options.faultHook === 'function' ? options.faultHook : null;
+
+  const plan = options.plan && typeof options.plan === 'object'
+    ? options.plan
+    : buildFinalizationPlan(project, {
+      change,
+      taskId,
+      attemptId,
+      sourceRevision,
+      completionDate: requireOptionString(options, 'completionDate'),
+      finalizedAt: requireOptionString(options, 'finalizedAt'),
+    });
+
+  if (!Array.isArray(plan.targets) || plan.targets.length !== TARGET_BOUNDARY_NAMES.length) {
+    throw new Error('journaled finalization plan targets must match allowlisted boundaries');
+  }
+  if (!plan.commit || typeof plan.commit !== 'object') {
+    throw new Error('journaled finalization plan requires a commit target');
+  }
+
+  fireFaultHook(faultHook, 'before-journal-create');
+  const journalFile = finalizationJournalPath(project, attemptId);
+  if (!fs.existsSync(journalFile)) {
+    createFinalizationJournal(project, plan.journal, {
+      change,
+      taskId,
+      attemptId,
+      sourceRevision,
+    });
+  } else {
+    readFinalizationJournal(project, attemptId, {
+      change,
+      taskId,
+      attemptId,
+      sourceRevision,
+    });
+  }
+  fireFaultHook(faultHook, 'after-journal-create');
+
+  return recoverFinalization(project, {
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+    targets: plan.targets,
+    commit: plan.commit,
+    faultHook,
+  });
+}
+
+/**
  * Resume or repeat a journaled finalization.
  *
  * Permitted when the attempt is accepted, finalize-failed, or already
@@ -476,6 +583,7 @@ export function replayFinalizationTargets(project, targets) {
  *   sourceRevision: string,
  *   targets?: object[],
  *   commit?: object,
+ *   faultHook?: ((boundary: string) => void) | null,
  * }} options
  * @returns {{
  *   status: 'committed' | 'resumed' | 'already-committed',
@@ -492,6 +600,8 @@ export function recoverFinalization(project, options = {}) {
   const taskId = requireOptionString(options, 'taskId');
   const attemptId = requireOptionString(options, 'attemptId');
   const sourceRevision = requireOptionString(options, 'sourceRevision');
+
+  const faultHook = typeof options.faultHook === 'function' ? options.faultHook : null;
 
   const journal = readFinalizationJournal(project, attemptId, {
     change,
@@ -540,9 +650,16 @@ export function recoverFinalization(project, options = {}) {
     return contentDigest(current) === target.afterDigest;
   }) || attempt.state === 'finalized';
 
-  const actions = replayFinalizationTargets(project, targets);
+  const actions = [];
+  for (let index = 0; index < targets.length; index += 1) {
+    const name = TARGET_BOUNDARY_NAMES[index] || `target-${index}`;
+    fireFaultHook(faultHook, `before-target:${name}`);
+    actions.push(compareAndApplyTarget(project, targets[index]));
+    fireFaultHook(faultHook, `after-target:${name}`);
+  }
 
   if (commit) {
+    fireFaultHook(faultHook, 'before-commit');
     actions.push(compareAndApplyTarget(project, commit));
   }
 
@@ -892,6 +1009,12 @@ function resolveApplyTargets(journal) {
       afterBytes: readyBytes,
     };
   });
+}
+
+function fireFaultHook(faultHook, boundary) {
+  if (typeof faultHook === 'function') {
+    faultHook(boundary);
+  }
 }
 
 function isFinalizationCommitted(project, journal, item, targets, commit) {

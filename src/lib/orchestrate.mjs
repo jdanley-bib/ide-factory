@@ -1,6 +1,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
+import {
+  canResumeFinalization,
+  finalizationJournalPath,
+  readFinalizationJournal,
+} from './finalization-recovery.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
@@ -197,7 +202,7 @@ export function runFactory(project, env, {
       };
     }
 
-    if (attempt.state === 'accepted') {
+    if (attempt.state === 'accepted' || needsCompleteForUnfinishedJournal(project, attempt, item)) {
       const fingerprint = {
         action: 'complete',
         role: 'scribe',
@@ -216,6 +221,9 @@ export function runFactory(project, env, {
         };
       }
       session = persistCompleteBeforeRequest(project, session, fingerprint);
+      const message = attempt.state === 'accepted'
+        ? 'Attempt accepted. Run idefactory complete to finalize.'
+        : 'Finalization journal unfinished. Run idefactory complete to resume.';
       return {
         code: EXIT_NEEDS_AGENT,
         text: renderRequest({
@@ -224,7 +232,7 @@ export function runFactory(project, env, {
           item,
           attempt,
           modelProfile: profileForRole(config, 'scribe'),
-          message: 'Attempt accepted. Run idefactory complete to finalize.',
+          message,
         }),
         stopReason: 'needs-complete',
         request: { action: 'complete', change, taskId: item.id, attemptId: attempt.id },
@@ -316,6 +324,23 @@ export function runFactory(project, env, {
     text: `Stopped after max-tasks=${limit} for ${change}.\n`,
     stopReason: 'max-tasks',
   };
+}
+
+function needsCompleteForUnfinishedJournal(project, attempt, item) {
+  if (!attempt || !item || item.status === 'done') return false;
+  if (attempt.state !== 'finalized' && attempt.state !== 'finalize-failed') return false;
+  const file = finalizationJournalPath(project, attempt.id);
+  if (!fs.existsSync(file)) return false;
+  try {
+    const journal = readFinalizationJournal(project, attempt.id, {
+      change: attempt.change,
+      taskId: attempt.taskId,
+      attemptId: attempt.id,
+    });
+    return canResumeFinalization(attempt, item, journal);
+  } catch {
+    return false;
+  }
 }
 
 function fingerprintsEqual(a, b) {
