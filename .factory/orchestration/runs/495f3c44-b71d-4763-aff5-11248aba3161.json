@@ -4,25 +4,25 @@
   "change": "make-finalization-recoverable",
   "status": "open",
   "startedAt": "2026-10-21T22:05:34.462Z",
-  "lastObservedAt": "2026-10-21T22:56:45.410Z",
+  "lastObservedAt": "2026-10-21T22:59:43.726Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 10,
-  "completedTasks": 4,
+  "agentSteps": 11,
+  "completedTasks": 5,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
   "countedFailureIds": [],
   "lastRequestFingerprint": {
     "action": "agent-step",
-    "role": "reviewer",
-    "taskId": "3.1",
-    "attemptId": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
-    "attemptState": "verifying",
+    "role": "engineer",
+    "taskId": "4.1",
+    "attemptId": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
+    "attemptState": "assigned",
     "workItemStatus": "in_progress"
   },
   "stopReason": null
