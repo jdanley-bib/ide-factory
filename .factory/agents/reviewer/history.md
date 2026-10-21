@@ -191,3 +191,10 @@ Attempt: 6cedaaba-b3b2-4540-a2b2-b5a8eda64ff6
 Reviewer: bc-5cd232d8-f88d-56c4-8f27-b001704b23f4
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 35 pass. Implementation notes record strict validate, npm test, and doctor (all exit 0); new test asserts those commands. CLI red present (issuer cli, kind unit, exitCode 1, passed false). No risk gate, security-stage, transactional complete, lockout, CI, provenance, or archive. Did not run `verify run`. Transitions verifying → awaiting-review → accepted.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/1.1
+
+Attempt: e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d
+Reviewer: bc-e391f52a-dc68-5ad2-b902-5ad00b473b1d
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs` exit 0, 5 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 5be8842); clean-head unit pass at 6bef0ac. Scoped-approval validator covers required fields, bad action, >24h expiry, self-approver; reject paths write no file. Transitions verifying → awaiting-review → accepted.
