@@ -261,3 +261,10 @@ Attempt: 25abe23f-bfaf-4489-b0cc-8e014bacc45f
 Reviewer: bc-4a1d77ce-079f-5d0d-bfbb-5d9093f539fa
 Verdict: ACCEPT
 Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 8 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at f244b4a); clean-head unit pass at ded99f7 worktreeClean. Product ded99f7: schema v1 journal validation + atomic create; allowlisted ordered targets; corrupt/unsupported/path/identity/revision/planDigest fail closed without marking done. Scope exclusions held (no replay, fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/1.2
+
+Attempt: 46a2aac4-ca25-4b93-a9db-ee047d77be5c
+Reviewer: bc-dba650a2-57bd-5c76-92cf-caf951a80b4d
+Verdict: ACCEPT
+Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 10 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 16bb79d worktreeClean:false); clean-head unit pass at cdb73d2 worktreeClean. Product cdb73d2: `buildFinalizationPlan` for checkbox, scribe marker, identity, finalized attempt, intended index, ready journal, and atomic work-item `done` as final correctness-critical write; frozen completionDate/finalizedAt across retries; plan does not apply writes. Scope exclusions held (no replay, fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
