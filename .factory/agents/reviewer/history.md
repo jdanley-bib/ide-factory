@@ -155,3 +155,11 @@ Attempt: d21c6018-7133-4b58-a5f2-3a53c613c50d
 Reviewer: bc-0c9f7c86-1b05-5274-9c9f-6ec42c3bf798
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 32 pass. Simulated red: parent orchestrate at d3ad0df + new tests → 2 fail (complete fingerprint; repeat complete unchanged-state); HALT tests green at parent. CLI red at d3ad0df; unit pass at 2cb14ee; complete via persistCompleteBeforeRequest no agentSteps; fingerprint unchanged-state exit 0 no request; HALT exit 1 before session write, bytes unchanged.
+
+## 2026-10-21 persist-bounded-run-sessions/3.4
+
+Attempt: c923e6ab-933a-44a2-a41e-4969af7b9380
+Reviewer: bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef
+Verdict: ACCEPT
+Transition: security-checking → awaiting-review → accepted (post security-reviewer bc-96987f34-07ea-5d89-8044-753b42bcde59).
+Re-ran `node --test test/orchestration.test.mjs test/run-session.test.mjs` exit 0, 49 pass; `npm test` exit 0, 110 pass. CLI red at 5e02d383 (exitCode 1, issuer cli, passed:false); unit pass at 039d456 worktreeClean. Simulated red: re-applied 358012f auto-reopen of sticky unchanged-state → orchestration suite 1 fail (`security-reviewer route in fresh session…`, exit 0 unchanged-state instead of exit 2). Product net: test-only at HEAD; sticky unchanged-state preserved; `--new-run` yields one security-reviewer request at exit 2 with budget remaining. evidence.security empty; no new enforcement/tooling.

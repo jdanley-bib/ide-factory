@@ -2,10 +2,10 @@
   "id": "c923e6ab-933a-44a2-a41e-4969af7b9380",
   "change": "persist-bounded-run-sessions",
   "taskId": "3.4",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-71e04e8a-ab36-5609-b0b5-5a71762974c2",
-  "reviewerId": null,
+  "reviewerId": "bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef",
   "modelProfile": "security-strong",
   "evidence": {
     "red": {
@@ -80,10 +80,39 @@
         "timedOut": false,
         "worktreeClean": false,
         "sourceRevision": "358012ff86cdad2db69790d2962a9ffe5df137d8"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:04:17.841Z",
+        "finishedAt": "2026-10-21T19:04:50.557Z",
+        "logDigest": "sha256:8eb0197af2d9c8af5a6df897533be69cc504d84cfe3cd9c56b54bc27ffa7e811",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "039d45634f54ef4228a08be810da99893b2af8ad"
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef",
+      "notes": "Independent review after security-checking: orchestration+run-session tests green; simulated auto-reopen red reproduces 3.4 failure; sticky unchanged-state and --new-run security route match spec.",
+      "at": "2026-10-21T19:08:22.106Z"
+    },
     "changedFiles": [
       "test/orchestration.test.mjs",
       ".factory/agents/engineer/history.md"
@@ -110,8 +139,20 @@
     {
       "at": "2026-10-21T19:03:50.312Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T19:05:40.015Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T19:08:22.074Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T19:08:22.106Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T18:52:11.391Z",
-  "updatedAt": "2026-10-21T19:03:50.312Z"
+  "updatedAt": "2026-10-21T19:08:22.106Z"
 }
