@@ -233,3 +233,10 @@ Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
 Reviewer: bc-65702123-0d1f-58e5-9c5a-31f004a05778
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs` exit 0, 25 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at ee59717); clean-head unit pass at 6f7ee25 worktreeClean. Product 6f7ee25: security-checking→awaiting-review requires passing CLI security record bound to attempt/clean HEAD; default kind threat-review; red and caller-supplied security payloads rejected; verify stores security-patterned kinds in evidence.security; complete fail-closed without that evidence; shipped checks.json unit-only (no scanner argv). Bootstrap dependency-basic leaves this attempt unforced through live threat-review. Transitions verifying → awaiting-review → accepted (post security-reviewer bc-04f1ac01-db6f-5b20-bb30-7d820a48f997).
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.1
+
+Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
+Reviewer: bc-7ad72710-1c5b-5463-9806-51d6596afed3
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 14 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at a2f9a37); clean-head unit pass at c72a5cc worktreeClean. Product c72a5cc: template `security-sensitive.humanGate` true, `release.humanGate` remains true; new init writes both; re-init leaves existing profiles.json byte-for-byte unchanged via writeIfMissing. Repo `.factory/profiles.json` untouched (`security-sensitive.humanGate` still false). Transitions verifying → awaiting-review → accepted (post security-reviewer bc-daa18683-6b21-5890-a651-4ed360ffc333). No verify/complete.

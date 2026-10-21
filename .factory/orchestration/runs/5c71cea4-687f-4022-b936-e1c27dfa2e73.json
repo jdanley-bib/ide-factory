@@ -4,15 +4,15 @@
   "change": "enforce-risk-gates-and-security-stage",
   "status": "open",
   "startedAt": "2026-10-21T20:05:36.686Z",
-  "lastObservedAt": "2026-10-21T21:11:46.000Z",
+  "lastObservedAt": "2026-10-21T21:19:56.297Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 14,
-  "completedTasks": 5,
+  "agentSteps": 16,
+  "completedTasks": 6,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
@@ -20,9 +20,9 @@
   "lastRequestFingerprint": {
     "action": "agent-step",
     "role": "reviewer",
-    "taskId": "3.2",
-    "attemptId": "30dbe229-266c-4a72-922e-ceebdc47f490",
-    "attemptState": "accepted",
+    "taskId": "4.1",
+    "attemptId": "18d745da-e9df-445c-a5a5-9ab639d96f4b",
+    "attemptState": "verifying",
     "workItemStatus": "in_progress"
   },
   "stopReason": null

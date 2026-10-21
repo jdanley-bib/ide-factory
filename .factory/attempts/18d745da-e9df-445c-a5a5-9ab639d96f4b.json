@@ -1,0 +1,103 @@
+{
+  "id": "18d745da-e9df-445c-a5a5-9ab639d96f4b",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "4.1",
+  "state": "accepted",
+  "implementerRole": "engineer",
+  "implementerId": "bc-ad5b4df3-f20c-5aa7-8b8f-a3d9cc4a5073",
+  "reviewerId": "bc-7ad72710-1c5b-5463-9806-51d6596afed3",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T21:15:16.119Z",
+      "finishedAt": "2026-10-21T21:16:47.021Z",
+      "logDigest": "sha256:81b4d210863ff67c8d6089d5497b1df02ef26ee5e08657c738c80478a4010771",
+      "artifactDigests": [],
+      "attemptId": "18d745da-e9df-445c-a5a5-9ab639d96f4b",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "a2f9a37639a133a8239c9848fb849a600f3b53d1"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T21:17:08.937Z",
+        "finishedAt": "2026-10-21T21:18:39.773Z",
+        "logDigest": "sha256:7c2cc1f7c12eed36cc58ff0b4f483f05a0be7cc689aa1be11112e6c92babe288",
+        "artifactDigests": [],
+        "attemptId": "18d745da-e9df-445c-a5a5-9ab639d96f4b",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "c72a5cc631039089ba0462dd68529aed72f2ec98"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-7ad72710-1c5b-5463-9806-51d6596afed3",
+      "notes": "Independent review ACCEPT: install tests 14/14; template humanGates; repo profiles untouched; post security-reviewer bc-daa18683-6b21-5890-a651-4ed360ffc333",
+      "at": "2026-10-21T21:20:50.579Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T21:13:44.338Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T21:13:44.339Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T21:15:06.558Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T21:16:49.624Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T21:18:45.531Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T21:20:50.542Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T21:20:50.579Z",
+      "state": "accepted"
+    }
+  ],
+  "createdAt": "2026-10-21T21:13:44.338Z",
+  "updatedAt": "2026-10-21T21:20:50.579Z"
+}
