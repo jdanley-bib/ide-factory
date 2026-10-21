@@ -2,10 +2,10 @@
   "id": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
   "change": "enforce-risk-gates-and-security-stage",
   "taskId": "2.2",
-  "state": "security-checking",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-28a08772-dc3e-5db8-81b6-131c8bce22d8",
-  "reviewerId": null,
+  "reviewerId": "bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33",
   "modelProfile": "security-strong",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs exit 0, 16 pass. CLI red issuer cli exitCode 1 passed false at 900fb7b; clean-head unit pass at 356d7ad. Matching accept/complete authorize; wrong action/task/stale rev/expired/policy mismatch fail closed; humanGate false non-sensitive reaches review. Post security-reviewer bc-aaea9636-54a3-5ec4-a6a4-e09c9e9ccd73.",
+      "at": "2026-10-21T20:40:41.597Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -87,8 +92,16 @@
     {
       "at": "2026-10-21T20:39:13.738Z",
       "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T20:40:41.546Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:40:41.597Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T20:28:53.848Z",
-  "updatedAt": "2026-10-21T20:39:13.738Z"
+  "updatedAt": "2026-10-21T20:40:41.597Z"
 }

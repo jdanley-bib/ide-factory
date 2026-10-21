@@ -212,3 +212,10 @@ Attempt: d989d087-25f9-408b-a6d1-0f593b01c5db
 Reviewer: bc-dcc4fc52-3281-5295-bd50-06c453ab8ff2
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs` exit 0, 12 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 3ec862d); clean-head unit pass at c91f23e. humanGate true / missing profile / non-boolean fail closed for run (human-gate, no request, session open) and complete (nonzero, item undone). Transitions verifying → awaiting-review → accepted.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/2.2
+
+Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
+Reviewer: bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 900fb7b); clean-head unit pass at 356d7ad. Matching accept/complete authorize; wrong action/task/stale rev/expired/policy mismatch fail closed; humanGate false non-sensitive reaches review. Transitions security-checking → awaiting-review → accepted (post security-reviewer bc-aaea9636-54a3-5ec4-a6a4-e09c9e9ccd73).
