@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "make-finalization-recoverable",
   "title": "Add failing tests that complete creates one deterministic plan for the checkbox, scribe marker, identity note, finalized attempt, intended work index, ready journal, and atomic work-item update; timestamps stay fixed across retries, and the work-item `done` write is the final correctness-critical write. Implement the planned target generation and verify with `node --test test/finalization-recovery.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "1.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "46a2aac4-ca25-4b93-a9db-ee047d77be5c",
-  "updatedAt": "2026-10-21T22:14:49.788Z"
+  "updatedAt": "2026-10-21T22:27:02.202Z"
 }
