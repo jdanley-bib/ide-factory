@@ -582,18 +582,6 @@ export function openOrResumeRunSession(project, {
   }
   if (existing) {
     if (existing.status === 'closed' && STICKY_STOP_REASONS.has(existing.stopReason)) {
-      // Unchanged-state is sticky only while attempt/work-item status match the fingerprint.
-      // Reopen the same counters so a later transition can emit the next stage request.
-      if (existing.stopReason === 'unchanged-state') {
-        const mergedBudgets = mergeResumeBudgets(existing.budgets, resumeFlags, config);
-        return writeRunSession(project, {
-          ...existing,
-          status: 'open',
-          stopReason: null,
-          budgets: mergedBudgets,
-          lastObservedAt: now.toISOString(),
-        });
-      }
       return existing;
     }
     const highWater = ledgerAgentStepHighWater(project, existing.runId);
