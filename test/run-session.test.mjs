@@ -128,11 +128,11 @@ async function seedDemoChange(dir, tasksBody) {
   assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
 }
 
-function spawnRun(dir, extraArgs = []) {
+function spawnRun(dir, extraArgs = [], envOverrides = {}) {
   return spawnSync(
     process.execPath,
     [path.join(repoRoot, 'src/cli.mjs'), 'run', '--change', 'demo', '--path', dir, ...extraArgs],
-    { cwd: dir, encoding: 'utf8', shell: false, env: process.env },
+    { cwd: dir, encoding: 'utf8', shell: false, env: { ...process.env, ...envOverrides } },
   );
 }
 
@@ -829,6 +829,116 @@ test('--new-run after max-agent-steps opens a new run id at zero steps and keeps
     assert.equal(latest.status, 'open');
     assert.equal(latest.stopReason, null);
     assert.equal(latest.budgets.maxAgentSteps, N);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('host tokens at configured ceiling exit 0 with max-tokens and no orchestration request', async () => {
+  const dir = tempProject();
+  const ceiling = 1000;
+  const exposed = ceiling;
+  try {
+    await seedDemoChange(dir);
+    const capped = spawnRun(dir, [
+      '--max-tasks', '1',
+      '--max-agent-steps', '5',
+      '--max-tokens', String(ceiling),
+      '--host-tokens', String(exposed),
+    ]);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-tokens/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /# Orchestration request/);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const session = readRunSession(files[0]);
+    assert.equal(session.budgets.maxTokens, ceiling);
+    assert.equal(session.hostTokens, exposed);
+    assert.equal(session.stopReason, 'max-tokens');
+    assert.equal(session.status, 'closed');
+    assert.equal(session.hostCost, undefined);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('configured cost ceiling without exposed host cost exits 1 host-usage-unavailable and no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const result = spawnRun(dir, ['--max-tasks', '1', '--max-cost', '50']);
+    assert.equal(result.status, 1, result.stderr + result.stdout);
+    assert.match(`${result.stderr}\n${result.stdout}`, /host-usage-unavailable/);
+    assert.doesNotMatch(`${result.stderr}\n${result.stdout}`, /# Orchestration request/);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const session = readRunSession(files[0]);
+    assert.equal(session.budgets.maxCost, 50);
+    assert.equal(session.stopReason, 'host-usage-unavailable');
+    assert.equal(session.status, 'closed');
+    assert.equal(session.hostCost, undefined);
+    assert.equal(session.hostTokens, undefined);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('without token or cost ceiling the session stores neither metric even when env exposes values', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const result = spawnRun(
+      dir,
+      ['--max-tasks', '1', '--max-agent-steps', '5'],
+      { IDEFACTORY_HOST_TOKENS: '99999', IDEFACTORY_HOST_COST: '12.5' },
+    );
+    assert.equal(result.status, 2, result.stderr + result.stdout);
+    assert.match(result.stdout, /# Orchestration request/);
+
+    const session = readRunSession(listRunSessionFiles(dir)[0]);
+    assert.equal(session.budgets.maxTokens, undefined);
+    assert.equal(session.budgets.maxCost, undefined);
+    assert.equal(session.hostTokens, undefined);
+    assert.equal(session.hostCost, undefined);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('max-tokens ceiling from config and host tokens from env enforce at ceiling', async () => {
+  const dir = tempProject();
+  const ceiling = 500;
+  try {
+    await seedDemoChange(dir);
+    const configPath = path.join(dir, '.factory', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.run = { ...config.run, maxTokens: ceiling };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+    const capped = spawnRun(dir, ['--max-tasks', '1'], { IDEFACTORY_HOST_TOKENS: String(ceiling) });
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-tokens/);
+    const session = readRunSession(listRunSessionFiles(dir)[0]);
+    assert.equal(session.budgets.maxTokens, ceiling);
+    assert.equal(session.hostTokens, ceiling);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('nonpositive token ceiling or negative host tokens fail closed with invalid-budget', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    for (const [args, label] of [
+      [['--max-tokens', '0', '--host-tokens', '1'], 'zero max-tokens ceiling'],
+      [['--max-tokens', '-5', '--host-tokens', '1'], 'negative max-tokens ceiling'],
+      [['--max-tokens', '10', '--host-tokens', '-1'], 'negative host-tokens'],
+    ]) {
+      assertInvalidBudgetRun(dir, args, label);
+    }
   } finally {
     cleanup(dir);
   }

@@ -149,3 +149,11 @@ Implementer: bc-3f374696-0140-575c-8c29-0678fad461f9
 Red: `node --test test/run-session.test.mjs` exit 1, 4 fail (unchanged-state, sticky bytes, --new-run); `node src/cli.mjs verify run 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 23 pass; `node --test test/orchestration.test.mjs` exit 0, 16 pass.
 Scope: unchanged-state fingerprint (action/role/task/attempt/state/work-item status), sticky closed sessions without file rewrite, `--new-run`, resume budget tighten-only — no host/HALT/default/skill/review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/3.2
+
+Attempt: 30e9c0f2-5077-43b7-9143-ac9eff1d5874
+Implementer: bc-4e3daf72-7186-5143-ba6c-b11288bcacad
+Red: `node --test test/run-session.test.mjs` exit 1, 4 fail (max-tokens at ceiling, host-usage-unavailable, config+env ceiling, invalid host/ceiling); `node src/cli.mjs verify run 30e9c0f2-5077-43b7-9143-ac9eff1d5874 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 28 pass.
+Scope: optional `--max-tokens`/`--max-cost` or config ceilings; compare only CLI/env-exposed host metrics; missing metric for configured ceiling → exit 1 `host-usage-unavailable`; at ceiling → exit 0 `max-tokens`/`max-cost` with stored observed value; no ceiling → omit host fields; positive ceilings and non-negative exposed metrics validated fail-closed — no HALT/complete/review/commit/push.

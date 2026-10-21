@@ -112,6 +112,8 @@ export function validateRunSession(session) {
       : [],
     lastRequestFingerprint: session.lastRequestFingerprint ?? null,
     stopReason: session.stopReason ?? null,
+    ...(session.hostTokens !== undefined ? { hostTokens: session.hostTokens } : {}),
+    ...(session.hostCost !== undefined ? { hostCost: session.hostCost } : {}),
   };
 }
 
@@ -218,9 +220,14 @@ export function mergeResumeBudgets(storedBudgets, { maxTasks, maxAgentSteps } = 
   return merged;
 }
 
-export function resolveNewSessionBudgets(config = {}, { maxTasks, maxAgentSteps } = {}) {
+export function resolveNewSessionBudgets(config = {}, {
+  maxTasks,
+  maxAgentSteps,
+  maxTokens,
+  maxCost,
+} = {}) {
   const run = config.run || {};
-  return {
+  const budgets = {
     maxAgentSteps: resolveCliBudget(
       maxAgentSteps,
       run.defaultMaxAgentSteps,
@@ -246,6 +253,66 @@ export function resolveNewSessionBudgets(config = {}, { maxTasks, maxAgentSteps 
       'maxFailures',
     ),
   };
+  const tokenCeiling = resolveOptionalTokenCeiling(maxTokens, run.maxTokens, 'max-tokens');
+  const costCeiling = resolveOptionalCostCeiling(maxCost, run.maxCost, 'max-cost');
+  if (tokenCeiling !== undefined) budgets.maxTokens = tokenCeiling;
+  if (costCeiling !== undefined) budgets.maxCost = costCeiling;
+  return budgets;
+}
+
+/**
+ * Parse host usage only when the invocation exposes it via CLI or env.
+ *
+ * @param {string|number|boolean|undefined} flagValue
+ * @param {string|undefined} envValue
+ * @param {{ label: string, integer?: boolean }} options
+ * @returns {number|undefined}
+ */
+export function parseExposedHostMetric(flagValue, envValue, { label, integer = false } = {}) {
+  const hasFlag = flagValue !== undefined && flagValue !== '' && flagValue !== true;
+  const hasEnv = envValue != null && String(envValue).length > 0;
+  if (!hasFlag && !hasEnv) return undefined;
+  const raw = hasFlag ? flagValue : envValue;
+  if (raw === true || raw === false) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a non-negative ${integer ? 'integer' : 'number'}`);
+  }
+  const n = Number(raw);
+  if (integer) {
+    if (!Number.isInteger(n) || n < 0) {
+      throw new InvalidBudgetError(`invalid-budget: ${label} must be a non-negative integer`);
+    }
+  } else if (!Number.isFinite(n) || n < 0) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a non-negative number`);
+  }
+  return n;
+}
+
+/**
+ * Compare configured token/cost ceilings with exposed host metrics.
+ *
+ * @param {object} session
+ * @param {{ hostTokens?: number, hostCost?: number }} hostUsage
+ * @returns {{ code: number, stopReason: string, patch?: object }|null}
+ */
+export function checkHostUsageBudgets(session, { hostTokens, hostCost } = {}) {
+  const { budgets } = session;
+  if (budgets.maxTokens !== undefined) {
+    if (hostTokens === undefined) {
+      return { code: 1, stopReason: 'host-usage-unavailable' };
+    }
+    if (hostTokens >= budgets.maxTokens) {
+      return { code: 0, stopReason: 'max-tokens', patch: { hostTokens } };
+    }
+  }
+  if (budgets.maxCost !== undefined) {
+    if (hostCost === undefined) {
+      return { code: 1, stopReason: 'host-usage-unavailable' };
+    }
+    if (hostCost >= budgets.maxCost) {
+      return { code: 0, stopReason: 'max-cost', patch: { hostCost } };
+    }
+  }
+  return null;
 }
 
 /**
@@ -558,6 +625,32 @@ function resolveRequiredBudget(explicit, configValue, fallback, label) {
   const n = Number(raw);
   if (!Number.isInteger(n) || n <= 0) {
     throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  return n;
+}
+
+function resolveOptionalTokenCeiling(flagValue, configValue, label) {
+  const raw = flagValue !== undefined && flagValue !== '' ? flagValue : configValue;
+  if (raw == null || raw === '') return undefined;
+  if (raw === true || raw === false) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  return n;
+}
+
+function resolveOptionalCostCeiling(flagValue, configValue, label) {
+  const raw = flagValue !== undefined && flagValue !== '' ? flagValue : configValue;
+  if (raw == null || raw === '') return undefined;
+  if (raw === true || raw === false) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive number`);
+  }
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n <= 0) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive number`);
   }
   return n;
 }

@@ -4,8 +4,10 @@ import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
+  checkHostUsageBudgets,
   InvalidBudgetError,
   openOrResumeRunSession,
+  parseExposedHostMetric,
   refreshCompletedTasks,
   refreshFailures,
   resolveNewSessionBudgets,
@@ -23,6 +25,10 @@ export function runFactory(project, env, {
   until = 'human-gate',
   maxTasks,
   maxAgentSteps,
+  maxTokens,
+  maxCost,
+  hostTokens,
+  hostCost,
   newRun = false,
 } = {}) {
   if (halted(project)) {
@@ -41,8 +47,24 @@ export function runFactory(project, env, {
 
   const config = readConfig(project);
   let sessionBudgets;
+  let hostUsage;
   try {
-    sessionBudgets = resolveNewSessionBudgets(config, { maxTasks, maxAgentSteps });
+    sessionBudgets = resolveNewSessionBudgets(config, {
+      maxTasks,
+      maxAgentSteps,
+      maxTokens,
+      maxCost,
+    });
+    hostUsage = {
+      hostTokens: parseExposedHostMetric(hostTokens, env.IDEFACTORY_HOST_TOKENS, {
+        label: 'host-tokens',
+        integer: true,
+      }),
+      hostCost: parseExposedHostMetric(hostCost, env.IDEFACTORY_HOST_COST, {
+        label: 'host-cost',
+        integer: false,
+      }),
+    };
   } catch (err) {
     if (err instanceof InvalidBudgetError) {
       return {
@@ -68,6 +90,16 @@ export function runFactory(project, env, {
       code: EXIT_OK,
       text: `Run stopped (${session.stopReason}) for ${change}.\n`,
       stopReason: session.stopReason,
+      request: null,
+    };
+  }
+  const hostStop = checkHostUsageBudgets(session, hostUsage);
+  if (hostStop) {
+    session = closeRunSession(project, session, hostStop.stopReason, hostStop.patch);
+    return {
+      code: hostStop.code,
+      text: `Run stopped (${hostStop.stopReason}) for ${change}.\n`,
+      stopReason: hostStop.stopReason,
       request: null,
     };
   }
@@ -283,9 +315,10 @@ function persistAgentStepBeforeRequest(project, session, fingerprint) {
   return written;
 }
 
-function closeRunSession(project, session, stopReason) {
+function closeRunSession(project, session, stopReason, extra = {}) {
   return writeRunSession(project, {
     ...session,
+    ...extra,
     status: 'closed',
     stopReason,
     lastObservedAt: new Date().toISOString(),

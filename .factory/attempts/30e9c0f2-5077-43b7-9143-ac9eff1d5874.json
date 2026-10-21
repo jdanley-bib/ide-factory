@@ -1,0 +1,71 @@
+{
+  "id": "30e9c0f2-5077-43b7-9143-ac9eff1d5874",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "3.2",
+  "state": "verifying",
+  "implementerRole": "engineer",
+  "implementerId": "bc-4e3daf72-7186-5143-ba6c-b11288bcacad",
+  "reviewerId": null,
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T18:38:01.518Z",
+      "finishedAt": "2026-10-21T18:38:32.507Z",
+      "logDigest": "sha256:66ef3053ff4cb71a9c273c4df8e76740f5612f6a9b0dfe2704d4dc2fdee480f2",
+      "artifactDigests": [],
+      "attemptId": "30e9c0f2-5077-43b7-9143-ac9eff1d5874",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "cbf32225512f35bcadb9feea5e373bd7bd1656c8"
+    },
+    "verification": [],
+    "security": [],
+    "review": null,
+    "changedFiles": [
+      "test/run-session.test.mjs",
+      "src/lib/run-session.mjs",
+      "src/lib/orchestrate.mjs",
+      "src/lib/run.mjs",
+      ".factory/agents/engineer/history.md"
+    ],
+    "baseRev": "cbf32225512f35bcadb9feea5e373bd7bd1656c8"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T18:37:10.216Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T18:37:10.217Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T18:37:49.800Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T18:38:36.750Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T18:39:04.471Z",
+      "state": "verifying"
+    }
+  ],
+  "createdAt": "2026-10-21T18:37:10.216Z",
+  "updatedAt": "2026-10-21T18:39:04.471Z"
+}

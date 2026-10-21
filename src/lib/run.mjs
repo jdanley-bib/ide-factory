@@ -93,6 +93,10 @@ export async function run(argv, io = {}) {
           until: parsed.flags.until || 'human-gate',
           maxTasks: parsed.flags['max-tasks'],
           maxAgentSteps: parsed.flags['max-agent-steps'],
+          maxTokens: parsed.flags['max-tokens'],
+          maxCost: parsed.flags['max-cost'],
+          hostTokens: parsed.flags['host-tokens'],
+          hostCost: parsed.flags['host-cost'],
           newRun: Boolean(parsed.flags['new-run']),
         });
         out(result.text);
