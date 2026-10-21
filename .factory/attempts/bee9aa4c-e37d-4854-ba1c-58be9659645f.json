@@ -1,0 +1,82 @@
+{
+  "id": "bee9aa4c-e37d-4854-ba1c-58be9659645f",
+  "change": "reconcile-factory-specifications",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-04b8a633-1877-5450-90a3-c1c63d50e2d2",
+  "reviewerId": "bc-aa8651b2-77ae-5c8a-96ac-f315507392e0",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "command": "git show c992d99:test/orchestration.test.mjs | rg -q security-sensitive\\ verification\\ routes\\ to\\ security-reviewer",
+      "passed": false,
+      "reason": "approved security routing contract test was absent from the baseline"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/orchestration.test.mjs",
+        "passed": true
+      }
+    ],
+    "security": [
+      {
+        "kind": "threat-review",
+        "command": "independent security-reviewer analysis by bc-9926bce1-933e-50c5-9f81-e955d0ae4245",
+        "passed": true,
+        "notes": "Contract-test-only diff; routing contract matches securityProfile or security-patterned checks. Known skippable/self-attested stages remain out of scope."
+      }
+    ],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-aa8651b2-77ae-5c8a-96ac-f315507392e0",
+      "notes": "Orchestration contracts and independent threat review are accurate and green.",
+      "at": "2026-10-21T15:31:21.040Z"
+    },
+    "changedFiles": [
+      "test/orchestration.test.mjs"
+    ],
+    "baseRev": "c992d99"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T15:24:35.988Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T15:24:35.988Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T15:27:02.049Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T15:27:02.090Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T15:27:02.333Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T15:29:02.526Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T15:31:21.008Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T15:31:21.040Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T15:31:25.280Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T15:24:35.988Z",
+  "updatedAt": "2026-10-21T15:31:25.280Z"
+}

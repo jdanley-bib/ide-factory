@@ -2,14 +2,14 @@
 
 ## 1. Contract traceability
 
-- [ ] 1.1 Add or refine queue contract tests for unchecked, checked, duplicate, and `.factory/work/`-only behavior; verify with `node --test test/queue.test.mjs`
+- [x] 1.1 Add or refine queue contract tests for unchecked, checked, duplicate, and `.factory/work/`-only behavior; verify with `node --test test/queue.test.mjs`
   factory:
     kind: general
     roles: [engineer, test-engineer, reviewer, scribe]
     checks: [unit]
     verificationProfile: frontend-low
 
-- [ ] 1.2 Add or refine orchestration contract tests for one-role requests, illegal attempt transitions, security-reviewer routing, distinct reviewers, required evidence, finalization, and HALT; verify with `node --test test/orchestration.test.mjs`
+- [x] 1.2 Add or refine orchestration contract tests for one-role requests, illegal attempt transitions, security-reviewer routing, distinct reviewers, required evidence, finalization, and HALT; verify with `node --test test/orchestration.test.mjs`
   factory:
     kind: general
     roles: [engineer, test-engineer, security-reviewer, reviewer, scribe]

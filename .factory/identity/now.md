@@ -1,5 +1,3 @@
 # Now
 
-Focus: IDE-native factory is installed in this repo
-Active work: (none) — change ide-native-factory is archived
-Blockers: (none)
+Last finalized: reconcile-factory-specifications/1.2 (2026-10-21)

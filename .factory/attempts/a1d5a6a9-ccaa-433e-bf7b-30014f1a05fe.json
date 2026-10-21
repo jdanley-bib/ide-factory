@@ -1,0 +1,71 @@
+{
+  "id": "a1d5a6a9-ccaa-433e-bf7b-30014f1a05fe",
+  "change": "reconcile-factory-specifications",
+  "taskId": "1.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-54495af9-6638-5aa0-9b97-6c2c4507e953",
+  "reviewerId": "bc-090fe58a-2c84-56dc-b6d3-f4ed83d071ca",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "git show c992d99:test/queue.test.mjs | rg -q sync-tasks\\ uses\\ \\.factory/work\\ as\\ the\\ only\\ machine\\ queue",
+      "passed": false,
+      "reason": "approved queue contract test was absent from the baseline"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/queue.test.mjs",
+        "passed": true
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-090fe58a-2c84-56dc-b6d3-f4ed83d071ca",
+      "notes": "Queue contract tests cover unchecked, checked, duplicate, and work-queue-only behavior; evidence independently rerun.",
+      "at": "2026-10-21T15:24:31.314Z"
+    },
+    "changedFiles": [
+      "test/queue.test.mjs"
+    ],
+    "baseRev": "c992d99"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T15:21:28.545Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T15:21:28.545Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T15:23:45.762Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T15:23:45.796Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T15:23:45.986Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T15:24:31.280Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T15:24:31.315Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T15:24:35.944Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T15:21:28.545Z",
+  "updatedAt": "2026-10-21T15:24:35.944Z"
+}
