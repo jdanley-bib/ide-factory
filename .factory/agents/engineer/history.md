@@ -260,3 +260,11 @@ Implementer: bc-ad5b4df3-f20c-5aa7-8b8f-a3d9cc4a5073
 Red: `node --test test/install.test.mjs` exit 1 (1 failure: security-sensitive.humanGate false !== true); `node src/cli.mjs verify run 18d745da-e9df-445c-a5a5-9ab639d96f4b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/install.test.mjs` exit 0, 14 pass.
 Scope: profile template only — `security-sensitive.humanGate` true, `release.humanGate` remains true; new init writes both; re-init leaves existing profiles.json byte-for-byte unchanged. Did not edit this repo's `.factory/profiles.json`. No checkbox, review, complete, or push.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.2
+
+Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
+Implementer: bc-7e555273-1c59-5f81-a461-d70b73089dc6
+Red: `node --test test/risk-gates.test.mjs` exit 1 (1 failure: five factory-run skills still say human-gate (release profile)); `node src/cli.mjs verify run f6d2af51-ad7a-435f-9c0e-16e92bcc9924 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:b098bfc917385bc18729be2a8f38f55a6e8275effd27c841d7825ced28ea6cf9).
+Green: `node --test test/risk-gates.test.mjs` exit 0, 26 pass.
+Scope: five factory-run SKILL copies + risk-gates skill test only — human-gate described as true profile `humanGate` stop, not release profile alone; loop still does not pass `--new-run`. No checkbox, review, complete, or push.

@@ -41,7 +41,7 @@ Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human 
 
 ## Stop conditions
 
-Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state`. Other clean stops include all work items done or human-gate (release profile). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
+Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state`. Other clean stops include all work items done or human-gate (true profile `humanGate`). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
 
 ## New session (human only)
 

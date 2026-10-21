@@ -10,7 +10,7 @@ import {
 } from '../src/lib/risk-gates.mjs';
 import { readRunSession } from '../src/lib/run-session.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
-import { cleanup, idefactory, tempProject } from './helpers.mjs';
+import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const IMPLEMENTER = 'bc-engineer-1';
 const APPROVER = 'bc-approver-9';
@@ -1056,5 +1056,38 @@ test('complete refuses security-required work lacking CLI security evidence', as
     assert.notEqual(getAttempt(dir, attemptId).state, 'finalized');
   } finally {
     cleanup(dir);
+  }
+});
+
+const FACTORY_RUN_SKILL_COPIES = [
+  '.cursor/skills/factory-run/SKILL.md',
+  '.github/skills/factory-run/SKILL.md',
+  '.agents/skills/factory-run/SKILL.md',
+  '.claude/skills/factory-run/SKILL.md',
+  'templates/skills/factory-run/SKILL.md',
+];
+
+function factoryRunSkillLoopSection(text) {
+  const start = text.indexOf('## Loop');
+  assert.notEqual(start, -1, 'factory-run skill must have a Loop section');
+  const afterLoop = text.indexOf('\n## ', start + 1);
+  return afterLoop === -1 ? text.slice(start) : text.slice(start, afterLoop);
+}
+
+test('shipped factory-run skill copies describe human-gate as profile humanGate stop', () => {
+  for (const rel of FACTORY_RUN_SKILL_COPIES) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    assert.match(
+      text,
+      /human-gate[\s\S]{0,120}true profile `?humanGate`?|true profile `?humanGate`?[\s\S]{0,120}human-gate/,
+      `${rel} must describe human-gate as the stop for a true profile humanGate`,
+    );
+    assert.doesNotMatch(
+      text,
+      /human-gate\s*\(release profile\)/i,
+      `${rel} must not limit human-gate to the release profile alone`,
+    );
+    const loop = factoryRunSkillLoopSection(text);
+    assert.doesNotMatch(loop, /--new-run/, `${rel} loop must not pass --new-run`);
   }
 });
