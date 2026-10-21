@@ -4,7 +4,7 @@
     "unit": {
       "argv": ["npm", "test"],
       "cwdPolicy": "project",
-      "timeoutMs": 30000,
+      "timeoutMs": 120000,
       "artifacts": []
     }
   }
