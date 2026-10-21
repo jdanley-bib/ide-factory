@@ -2,10 +2,10 @@
   "id": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
   "change": "make-finalization-recoverable",
   "taskId": "3.1",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-aaa7940c-be3e-5ebc-8f9a-52dc1d4ee4e7",
-  "reviewerId": null,
+  "reviewerId": "bc-7a38b257-e8b5-59fe-80a1-9204356fb466",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-7a38b257-e8b5-59fe-80a1-9204356fb466",
+      "notes": "Independent review ACCEPT: schema v1 created/resolved lockouts; distinct resolver; idempotent/conflict; legacy basename+digest without mutation; five skill copies; focused tests 27 pass; CLI red/clean evidence valid.",
+      "at": "2026-10-21T22:57:33.037Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -83,8 +88,16 @@
     {
       "at": "2026-10-21T22:56:25.879Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:57:33.004Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:57:33.037Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T22:47:59.004Z",
-  "updatedAt": "2026-10-21T22:56:25.879Z"
+  "updatedAt": "2026-10-21T22:57:33.037Z"
 }

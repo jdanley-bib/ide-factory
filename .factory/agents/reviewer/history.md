@@ -282,3 +282,10 @@ Attempt: 53b91f30-220d-425e-8f86-e9b3dbbc18ab
 Reviewer: bc-26a59cbe-977d-5fb0-a5f0-7a5631691d2d
 Verdict: ACCEPT
 Re-ran `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 40 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 062e22a worktreeClean:false); clean-head unit pass at 0f21406 worktreeClean. Product 0f21406: library-only `faultHook` / `finalizationFaultBoundaries` cover journal create, all six pre-commit targets (incl. ready-journal), and before-commit; every injected fault leaves item not done and uninjected retry reaches one byte-consistent final state; orchestrator emits `needs-complete` for finalized+matching unfinished journal. Scope exclusions held (no lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/3.1
+
+Attempt: 7fb6a76f-7c65-4252-aa20-95c69f0257be
+Reviewer: bc-7a38b257-e8b5-59fe-80a1-9204356fb466
+Verdict: ACCEPT
+Re-ran `node --test test/govern.test.mjs test/finalization-recovery.test.mjs` exit 0, 27 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 98974d1 worktreeClean:false); clean-head unit pass at 27ad7e4 worktreeClean. Product 27ad7e4: schema v1 created.json under printed lockout id (wx exclusive); resolve requires distinct resolver+reason and writes one immutable resolved.json; blocks/unblocks complete; exact repeat idempotent and conflicting inputs fail closed; legacy `*lockout*.md` resolve by exact basename+digest without rename/delete; five identical factory-governance skill copies document create/resolve. Scope exclusions held (no lease). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
