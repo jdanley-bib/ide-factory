@@ -2,7 +2,7 @@
   "id": "5.1",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Run `npx openspec validate enforce-risk-gates-and-security-stage --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, make `complete` transactional, resolve lockout, add a lease, or add CI, provenance, or observability.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [],
   "acceptanceCriteria": [
     "Run `npx openspec validate enforce-risk-gates-and-security-stage --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, make `complete` transactional, resolve lockout, add a lease, or add CI, provenance, or observability. works as specified and is covered by the verification profile checks."
@@ -18,16 +18,13 @@
       "scribe"
     ],
     "checks": [
-      "unit",
-      "build",
-      "dependency-audit",
-      "threat-review"
+      "unit"
     ],
     "modelProfile": "security-strong",
-    "securityProfile": "security-sensitive",
+    "securityProfile": "dependency-basic",
     "verificationProfile": "security-sensitive",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T20:05:30.942Z"
+  "attemptId": "c55fda80-405c-41b0-ae1c-743da4435908",
+  "updatedAt": "2026-10-21T21:35:29.184Z"
 }

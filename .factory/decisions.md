@@ -89,3 +89,13 @@ Authorized-by: factory lead aligning the machine queue to the approved task
 Work-item: enforce-risk-gates-and-security-stage/4.2
 Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
 Note: The classifier inferred security checks because the task documents `human-gate`. The human task only updates five factory-run skill copies and verifies them through `test/risk-gates.test.mjs`; the registry maps only unit. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts; do not invent scanner argv or forge evidence.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-5.1-unit-check
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-5.1-unit-check
+Authorized-at: 2026-10-21T21:35:30Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: enforce-risk-gates-and-security-stage/5.1
+Attempt: c55fda80-405c-41b0-ae1c-743da4435908
+Note: The classifier inferred security checks because the integration task names excluded provenance. The human task runs strict OpenSpec validation, `npm test`, and doctor; the registry maps only unit. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security review before the distinct reviewer accepts; do not invent scanner argv or forge evidence.
