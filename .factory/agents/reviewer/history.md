@@ -148,3 +148,10 @@ Attempt: 30e9c0f2-5077-43b7-9143-ac9eff1d5874
 Reviewer: bc-e1cbb0b3-2125-5399-b7e0-62f4a787ba3d
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 28 pass. Simulated red: parent orchestrate/run-session/run at cbf3222 + new tests → 4 fail (max-tokens at ceiling; host-usage-unavailable; config+env ceiling; invalid token/host ceilings). CLI red at cbf3222; unit pass at f71627f; host metrics CLI/env only; max-tokens exit 0 no request; cost ceiling without metric exit 1; no ceiling omits token/cost fields; invalid-budget fail closed.
+
+## 2026-10-21 persist-bounded-run-sessions/3.3
+
+Attempt: d21c6018-7133-4b58-a5f2-3a53c613c50d
+Reviewer: bc-0c9f7c86-1b05-5274-9c9f-6ec42c3bf798
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 32 pass. Simulated red: parent orchestrate at d3ad0df + new tests → 2 fail (complete fingerprint; repeat complete unchanged-state); HALT tests green at parent. CLI red at d3ad0df; unit pass at 2cb14ee; complete via persistCompleteBeforeRequest no agentSteps; fingerprint unchanged-state exit 0 no request; HALT exit 1 before session write, bytes unchanged.
