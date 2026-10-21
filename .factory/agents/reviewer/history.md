@@ -99,3 +99,10 @@ Attempt: 11409764-fcdc-4ef3-ae0e-22916ac1ef69
 Reviewer: bc-67734fc6-6f8d-5584-bd6b-c5c22e08b94e
 Verdict: ACCEPT
 Re-ran `node --test test/run-session.test.mjs` exit 0, 7 pass. CLI red present; clean-head unit pass at 219d57e; unmatched-open and high-water fail closed; best-effort ledger remains.
+
+## 2026-10-21 persist-bounded-run-sessions/2.1
+
+Attempt: 7b2f2844-928e-4eb7-8461-674bc47ed750
+Reviewer: bc-573b4a1c-04a3-5fb7-acfa-9b11d80786b9
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs test/orchestration.test.mjs` exit 0, 24 pass. CLI red present; clean-head unit pass at 760a29a; N then N+1 max-agent-steps; persist-before-emit; `--max-tasks 1` first request exit 2.
