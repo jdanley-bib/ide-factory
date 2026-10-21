@@ -2,10 +2,10 @@
   "id": "934b44b7-55ff-47e4-8ddf-9313707ab641",
   "change": "enforce-risk-gates-and-security-stage",
   "taskId": "3.1",
-  "state": "security-checking",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-a95794d1-0bea-5a09-b8af-429f21713938",
-  "reviewerId": null,
+  "reviewerId": "bc-3546052c-8d33-5088-89c7-271d503b325d",
   "modelProfile": "security-strong",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-3546052c-8d33-5088-89c7-271d503b325d",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs test/orchestration.test.mjs exit 0, 38 pass. CLI red issuer cli exitCode 1 passed false at 2a572f3; clean-head unit pass at afa2b0a worktreeClean. Bypass verifying→awaiting-review rejected for securityProfile/security-patterned checks; verificationProfile alone legal; next run still Role security-reviewer / nextState security-checking. Post security-reviewer bc-f9ea047e-5815-5278-b118-08acdd05d9ab. No 3.2 evidence gate, scanner argv, or complete.",
+      "at": "2026-10-21T20:54:35.773Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -87,8 +92,16 @@
     {
       "at": "2026-10-21T20:52:54.420Z",
       "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T20:54:35.718Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:54:35.773Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T20:42:31.133Z",
-  "updatedAt": "2026-10-21T20:52:54.420Z"
+  "updatedAt": "2026-10-21T20:54:35.773Z"
 }

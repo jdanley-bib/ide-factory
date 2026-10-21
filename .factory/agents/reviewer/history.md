@@ -219,3 +219,10 @@ Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
 Reviewer: bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 900fb7b); clean-head unit pass at 356d7ad. Matching accept/complete authorize; wrong action/task/stale rev/expired/policy mismatch fail closed; humanGate false non-sensitive reaches review. Transitions security-checking → awaiting-review → accepted (post security-reviewer bc-aaea9636-54a3-5ec4-a6a4-e09c9e9ccd73).
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.1
+
+Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
+Reviewer: bc-3546052c-8d33-5088-89c7-271d503b325d
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0, 38 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 2a572f3); clean-head unit pass at afa2b0a worktreeClean. Bypass verifying→awaiting-review rejected for security-sensitive; verificationProfile alone legal; next run still names security-reviewer. Transitions security-checking → awaiting-review → accepted (post security-reviewer bc-f9ea047e-5815-5278-b118-08acdd05d9ab).
