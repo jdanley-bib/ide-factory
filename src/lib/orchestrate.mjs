@@ -3,17 +3,36 @@ import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
-import { openOrResumeRunSession, resolveNewSessionBudgets } from './run-session.mjs';
+import {
+  openOrResumeRunSession,
+  resolveNewSessionBudgets,
+  writeRunSession,
+} from './run-session.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
 export const EXIT_ERROR = 1;
 export const EXIT_NEEDS_AGENT = 2;
 
+/** Sticky stop reasons that stay exhausted until --new-run (design.md). */
+const STICKY_STOP_REASONS = new Set([
+  'max-agent-steps',
+  'max-tasks',
+  'wall-clock',
+  'max-failures',
+  'unchanged-state',
+  'max-tokens',
+  'max-cost',
+  'invalid-budget',
+  'invalid-session',
+  'host-usage-unavailable',
+]);
+
 export function runFactory(project, env, {
   change,
   until = 'human-gate',
   maxTasks,
+  maxAgentSteps,
 } = {}) {
   if (halted(project)) {
     const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
@@ -29,10 +48,28 @@ export function runFactory(project, env, {
     };
   }
 
-  syncTasks(project, change, env);
   const config = readConfig(project);
-  const sessionBudgets = resolveNewSessionBudgets(config, { maxTasks });
-  openOrResumeRunSession(project, { change, budgets: sessionBudgets });
+  const sessionBudgets = resolveNewSessionBudgets(config, { maxTasks, maxAgentSteps });
+  let session = openOrResumeRunSession(project, { change, budgets: sessionBudgets });
+  if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (${session.stopReason}) for ${change}.\n`,
+      stopReason: session.stopReason,
+      request: null,
+    };
+  }
+  if (session.agentSteps >= session.budgets.maxAgentSteps) {
+    session = closeRunSession(project, session, 'max-agent-steps');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-agent-steps) for ${change}.\n`,
+      stopReason: 'max-agent-steps',
+      request: null,
+    };
+  }
+
+  syncTasks(project, change, env);
   const limit = Number(maxTasks || config.run?.defaultMaxTasks || 20);
   let progressed = 0;
 
@@ -91,6 +128,15 @@ export function runFactory(project, env, {
 
     const stage = stageForState(attempt.state, item);
     if (stage.needsAgent) {
+      if (session.agentSteps >= session.budgets.maxAgentSteps) {
+        session = closeRunSession(project, session, 'max-agent-steps');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (max-agent-steps) for ${change}.\n`,
+          stopReason: 'max-agent-steps',
+          request: null,
+        };
+      }
       const request = {
         action: 'agent-step',
         role: stage.role,
@@ -105,6 +151,14 @@ export function runFactory(project, env, {
         checks: item.factory?.checks || [],
         verificationProfile: item.factory?.verificationProfile,
       };
+      session = persistAgentStepBeforeRequest(project, session, {
+        action: 'agent-step',
+        role: stage.role,
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      });
       ledger(project, 'run-needs-agent', { change, taskId: item.id, role: stage.role, state: attempt.state });
       return {
         code: EXIT_NEEDS_AGENT,
@@ -130,6 +184,31 @@ export function runFactory(project, env, {
     text: `Stopped after max-tasks=${limit} for ${change}.\n`,
     stopReason: 'max-tasks',
   };
+}
+
+function persistAgentStepBeforeRequest(project, session, fingerprint) {
+  const written = writeRunSession(project, {
+    ...session,
+    agentSteps: session.agentSteps + 1,
+    lastObservedAt: new Date().toISOString(),
+    lastRequestFingerprint: fingerprint,
+  });
+  // Best-effort: ledger() must not block a valid session write.
+  ledger(project, 'run-agent-step', {
+    change: written.change,
+    runId: written.runId,
+    agentSteps: written.agentSteps,
+  });
+  return written;
+}
+
+function closeRunSession(project, session, stopReason) {
+  return writeRunSession(project, {
+    ...session,
+    status: 'closed',
+    stopReason,
+    lastObservedAt: new Date().toISOString(),
+  });
 }
 
 function stageForState(state, item) {

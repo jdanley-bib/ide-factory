@@ -101,3 +101,11 @@ Implementer: bc-54489461-09a6-5be8-a344-270b204b7df9
 Red: `node --test test/run-session.test.mjs` exit 1 (2 assertion failures: unmatched open / high-water still exited 2 with request); `node src/cli.mjs verify run 11409764-fcdc-4ef3-ae0e-22916ac1ef69 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 7 pass.
 Scope: ledger tripwire only — appends stay best-effort; no budget/stuck/host enforcement.
+
+## 2026-10-21 persist-bounded-run-sessions/2.1
+
+Attempt: 7b2f2844-928e-4eb7-8461-674bc47ed750
+Implementer: bc-c00819ae-5928-5ff4-a321-77696732de1f
+Red: `node --test test/run-session.test.mjs` exit 1 (maxAgentSteps stayed 20; `--max-agent-steps` unwired); `node src/cli.mjs verify run 7b2f2844-928e-4eb7-8461-674bc47ed750 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs test/orchestration.test.mjs` exit 0, 24 pass.
+Scope: agent-step budget across processes only — persist increment before request; first-request `--max-tasks 1` still exit 2; no completed-task/wall-clock/failure/unchanged/host enforcement.

@@ -122,12 +122,29 @@ async function seedDemoChange(dir) {
   assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
 }
 
-function spawnRun(dir) {
+function spawnRun(dir, extraArgs = []) {
   return spawnSync(
     process.execPath,
-    [path.join(repoRoot, 'src/cli.mjs'), 'run', '--change', 'demo', '--path', dir],
+    [path.join(repoRoot, 'src/cli.mjs'), 'run', '--change', 'demo', '--path', dir, ...extraArgs],
     { cwd: dir, encoding: 'utf8', shell: false, env: process.env },
   );
+}
+
+function parseOrchestrationJson(out) {
+  const match = out.match(/```json\n([\s\S]*?)\n```/);
+  assert.ok(match, 'orchestration request must include a json block');
+  return JSON.parse(match[1]);
+}
+
+/** Advance attempt state so the next run request differs (unchanged-state is task 3.1). */
+function advanceAttemptState(dir, attemptId, state) {
+  const file = path.join(dir, '.factory', 'attempts', `${attemptId}.json`);
+  const attempt = JSON.parse(fs.readFileSync(file, 'utf8'));
+  attempt.state = state;
+  attempt.history = Array.isArray(attempt.history) ? attempt.history : [];
+  attempt.history.push({ at: new Date().toISOString(), state });
+  attempt.updatedAt = new Date().toISOString();
+  fs.writeFileSync(file, `${JSON.stringify(attempt, null, 2)}\n`);
 }
 
 test('first idefactory run for a change writes .factory/orchestration/runs/<run-id>.json', async () => {
@@ -174,7 +191,8 @@ test('second process resumes the same run id and agent-step count', async () => 
     assert.equal(filesAfterSecond.length, 1, 'resume must not create a second session file');
     const resumed = readRunSession(filesAfterSecond[0]);
     assert.equal(resumed.runId, created.runId);
-    assert.equal(resumed.agentSteps, 3);
+    // Second process prints an agent-step request, so the count increments after resume.
+    assert.equal(resumed.agentSteps, 4);
     assert.equal(resumed.change, 'demo');
   } finally {
     cleanup(dir);
@@ -235,6 +253,59 @@ test('ledger agent-step high-water above loaded file exits 1 without printing a 
     assert.match(`${second.stderr}\n${second.stdout}`, /invalid-session/);
     assert.doesNotMatch(`${second.stderr}\n${second.stdout}`, /# Orchestration request/);
     assert.equal(fs.readFileSync(files[0], 'utf8'), originalBytes, 'corrupt session bytes stay unchanged');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('max-agent-steps N allows N cross-process requests then process N+1 stops with max-agent-steps', async () => {
+  const dir = tempProject();
+  const N = 2;
+  const advanceStates = ['implementing'];
+  try {
+    await seedDemoChange(dir);
+
+    let runId = null;
+    for (let step = 1; step <= N; step += 1) {
+      const result = spawnRun(dir, ['--max-agent-steps', String(N)]);
+      assert.equal(result.status, 2, `process ${step}: ${result.stderr}${result.stdout}`);
+      assert.match(result.stdout, /# Orchestration request/);
+      assert.match(result.stdout, /"action": "agent-step"/);
+
+      const files = listRunSessionFiles(dir);
+      assert.equal(files.length, 1, 'one session file across processes');
+      const session = readRunSession(files[0]);
+      assert.equal(session.budgets.maxAgentSteps, N);
+      assert.equal(
+        session.agentSteps,
+        step,
+        'incremented agentSteps must be persisted before the request is printed',
+      );
+      assert.equal(session.status, 'open');
+      assert.equal(session.stopReason, null);
+      if (runId == null) runId = session.runId;
+      else assert.equal(session.runId, runId);
+
+      const request = parseOrchestrationJson(result.stdout);
+      assert.equal(request.action, 'agent-step');
+      if (step < N) {
+        advanceAttemptState(dir, request.attemptId, advanceStates[step - 1]);
+      }
+    }
+
+    const capped = spawnRun(dir, ['--max-agent-steps', String(N)]);
+    assert.equal(capped.status, 0, capped.stderr + capped.stdout);
+    assert.match(`${capped.stderr}\n${capped.stdout}`, /max-agent-steps/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /# Orchestration request/);
+    assert.doesNotMatch(`${capped.stderr}\n${capped.stdout}`, /"action": "agent-step"/);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const finalSession = readRunSession(files[0]);
+    assert.equal(finalSession.runId, runId);
+    assert.equal(finalSession.agentSteps, N);
+    assert.equal(finalSession.stopReason, 'max-agent-steps');
+    assert.equal(finalSession.status, 'closed');
   } finally {
     cleanup(dir);
   }

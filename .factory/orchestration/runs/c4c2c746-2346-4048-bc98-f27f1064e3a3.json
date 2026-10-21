@@ -4,7 +4,7 @@
   "change": "persist-bounded-run-sessions",
   "status": "open",
   "startedAt": "2026-10-21T17:44:26.895Z",
-  "lastObservedAt": "2026-10-21T17:44:26.895Z",
+  "lastObservedAt": "2026-10-21T17:48:57.611Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,

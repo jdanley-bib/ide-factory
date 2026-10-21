@@ -22,7 +22,7 @@ Usage:
   idefactory status [path]
   idefactory sync-tasks <change> [--path dir]
   idefactory next [--change name] [--path dir]
-  idefactory run --change <name> [--until human-gate] [--max-tasks N] [--path dir]
+  idefactory run --change <name> [--until human-gate] [--max-tasks N] [--max-agent-steps N] [--path dir]
   idefactory attempt start <change> <taskId> [--path dir]
   idefactory attempt transition <attemptId> <state> [--evidence json] [--path dir]
   idefactory attempt show <attemptId> [--path dir]
@@ -92,6 +92,7 @@ export async function run(argv, io = {}) {
           change: parsed.flags.change || parsed.rest[0],
           until: parsed.flags.until || 'human-gate',
           maxTasks: parsed.flags['max-tasks'],
+          maxAgentSteps: parsed.flags['max-agent-steps'],
         });
         out(result.text);
         return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;

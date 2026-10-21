@@ -160,13 +160,16 @@ export function latestRunSession(project, change) {
  * Does not invent token/cost ceilings.
  *
  * @param {object} config
- * @param {{ maxTasks?: number|string }} [flags]
+ * @param {{ maxTasks?: number|string, maxAgentSteps?: number|string }} [flags]
  * @returns {object}
  */
-export function resolveNewSessionBudgets(config = {}, { maxTasks } = {}) {
+export function resolveNewSessionBudgets(config = {}, { maxTasks, maxAgentSteps } = {}) {
   const run = config.run || {};
   return {
-    maxAgentSteps: positiveIntOrDefault(run.defaultMaxAgentSteps, BUILTIN_RUN_BUDGETS.maxAgentSteps),
+    maxAgentSteps: positiveIntOrDefault(
+      maxAgentSteps != null && maxAgentSteps !== '' ? maxAgentSteps : run.defaultMaxAgentSteps,
+      BUILTIN_RUN_BUDGETS.maxAgentSteps,
+    ),
     maxTasks: positiveIntOrDefault(
       maxTasks != null && maxTasks !== '' ? maxTasks : run.defaultMaxTasks,
       BUILTIN_RUN_BUDGETS.maxTasks,
