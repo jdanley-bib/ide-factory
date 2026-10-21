@@ -22,6 +22,14 @@ export const BUILTIN_RUN_BUDGETS = {
   maxFailures: 5,
 };
 
+export class InvalidBudgetError extends Error {
+  constructor(message = 'invalid-budget') {
+    super(message);
+    this.name = 'InvalidBudgetError';
+    this.code = 'INVALID_BUDGET';
+  }
+}
+
 /**
  * Validate a schema version 1 run-session object.
  * Rejects unsupported schema versions and missing required fields.
@@ -168,16 +176,30 @@ export function latestRunSession(project, change) {
 export function resolveNewSessionBudgets(config = {}, { maxTasks, maxAgentSteps } = {}) {
   const run = config.run || {};
   return {
-    maxAgentSteps: positiveIntOrDefault(
-      maxAgentSteps != null && maxAgentSteps !== '' ? maxAgentSteps : run.defaultMaxAgentSteps,
+    maxAgentSteps: resolveCliBudget(
+      maxAgentSteps,
+      run.defaultMaxAgentSteps,
       BUILTIN_RUN_BUDGETS.maxAgentSteps,
+      'max-agent-steps',
     ),
-    maxTasks: positiveIntOrDefault(
-      maxTasks != null && maxTasks !== '' ? maxTasks : run.defaultMaxTasks,
+    maxTasks: resolveCliBudget(
+      maxTasks,
+      run.defaultMaxTasks,
       BUILTIN_RUN_BUDGETS.maxTasks,
+      'max-tasks',
     ),
-    maxWallClockMs: positiveIntOrDefault(run.defaultMaxWallClockMs, BUILTIN_RUN_BUDGETS.maxWallClockMs),
-    maxFailures: positiveIntOrDefault(run.defaultMaxFailures, BUILTIN_RUN_BUDGETS.maxFailures),
+    maxWallClockMs: resolveRequiredBudget(
+      undefined,
+      run.defaultMaxWallClockMs,
+      BUILTIN_RUN_BUDGETS.maxWallClockMs,
+      'maxWallClockMs',
+    ),
+    maxFailures: resolveRequiredBudget(
+      undefined,
+      run.defaultMaxFailures,
+      BUILTIN_RUN_BUDGETS.maxFailures,
+      'maxFailures',
+    ),
   };
 }
 
@@ -457,10 +479,27 @@ export function openOrResumeRunSession(project, { change, budgets, now = new Dat
   return createRunSession(project, { change, budgets, now });
 }
 
-function positiveIntOrDefault(value, fallback) {
-  const n = Number(value);
-  if (Number.isInteger(n) && n > 0) return n;
-  return fallback;
+function resolveCliBudget(flagValue, configValue, fallback, label) {
+  if (flagValue === undefined || flagValue === '') {
+    return resolveRequiredBudget(undefined, configValue, fallback, label);
+  }
+  if (flagValue === true || flagValue === false) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  return resolveRequiredBudget(flagValue, undefined, fallback, label);
+}
+
+function resolveRequiredBudget(explicit, configValue, fallback, label) {
+  const raw = explicit !== undefined ? explicit : configValue;
+  if (raw == null || raw === '') return fallback;
+  if (raw === true || raw === false) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n <= 0) {
+    throw new InvalidBudgetError(`invalid-budget: ${label} must be a positive integer`);
+  }
+  return n;
 }
 
 function requireString(session, key) {

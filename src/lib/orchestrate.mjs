@@ -4,6 +4,7 @@ import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
+  InvalidBudgetError,
   openOrResumeRunSession,
   refreshCompletedTasks,
   refreshFailures,
@@ -51,7 +52,20 @@ export function runFactory(project, env, {
   }
 
   const config = readConfig(project);
-  const sessionBudgets = resolveNewSessionBudgets(config, { maxTasks, maxAgentSteps });
+  let sessionBudgets;
+  try {
+    sessionBudgets = resolveNewSessionBudgets(config, { maxTasks, maxAgentSteps });
+  } catch (err) {
+    if (err instanceof InvalidBudgetError) {
+      return {
+        code: EXIT_ERROR,
+        text: `Run stopped (invalid-budget) for ${change}.\n`,
+        stopReason: 'invalid-budget',
+        request: null,
+      };
+    }
+    throw err;
+  }
   const now = new Date();
   let session = openOrResumeRunSession(project, { change, budgets: sessionBudgets, now });
   if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
@@ -114,7 +128,7 @@ export function runFactory(project, env, {
     };
   }
 
-  const limit = Number(maxTasks || config.run?.defaultMaxTasks || 20);
+  const limit = session.budgets.maxTasks;
   let progressed = 0;
 
   while (progressed < limit) {

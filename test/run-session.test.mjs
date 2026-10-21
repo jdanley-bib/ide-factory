@@ -551,3 +551,105 @@ test('clock earlier than startedAt exits 1 with invalid-session and no orchestra
     cleanup(dir);
   }
 });
+
+function assertInvalidBudgetRun(dir, extraArgs, label) {
+  assert.deepEqual(listRunSessionFiles(dir), [], `precondition: no session before ${label}`);
+  const result = spawnRun(dir, extraArgs);
+  assert.equal(result.status, 1, `${label}: ${result.stderr}${result.stdout}`);
+  assert.match(`${result.stderr}\n${result.stdout}`, /invalid-budget/);
+  assert.doesNotMatch(`${result.stderr}\n${result.stdout}`, /# Orchestration request/);
+  assert.deepEqual(
+    listRunSessionFiles(dir),
+    [],
+    `${label}: must not create a zeroed open session file`,
+  );
+}
+
+test('zero, negative, or non-integer required budgets exit 1 with invalid-budget and no session', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const cases = [
+      [['--max-agent-steps', '0'], 'zero max-agent-steps'],
+      [['--max-agent-steps', '-1'], 'negative max-agent-steps'],
+      [['--max-agent-steps', '2.5'], 'non-integer max-agent-steps'],
+      [['--max-tasks', '0'], 'zero max-tasks'],
+      [['--max-tasks', '-3'], 'negative max-tasks'],
+      [['--max-tasks', 'nope'], 'non-integer max-tasks'],
+    ];
+    for (const [args, label] of cases) {
+      assertInvalidBudgetRun(dir, args, label);
+    }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('bare --max-agent-steps flag does not fall through via truthiness to a session', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    assertInvalidBudgetRun(dir, ['--max-agent-steps'], 'bare max-agent-steps flag');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('invalid config budget exits 1 with invalid-budget and creates no session file', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const configPath = path.join(dir, '.factory', 'config.json');
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    config.run = { ...config.run, defaultMaxFailures: 0 };
+    fs.writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+
+    assertInvalidBudgetRun(dir, ['--max-tasks', '1'], 'zero defaultMaxFailures in config');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('corrupt session JSON on resume exits 1 with unchanged bytes and no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const original = 'not-json{{{';
+    fs.writeFileSync(files[0], original);
+
+    const second = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(second.status, 1, second.stderr + second.stdout);
+    assert.doesNotMatch(`${second.stderr}\n${second.stdout}`, /# Orchestration request/);
+    assert.equal(fs.readFileSync(files[0], 'utf8'), original, 'corrupt session bytes stay unchanged');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('session missing required counter on resume exits 1 with unchanged bytes and no request', async () => {
+  const dir = tempProject();
+  try {
+    await seedDemoChange(dir);
+    const first = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(first.status, 2, first.stderr + first.stdout);
+
+    const files = listRunSessionFiles(dir);
+    assert.equal(files.length, 1);
+    const parsed = JSON.parse(fs.readFileSync(files[0], 'utf8'));
+    delete parsed.agentSteps;
+    const original = `${JSON.stringify(parsed, null, 2)}\n`;
+    fs.writeFileSync(files[0], original);
+
+    const second = spawnRun(dir, ['--max-tasks', '1']);
+    assert.equal(second.status, 1, second.stderr + second.stdout);
+    assert.doesNotMatch(`${second.stderr}\n${second.stdout}`, /# Orchestration request/);
+    assert.equal(fs.readFileSync(files[0], 'utf8'), original);
+  } finally {
+    cleanup(dir);
+  }
+});

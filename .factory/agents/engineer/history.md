@@ -133,3 +133,11 @@ Implementer: bc-f1976f28-d282-5a0f-9c75-89cbb2e817b2
 Red: `node --test test/run-session.test.mjs` exit 1 (1 failure: timed-out at maxFailures exit 2 with request, expected 0 max-failures); `node src/cli.mjs verify run 7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 13 pass.
 Scope: failure budget only — distinct timed-out or non-passing verification records increment failureCount and countedFailureIds; evidence.red excluded; at maxFailures stop code 0 max-failures/no request; no unchanged/host/invalid-budget; no review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/2.5
+
+Attempt: 7e1f372e-1f51-456d-a365-68946f0be648
+Implementer: bc-454b4c19-6657-5629-9670-5d0bfd19a75f
+Red: `node --test test/run-session.test.mjs` exit 1 (3 failures: invalid budgets exit 2 with session/request; bare `--max-agent-steps` truthiness; config defaultMaxFailures 0); `node src/cli.mjs verify run 7e1f372e-1f51-456d-a365-68946f0be648 --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
+Green: `node --test test/run-session.test.mjs` exit 0, 18 pass.
+Scope: invalid-budget and corrupt-session only — zero/negative/non-integer CLI or config budgets exit 1 invalid-budget/no zeroed session/no request; bare boolean CLI flags rejected; corrupt JSON or missing counter unchanged/no request; no unchanged/host/review/complete/commit/push.
