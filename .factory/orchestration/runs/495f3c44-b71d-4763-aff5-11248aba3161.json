@@ -4,14 +4,14 @@
   "change": "make-finalization-recoverable",
   "status": "open",
   "startedAt": "2026-10-21T22:05:34.462Z",
-  "lastObservedAt": "2026-10-21T22:36:40.236Z",
+  "lastObservedAt": "2026-10-21T22:44:05.625Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 7,
+  "agentSteps": 8,
   "completedTasks": 3,
   "failureCount": 0,
   "baselineDoneIds": [],
@@ -19,10 +19,10 @@
   "countedFailureIds": [],
   "lastRequestFingerprint": {
     "action": "agent-step",
-    "role": "engineer",
+    "role": "reviewer",
     "taskId": "2.2",
     "attemptId": "53b91f30-220d-425e-8f86-e9b3dbbc18ab",
-    "attemptState": "assigned",
+    "attemptState": "verifying",
     "workItemStatus": "in_progress"
   },
   "stopReason": null

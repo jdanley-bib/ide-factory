@@ -275,3 +275,10 @@ Attempt: 3a56eca2-2a84-440c-b064-87222e4e7a3c
 Reviewer: bc-c64a39ea-058f-5d73-a422-dd5aa28ee7f4
 Verdict: ACCEPT
 Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 17 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 1b1f1eb worktreeClean:false); clean-head unit pass at 20f3c9b worktreeClean. Product 20f3c9b: compare-and-apply skip after-digest / apply before-digest / conflict otherwise; `recoverFinalization` resumes finalized+unfinished journal and repeats already-committed without duplicating checkbox/scribe/attempt history; conflict keeps item not done. Scope exclusions held (no fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/2.2
+
+Attempt: 53b91f30-220d-425e-8f86-e9b3dbbc18ab
+Reviewer: bc-26a59cbe-977d-5fb0-a5f0-7a5631691d2d
+Verdict: ACCEPT
+Re-ran `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 40 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 062e22a worktreeClean:false); clean-head unit pass at 0f21406 worktreeClean. Product 0f21406: library-only `faultHook` / `finalizationFaultBoundaries` cover journal create, all six pre-commit targets (incl. ready-journal), and before-commit; every injected fault leaves item not done and uninjected retry reaches one byte-consistent final state; orchestrator emits `needs-complete` for finalized+matching unfinished journal. Scope exclusions held (no lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.

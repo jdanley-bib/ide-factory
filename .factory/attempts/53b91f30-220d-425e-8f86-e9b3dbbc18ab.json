@@ -2,10 +2,10 @@
   "id": "53b91f30-220d-425e-8f86-e9b3dbbc18ab",
   "change": "make-finalization-recoverable",
   "taskId": "2.2",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-f9136866-3cd3-54a7-b04b-49280da24f59",
-  "reviewerId": null,
+  "reviewerId": "bc-26a59cbe-977d-5fb0-a5f0-7a5631691d2d",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "062e22a5c6fcc510e53e62f7c896e45e67755378"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:42:15.657Z",
+        "finishedAt": "2026-10-21T22:43:46.598Z",
+        "logDigest": "sha256:0ec6115341c32c824af4c83d813b04aba383802685efb2b3d39ed3ac0825dd02",
+        "artifactDigests": [],
+        "attemptId": "53b91f30-220d-425e-8f86-e9b3dbbc18ab",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "0f21406dca9787e1c95d43749369a400f505e9cb"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-26a59cbe-977d-5fb0-a5f0-7a5631691d2d",
+      "notes": "Independent review ACCEPT: 15 fault boundaries leave item not done; uninjected retry byte-consistent; library-only faultHook; orchestration needs-complete for finalized+unfinished journal; focused tests 40 pass; CLI red/clean evidence valid.",
+      "at": "2026-10-21T22:45:38.998Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -58,8 +88,16 @@
     {
       "at": "2026-10-21T22:41:46.700Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:45:38.965Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:45:38.998Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T22:36:40.235Z",
-  "updatedAt": "2026-10-21T22:41:46.700Z"
+  "updatedAt": "2026-10-21T22:45:38.998Z"
 }
