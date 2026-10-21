@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: enforce-verification-evidence/4.3 (2026-10-21)
+Last finalized: enforce-verification-evidence/5.1 (2026-10-21)

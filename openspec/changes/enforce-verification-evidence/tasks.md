@@ -24,7 +24,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npx openspec validate enforce-verification-evidence --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in the implementation notes. Do not start a model, add a run-session budget, enforce `humanGate`, or change finalization atomicity.
+- [x] 5.1 Run `npx openspec validate enforce-verification-evidence --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in the implementation notes. Do not start a model, add a run-session budget, enforce `humanGate`, or change finalization atomicity.
 
 ## Workflow follow-up
 

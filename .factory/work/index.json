@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T17:03:02.304Z",
+  "updatedAt": "2026-10-21T17:09:20.887Z",
   "items": [
     {
       "change": "enforce-verification-evidence",
@@ -55,7 +55,7 @@
     {
       "change": "enforce-verification-evidence",
       "id": "5.1",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "reconcile-factory-specifications",
