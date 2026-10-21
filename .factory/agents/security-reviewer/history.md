@@ -36,3 +36,13 @@ Verdict: ACCEPT
 Transition: verifying → security-checking (2026-10-21T20:52Z)
 Commands: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0 (38 pass); advisory `npm audit --audit-level=high` exit 0 (0 vulns).
 Threat review: `requiresSecurityStage` in `validateEvidence` (afa2b0a) rejects `verifying` → `awaiting-review` when `securityProfile === security-sensitive` or a security-patterned check matches; attempt file left unchanged on reject. `verificationProfile` alone does not trigger. Orchestration `stageForState` still routes verifying security-sensitive work to role `security-reviewer` / `nextState: security-checking` (tests lock bypass rejection + routing). `.factory/checks.json` remains unit-only (no scanner argv). `evidence.security` left empty — no forged threat-review records. Not moved to awaiting-review; complete not run.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.2
+
+Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
+Reviewer: bc-04f1ac01-db6f-5b20-bb30-7d820a48f997
+Implementer: bc-ce850c12-8e69-57a8-a2f1-f6cdd422ec79
+Verdict: ACCEPT
+Product: 6f7ee25
+Commands: `node --test test/risk-gates.test.mjs` exit 0 (25 pass).
+Threat review: `assertPassingCliSecurityEvidence` (6f7ee25) gates `security-checking` → `awaiting-review` on passing CLI records bound to attempt id and clean HEAD; default required kind is `threat-review` when no check is security-patterned; red rows and caller-supplied `security` payloads fail closed; `verify` routes security-patterned kinds into `evidence.security`; `complete` also refuses security-required work lacking that evidence. Shipped `.factory/checks.json` stays unit-only (no scanner argv); tests use temporary registry mappings only. Bootstrap sets machine `securityProfile` to dependency-basic so this attempt is not forced through a live threat-review mapping. `evidence.security` left empty — no forged or labeled threat-review records. Attempt state not transitioned; coordinator routes to distinct reviewer.
