@@ -226,3 +226,10 @@ Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
 Reviewer: bc-3546052c-8d33-5088-89c7-271d503b325d
 Verdict: ACCEPT
 Re-ran `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0, 38 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 2a572f3); clean-head unit pass at afa2b0a worktreeClean. Bypass verifying→awaiting-review rejected for security-sensitive; verificationProfile alone legal; next run still names security-reviewer. Transitions security-checking → awaiting-review → accepted (post security-reviewer bc-f9ea047e-5815-5278-b118-08acdd05d9ab).
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.2
+
+Attempt: 30dbe229-266c-4a72-922e-ceebdc47f490
+Reviewer: bc-65702123-0d1f-58e5-9c5a-31f004a05778
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs` exit 0, 25 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at ee59717); clean-head unit pass at 6f7ee25 worktreeClean. Product 6f7ee25: security-checking→awaiting-review requires passing CLI security record bound to attempt/clean HEAD; default kind threat-review; red and caller-supplied security payloads rejected; verify stores security-patterned kinds in evidence.security; complete fail-closed without that evidence; shipped checks.json unit-only (no scanner argv). Bootstrap dependency-basic leaves this attempt unforced through live threat-review. Transitions verifying → awaiting-review → accepted (post security-reviewer bc-04f1ac01-db6f-5b20-bb30-7d820a48f997).
