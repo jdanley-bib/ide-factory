@@ -36,6 +36,9 @@ export function completeWorkItem(project, change, taskId, attemptId, env = {}) {
   if (!humanGateAllows(project, {
     action: 'complete',
     verificationProfile: item.factory?.verificationProfile,
+    change,
+    task: taskId,
+    implementerId: attempt.implementerId,
   })) {
     throw new Error(
       'complete requires a valid scoped approval when humanGate is true (or the profile is missing / non-boolean)',

@@ -298,12 +298,49 @@ function ensureFactoryGitignore(dir) {
     '.factory/ledger.jsonl',
     '.factory/orchestration/*',
     '!.factory/orchestration/.gitkeep',
+    '.factory/approvals/*',
+    '!.factory/approvals/.gitkeep',
   ];
   const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
   const extras = lines.filter((line) => !existing.split('\n').includes(line));
   if (extras.length > 0) {
     fs.writeFileSync(file, `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${extras.join('\n')}\n`);
   }
+}
+
+function plantApproval(dir, id, overrides = {}) {
+  const head = git(dir, ['rev-parse', 'HEAD']);
+  const issuance = new Date(Date.now() - HOUR_MS).toISOString();
+  const record = validApproval({
+    change: 'demo',
+    task: '2.2',
+    sourceRevision: head,
+    action: 'accept',
+    approver: APPROVER,
+    issuance,
+    expiry: new Date(Date.now() + 12 * HOUR_MS).toISOString(),
+    policyVersion: 1,
+    note: 'planted scoped approval',
+    ...overrides,
+  });
+  return writeScopedApproval(dir, id, record, { implementerId: IMPLEMENTER });
+}
+
+async function advanceToVerifying(dir, attemptId) {
+  await recordRed(dir, attemptId);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'implementing',
+    '--evidence', JSON.stringify({ implementerId: IMPLEMENTER }),
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'red-confirmed',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
+  await recordPassingChecks(dir, attemptId);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attemptId, 'verifying',
+    '--evidence', JSON.stringify({}),
+  ])).code, 0);
 }
 
 function writeCheckRegistry(dir, exitByKind) {
@@ -492,6 +529,123 @@ test('non-boolean humanGate is treated as true', async () => {
     assert.doesNotMatch(result.out, /# Orchestration request/);
     const session = readRunSession(listRunSessionFiles(dir)[0]);
     assert.equal(session.status, 'open');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('matching accept approval allows accept transition via run', async () => {
+  const dir = tempProject();
+  try {
+    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    patchProfiles(dir, (profiles) => {
+      profiles['frontend-low'].humanGate = true;
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToAwaitingReview(dir, attemptId);
+    plantApproval(dir, 'accept-ok', { action: 'accept', task: '2.2' });
+
+    const result = await idefactory(dir, [
+      'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
+    ]);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.match(result.out, /# Orchestration request/);
+    assert.match(result.out, /"nextState": "accepted"/);
+    assert.doesNotMatch(result.out, /Run stopped \(human-gate\)/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('matching complete approval allows completion', async () => {
+  const dir = tempProject();
+  try {
+    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    patchProfiles(dir, (profiles) => {
+      profiles['frontend-low'].humanGate = true;
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await acceptViaTransitions(dir, attemptId);
+    plantApproval(dir, 'complete-ok', { action: 'complete', task: '2.2' });
+
+    const done = await idefactory(dir, ['complete', 'demo', '2.2', '--attempt', attemptId]);
+    assert.equal(done.code, 0, done.err + done.out);
+    assert.equal(getWorkItem(dir, 'demo', '2.2').status, 'done');
+    assert.equal(getAttempt(dir, attemptId).state, 'finalized');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('wrong action, wrong task, stale revision, expired, or policy mismatch do not authorize', async () => {
+  const dir = tempProject();
+  try {
+    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    patchProfiles(dir, (profiles) => {
+      profiles['frontend-low'].humanGate = true;
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToAwaitingReview(dir, attemptId);
+
+    const mismatches = [
+      { id: 'wrong-action', overrides: { action: 'complete' } },
+      { id: 'wrong-task', overrides: { task: '9.9' } },
+      { id: 'stale-rev', overrides: { sourceRevision: '0'.repeat(40) } },
+      {
+        id: 'expired',
+        overrides: {
+          issuance: new Date(Date.now() - 3 * HOUR_MS).toISOString(),
+          expiry: new Date(Date.now() - HOUR_MS).toISOString(),
+        },
+      },
+      { id: 'policy-mismatch', overrides: { policyVersion: 99 } },
+    ];
+
+    for (const { id, overrides } of mismatches) {
+      for (const name of approvalFiles(dir).filter((n) => n.endsWith('.json'))) {
+        fs.unlinkSync(path.join(dir, '.factory', 'approvals', name));
+      }
+      plantApproval(dir, id, { action: 'accept', task: '2.2', ...overrides });
+
+      const result = await idefactory(dir, [
+        'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
+      ]);
+      assert.equal(result.code, 0, `${id}: ${result.err + result.out}`);
+      assert.match(result.out, /Run stopped \(human-gate\)/, `${id} should stay gated`);
+      assert.doesNotMatch(result.out, /# Orchestration request/, `${id} must not emit request`);
+    }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('humanGate false on non-sensitive work reaches review without approval', async () => {
+  const dir = tempProject();
+  try {
+    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    patchProfiles(dir, (profiles) => {
+      profiles['frontend-low'].humanGate = false;
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToVerifying(dir, attemptId);
+
+    assert.equal(approvalFiles(dir).filter((n) => n.endsWith('.json')).length, 0);
+    const result = await idefactory(dir, [
+      'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
+    ]);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.match(result.out, /# Orchestration request/);
+    assert.match(result.out, /"role": "reviewer"/);
+    assert.match(result.out, /"nextState": "awaiting-review"/);
+    assert.doesNotMatch(result.out, /Run stopped \(human-gate\)/);
   } finally {
     cleanup(dir);
   }

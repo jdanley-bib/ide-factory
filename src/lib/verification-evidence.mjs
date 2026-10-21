@@ -429,6 +429,7 @@ const FACTORY_RUN_STATE_PREFIXES = [
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',
+  '.factory/active-change.json',
 ]);
 
 function normalizeGitPath(relPath) {

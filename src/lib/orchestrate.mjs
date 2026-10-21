@@ -238,6 +238,9 @@ export function runFactory(project, env, {
         && !humanGateAllows(project, {
           action: 'accept',
           verificationProfile: item.factory?.verificationProfile,
+          change: attempt.change || change,
+          task: item.id,
+          implementerId: attempt.implementerId,
         })
       ) {
         return {

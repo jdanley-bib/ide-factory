@@ -228,3 +228,11 @@ Implementer: bc-2f1a688c-749e-5c38-a804-97a84aec8aa6
 Red: `node --test test/risk-gates.test.mjs` exit 1 (4 failures: accept request still emitted; complete succeeded without approval; missing/non-boolean gate not fail-closed); `node src/cli.mjs verify run d989d087-25f9-408b-a6d1-0f593b01c5db --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/risk-gates.test.mjs` exit 0, 12 pass.
 Scope: fail-closed human gate only — `humanGate: true` / missing profile / non-boolean blocks accept (`run` exit 0 `human-gate`, no request, session open) and `complete` (nonzero, item undone); no valid-matching approval matrix (2.2), security stage, lockout, CI, provenance, or transactional complete.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/2.2
+
+Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
+Implementer: bc-28a08772-dc3e-5db8-81b6-131c8bce22d8
+Red: `node --test test/risk-gates.test.mjs` exit 1 (2 failures: matching accept still human-gate; matching complete still rejected); `node src/cli.mjs verify run 049a0a00-f6c2-4187-ab0f-7baadd95180a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/risk-gates.test.mjs` exit 0, 16 pass.
+Scope: matching scoped approval authorizes accept/complete; wrong action/task, stale revision, expired window, or policy version mismatch reject; `humanGate: false` non-sensitive reaches review without approval. `.factory/active-change.json` treated as factory run-state so `run` does not self-invalidate the gate. No security-stage, scanner argv, checkbox, review, complete, or push.

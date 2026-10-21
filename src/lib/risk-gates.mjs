@@ -1,8 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText, writeText } from './layout.mjs';
+import { resolveGitBinding } from './verification-evidence.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
+const DEFAULT_POLICY_VERSION = 1;
 const MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const ALLOWED_ACTIONS = new Set(['accept', 'complete']);
 
@@ -146,11 +148,18 @@ export function isHumanGateRequired(project, verificationProfile) {
 
 /**
  * Whether accept/complete may proceed for this work item's verification profile.
- * Fail-closed for 2.1: when the gate is required, no approval authorizes yet
- * (matching success/mismatch matrix is task 2.2).
+ * When the gate is required, a scoped JSON approval must match change, task,
+ * action, current clean HEAD, policy version, lifetime, and a distinct approver.
  *
  * @param {string} project
- * @param {{ action: 'accept'|'complete', verificationProfile?: string }} scope
+ * @param {{
+ *   action: 'accept'|'complete',
+ *   verificationProfile?: string,
+ *   change?: string,
+ *   task?: string,
+ *   implementerId?: string,
+ *   now?: Date|number,
+ * }} scope
  * @returns {boolean}
  */
 export function humanGateAllows(project, scope) {
@@ -160,5 +169,77 @@ export function humanGateAllows(project, scope) {
   if (!isHumanGateRequired(project, scope.verificationProfile)) {
     return true;
   }
+  return hasMatchingScopedApproval(project, scope);
+}
+
+/**
+ * @param {string} project
+ * @param {{
+ *   action: 'accept'|'complete',
+ *   change?: string,
+ *   task?: string,
+ *   implementerId?: string,
+ *   now?: Date|number,
+ * }} scope
+ * @returns {boolean}
+ */
+function hasMatchingScopedApproval(project, scope) {
+  if (typeof scope.change !== 'string' || scope.change.length === 0) return false;
+  if (typeof scope.task !== 'string' || scope.task.length === 0) return false;
+
+  const { sourceRevision, worktreeClean } = resolveGitBinding(project);
+  if (!worktreeClean || !sourceRevision) return false;
+
+  const policyVersion = readPolicyVersion(project);
+  const nowMs = resolveNowMs(scope.now);
+  const approvalsDir = path.join(project, '.factory', 'approvals');
+  if (!fs.existsSync(approvalsDir)) return false;
+
+  for (const name of fs.readdirSync(approvalsDir)) {
+    if (!name.endsWith('.json')) continue;
+    let record;
+    try {
+      record = JSON.parse(readText(path.join(approvalsDir, name)));
+      validateScopedApproval(record, { implementerId: scope.implementerId });
+    } catch {
+      continue;
+    }
+    if (record.change !== scope.change) continue;
+    if (record.task !== scope.task) continue;
+    if (record.action !== scope.action) continue;
+    if (record.sourceRevision !== sourceRevision) continue;
+    if (record.policyVersion !== policyVersion) continue;
+    if (
+      typeof scope.implementerId === 'string'
+      && scope.implementerId.length > 0
+      && record.approver === scope.implementerId
+    ) {
+      continue;
+    }
+    const issuedAt = Date.parse(record.issuance);
+    const expiresAt = Date.parse(record.expiry);
+    if (Number.isNaN(issuedAt) || Number.isNaN(expiresAt)) continue;
+    if (nowMs < issuedAt || nowMs >= expiresAt) continue;
+    return true;
+  }
   return false;
+}
+
+function readPolicyVersion(project) {
+  const configPath = path.join(project, '.factory', 'config.json');
+  if (!fs.existsSync(configPath)) return DEFAULT_POLICY_VERSION;
+  try {
+    const config = JSON.parse(readText(configPath));
+    const version = config?.governance?.policyVersion;
+    if (Number.isInteger(version) && version > 0) return version;
+  } catch {
+    // fall through to default
+  }
+  return DEFAULT_POLICY_VERSION;
+}
+
+function resolveNowMs(now) {
+  if (now instanceof Date) return now.getTime();
+  if (typeof now === 'number' && Number.isFinite(now)) return now;
+  return Date.now();
 }
