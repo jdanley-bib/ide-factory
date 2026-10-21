@@ -97,3 +97,7 @@ Attempt: 7b08cfdc-a44c-45d0-bdc0-546cbd4cb87a
 ## 2026-10-21 finalized persist-bounded-run-sessions/2.5
 
 Attempt: 7e1f372e-1f51-456d-a365-68946f0be648
+
+## 2026-10-21 finalized persist-bounded-run-sessions/3.1
+
+Attempt: 1fe9b9fc-4fa7-4721-8bed-1b85f057acd4
