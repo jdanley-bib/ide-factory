@@ -1,9 +1,9 @@
 ---
-description: Apply the IDE factory only when the human asks for factory plan, build, run, review, or status
+description: Apply the IDE factory only when the human asks for factory plan, build, run, full, review, or status
 alwaysApply: true
 ---
 
-When the human asks the factory or the team to plan, build, run, review, apply an OpenSpec change, or report status, follow the factory-coordinator skill and keep team memory in `.factory/`.
+When the human asks the factory or the team to plan, build, run, full pipeline, review, apply an OpenSpec change, or report status, follow the factory-coordinator skill and keep team memory in `.factory/`.
 
 Unrelated requests are left alone. Do not change `.factory/` or factory adapters for unrelated work.
 

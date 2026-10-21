@@ -3,6 +3,7 @@
 These are prompts for the IDE session, not an unattended scheduler.
 
 - **Status.** Read team, decisions, the active OpenSpec change, and `.factory/work/`.
+- **Full.** Human starts `/factory-full`: explore → propose if needed → plan (`sync-tasks`) → run until a stop condition.
 - **Plan.** Read a human-authored change and sync its unchecked tasks into `.factory/work/`.
 - **Build.** Implement one work item, test first, record attempt evidence, then ask the reviewer.
 - **Run.** Human starts `/factory-run` or `idefactory run`. The skill loops on orchestration requests until a stop condition. The CLI never launches a model.

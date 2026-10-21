@@ -43,7 +43,7 @@ idefactory upgrade
 
 1. You author an OpenSpec change (`/opsx-propose` or equivalent). The factory will not invent the product for you.
 2. Plan with `/factory-plan`, or run `idefactory sync-tasks <change>`. Each unchecked box in `tasks.md` becomes one work item under `.factory/work/`. Optional `factory:` YAML under a checkbox sets kind, roles, checks, and dependencies.
-3. Build one item with `/factory-build`, or run a bounded multi-item loop with `/factory-run` / `idefactory run --change <name> --until human-gate`.
+3. Build one item with `/factory-build`, run a bounded multi-item loop with `/factory-run` / `idefactory run --change <name> --until human-gate`, or use `/factory-full` for explore → propose (if needed) → plan → run in one flow.
 4. Attempts record red/verify/security/review evidence. Finalize with `idefactory complete <change> <id> --attempt <attemptId>`.
 5. Record spend, publishing, or deployment yourself:
 
@@ -71,7 +71,7 @@ idefactory reject <id> --note "why not"
 | `idefactory lockout` | Record a reviewer rejection |
 | `idefactory halt` / `resume` | Set or clear the kill switch |
 
-Slash commands: `/factory-status`, `/factory-plan`, `/factory-build`, `/factory-run`, `/factory-review`.
+Slash commands: `/factory-status`, `/factory-plan`, `/factory-build`, `/factory-run`, `/factory-full`, `/factory-review`.
 
 ## What gets installed
 

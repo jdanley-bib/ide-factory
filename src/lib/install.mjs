@@ -43,6 +43,10 @@ const COMMANDS = [
     description: 'Bounded multi-task factory orchestration until a stop condition',
   },
   {
+    name: 'factory-full',
+    description: 'One-stop factory: explore, propose if needed, plan, and run',
+  },
+  {
     name: 'factory-review',
     description: 'Review the current factory task as a different role',
   },

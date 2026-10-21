@@ -65,26 +65,33 @@ test('re-init preserves decisions, history, squad, and AGENTS.md', async () => {
   }
 });
 
-test('installs the three IDE build commands, factory-run, a narrow rule, and skills with no model launcher', async () => {
+test('installs factory build/run/full commands, a narrow rule, and skills with no model launcher', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     for (const rel of [
       '.cursor/commands/factory-build.md',
       '.cursor/commands/factory-run.md',
+      '.cursor/commands/factory-full.md',
       '.github/prompts/factory-build.prompt.md',
       '.github/prompts/factory-run.prompt.md',
+      '.github/prompts/factory-full.prompt.md',
       '.claude/commands/factory-build.md',
       '.claude/commands/factory-run.md',
+      '.claude/commands/factory-full.md',
       '.cursor/commands/factory-status.md',
       '.cursor/commands/factory-plan.md',
       '.cursor/commands/factory-review.md',
       '.github/agents/factory.agent.md',
       '.claude/skills/factory-coordinator/SKILL.md',
       '.cursor/skills/factory-run/SKILL.md',
+      '.cursor/skills/factory-full/SKILL.md',
     ]) {
       assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
     }
+    assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /openspec-explore/);
+    assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /factory-run/);
+    assert.match(read(dir, '.cursor/commands/factory-full.md'), /factory-full skill/);
     assert.match(read(dir, '.cursor/rules/factory.mdc'), /Unrelated requests are left alone/);
     const build = read(dir, '.cursor/skills/factory-build/SKILL.md');
     assert.match(build, /failing test/i);

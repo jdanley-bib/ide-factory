@@ -3,7 +3,8 @@ name: factory-coordinator
 description: >
   Route IDE factory work using .factory/ team memory. Use when the user says
   team, factory, /factory-status, /factory-plan, /factory-build, /factory-run,
-  or asks to apply an OpenSpec change through the factory. The IDE session model does the work.
+  /factory-full, or asks to apply an OpenSpec change through the factory.
+  The IDE session model does the work.
 ---
 
 # Factory coordinator
@@ -22,6 +23,7 @@ You route work. You do not implement product code in the same turn.
 ## Where to send the request
 
 - Status: run `idefactory status` and summarize it. Do not edit the product.
+- Full pipeline ("do everything", `/factory-full`): follow the `factory-full` skill.
 - Plan or "apply this OpenSpec change": follow the `factory-openspec` skill.
 - Build or "do the next task": follow the `factory-build` skill.
 - Bounded multi-task orchestration: follow the `factory-run` skill.
@@ -39,7 +41,7 @@ The scribe runs last. Prefer `idefactory complete` for finalization. The scribe 
 
 ## What you never do
 
-- Do not start an unattended loop. `/factory-run` is human-started and stops on CLI conditions.
+- Do not start an unattended loop. `/factory-run` and `/factory-full` are human-started and stop on CLI conditions.
 - Do not create a human task board that replaces OpenSpec. `.factory/work/` is the machine execution graph only.
 - Do not archive an OpenSpec change. Tell the human to use OpenSpec's archive skill.
 - Do not modify `.squad/` if present.

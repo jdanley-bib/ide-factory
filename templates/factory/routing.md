@@ -10,3 +10,4 @@
 | Review | Reviewer | Lead | Lead |
 | Team memory | Scribe | Lead | Lead |
 | Bounded multi-task run | Lead | role pipeline from work item | Reviewer |
+| Full pipeline (explore→plan→run) | Lead | Architect, then role pipeline | Reviewer |
