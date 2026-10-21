@@ -2,10 +2,10 @@
   "id": "25abe23f-bfaf-4489-b0cc-8e014bacc45f",
   "change": "make-finalization-recoverable",
   "taskId": "1.1",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-dbaa9b47-88a9-5be9-b262-7585198dac69",
-  "reviewerId": null,
+  "reviewerId": "bc-4a1d77ce-079f-5d0d-bfbb-5d9093f539fa",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "f244b4a0f8c5f465b37cdc055a241199efcde142"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:09:26.799Z",
+        "finishedAt": "2026-10-21T22:10:57.677Z",
+        "logDigest": "sha256:226ac011825c17b698d3fa5bf0bdd775c462b20536b8b216077450946caf0234",
+        "artifactDigests": [],
+        "attemptId": "25abe23f-bfaf-4489-b0cc-8e014bacc45f",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "ded99f725e732f61245b4b44ff16fa9a8e3d989b"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-4a1d77ce-079f-5d0d-bfbb-5d9093f539fa",
+      "notes": "",
+      "at": "2026-10-21T22:12:35.206Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-21T22:08:45.752Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T22:11:01.280Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:12:35.169Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:12:35.206Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T22:05:34.473Z",
-  "updatedAt": "2026-10-21T22:08:45.752Z"
+  "updatedAt": "2026-10-21T22:12:35.206Z"
 }

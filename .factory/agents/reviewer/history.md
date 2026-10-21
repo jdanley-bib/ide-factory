@@ -254,3 +254,10 @@ Attempt: c55fda80-405c-41b0-ae1c-743da4435908
 Reviewer: bc-2bcc3a49-cb7c-5f23-af68-6496693c6c78
 Verdict: ACCEPT
 Re-ran `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `node --test test/risk-gates.test.mjs` exit 0, 27 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 423fd37); clean-head unit pass at 11ccb4b worktreeClean. Product 11ccb4b: implementation notes record strict validate, npm test (146 pass), and doctor ok; focused test locks those three command strings. Scope exclusions held (no model start, transactional complete, lockout, lease, CI, provenance, observability). Transitions verifying → awaiting-review → accepted (post security-reviewer bc-4bc55479-78ad-5095-900b-66e5a3a91307). No verify/complete.
+
+## 2026-10-21 make-finalization-recoverable/1.1
+
+Attempt: 25abe23f-bfaf-4489-b0cc-8e014bacc45f
+Reviewer: bc-4a1d77ce-079f-5d0d-bfbb-5d9093f539fa
+Verdict: ACCEPT
+Re-ran `node --test test/finalization-recovery.test.mjs` exit 0, 8 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at f244b4a); clean-head unit pass at ded99f7 worktreeClean. Product ded99f7: schema v1 journal validation + atomic create; allowlisted ordered targets; corrupt/unsupported/path/identity/revision/planDigest fail closed without marking done. Scope exclusions held (no replay, fault injection, lockout, lease, complete wiring). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
