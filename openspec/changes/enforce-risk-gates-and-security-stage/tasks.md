@@ -22,7 +22,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npx openspec validate enforce-risk-gates-and-security-stage --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, make `complete` transactional, resolve lockout, add a lease, or add CI, provenance, or observability.
+- [x] 5.1 Run `npx openspec validate enforce-risk-gates-and-security-stage --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, make `complete` transactional, resolve lockout, add a lease, or add CI, provenance, or observability.
 
 ## Workflow follow-up
 

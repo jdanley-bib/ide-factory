@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T21:35:29.185Z",
+  "updatedAt": "2026-10-21T21:49:09.741Z",
   "items": [
     {
       "change": "enforce-risk-gates-and-security-stage",
@@ -45,7 +45,7 @@
     {
       "change": "enforce-risk-gates-and-security-stage",
       "id": "5.1",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "enforce-verification-evidence",
