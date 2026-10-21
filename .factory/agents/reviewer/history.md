@@ -303,3 +303,11 @@ Attempt: 29c52e9a-6ec4-4fdd-a733-7b7248bce462
 Reviewer: bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb
 Verdict: ACCEPT
 Re-ran `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 41 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at dcf3336 worktreeClean:false; engineer notes 6 failing heartbeat/takeover/owner-loss/corrupt/CLI/release cases); clean unit at 98e443b≡97eb307 worktreeClean plus rebind verify at 4bc2628. Product 97eb307: one-minute fake-clock heartbeat, five-minute expiry, one-winner stale-directory rename takeover, OWNERSHIP_LOST on successor mismatch, LEASE_RECOVERY corrupt/unsupported without delete, HALT bypass, top-level `run.mjs` wrap of all named mutations with no nested acquire, read-only unleased, rename release TOCTOU fix vs successor. Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/5.1
+
+Attempt: 9247289a-042d-4ef4-8e9c-1f98d80ee70f
+Reviewer: bc-98a08a6b-7aeb-541d-8777-c11db7f00b38
+Implementer: bc-c064be93-5bd6-54d5-aebc-9344f8749e47
+Verdict: ACCEPT
+Re-ran `npx openspec validate make-finalization-recoverable --strict` exit 0; `node --test test/finalization-recovery.test.mjs` exit 0, 21 pass; `node src/cli.mjs doctor` exit 0. Confirmed notes honesty: npm test 187/187 (re-run exit 0 after one intermittent writer-lease stale-takeover flake unrelated to 5.1). CLI red present (issuer cli, kind unit, exitCode 1, passed false at 912bb226 worktreeClean:false; simulated missing notes → 20 pass / 1 fail); clean-head unit pass at 60e4ba8 worktreeClean. Product 60e4ba8: implementation-notes + notes assertion test + engineer history only. Scope exclusions held (no model start, CI/provenance, observability, gate/evidence policy, archive, checkbox, complete, push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.

@@ -1,0 +1,103 @@
+{
+  "id": "9247289a-042d-4ef4-8e9c-1f98d80ee70f",
+  "change": "make-finalization-recoverable",
+  "taskId": "5.1",
+  "state": "accepted",
+  "implementerRole": "engineer",
+  "implementerId": "bc-c064be93-5bd6-54d5-aebc-9344f8749e47",
+  "reviewerId": "bc-98a08a6b-7aeb-541d-8777-c11db7f00b38",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T23:25:30.535Z",
+      "finishedAt": "2026-10-21T23:27:01.814Z",
+      "logDigest": "sha256:3a52394a372624272647300b38fcb975201f2ca977cb127ae2f382d093ae79a9",
+      "artifactDigests": [],
+      "attemptId": "9247289a-042d-4ef4-8e9c-1f98d80ee70f",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "912bb226159e157e9a464bf6c53016d5b72298aa"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:29:23.895Z",
+        "finishedAt": "2026-10-21T23:30:55.035Z",
+        "logDigest": "sha256:63e69f81633fb0a9523a244f84b87fb3e9dda1d8147b1227f5427144ae436910",
+        "artifactDigests": [],
+        "attemptId": "9247289a-042d-4ef4-8e9c-1f98d80ee70f",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "60e4ba8e09b0f27c3fa1b226519a11c1d36f2731"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-98a08a6b-7aeb-541d-8777-c11db7f00b38",
+      "notes": "Independent review: red/clean CLI evidence authentic; notes honest; exclusions held; re-ran validate, finalization-recovery tests, doctor.",
+      "at": "2026-10-21T23:35:55.504Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T23:24:36.348Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T23:24:36.348Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T23:25:21.139Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T23:27:11.088Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T23:30:58.622Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T23:35:55.445Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T23:35:55.504Z",
+      "state": "accepted"
+    }
+  ],
+  "createdAt": "2026-10-21T23:24:36.348Z",
+  "updatedAt": "2026-10-21T23:35:55.504Z"
+}
