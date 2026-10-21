@@ -170,3 +170,10 @@ Attempt: e63c39e8-9c29-419e-af8e-769c141de8d5
 Reviewer: bc-9b0951c5-ad67-55a5-a0e2-573a102cb4fb
 Verdict: ACCEPT
 Product: 2c5b4fb (template four positive run defaults; install tests). Re-ran `node --test test/install.test.mjs` 12/12 pass. CLI red ac2b105 passed:false worktreeClean:false; simulated red ac2b105+tests only 1 fail; unit verify 2c5b4fb passed:true. Repo `.factory/config.json` unchanged. Transitions verifying → awaiting-review → accepted.
+
+## 2026-10-21 persist-bounded-run-sessions/4.2
+
+Attempt: 98c38e90-8523-4cfa-a251-fe216a73532e
+Reviewer: bc-e1e6f7ab-79fb-50dc-9494-f0c2f28f5c69
+Verdict: ACCEPT
+Product: 006525d (five factory-run SKILL copies + run-session test asserting stops and loop resume). Inspected skill Loop uses `idefactory run --change <name> --until human-gate` without `--new-run`; Stop conditions list all five bounded stops; New session (human only) documents `--new-run` for sticky resets. Re-ran focused `node --test test/run-session.test.mjs` (33 pass, including shipped factory-run skill copies test). CLI red 045b1db exitCode 1 passed:false issuer cli; unit pass 006525d worktreeClean passed:true (reviewer re-verify logDigest sha256:949f7a9c…). Transitions verifying → awaiting-review → accepted.
