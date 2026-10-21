@@ -268,3 +268,11 @@ Implementer: bc-7e555273-1c59-5f81-a461-d70b73089dc6
 Red: `node --test test/risk-gates.test.mjs` exit 1 (1 failure: five factory-run skills still say human-gate (release profile)); `node src/cli.mjs verify run f6d2af51-ad7a-435f-9c0e-16e92bcc9924 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:b098bfc917385bc18729be2a8f38f55a6e8275effd27c841d7825ced28ea6cf9).
 Green: `node --test test/risk-gates.test.mjs` exit 0, 26 pass.
 Scope: five factory-run SKILL copies + risk-gates skill test only — human-gate described as true profile `humanGate` stop, not release profile alone; loop still does not pass `--new-run`. No checkbox, review, complete, or push.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/5.1
+
+Attempt: c55fda80-405c-41b0-ae1c-743da4435908
+Implementer: bc-f2d26bc7-6fcf-5b41-a1e2-967cfaac57bc
+Red: missing `openspec/changes/enforce-risk-gates-and-security-stage/implementation-notes.md`; `node --test test/risk-gates.test.mjs` 26 pass / 1 fail; `node src/cli.mjs verify run c55fda80-405c-41b0-ae1c-743da4435908 --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:4b6c06f7dc5b3f960482b7ebfdb96a626d68e91233961cfbf13aa52ea4d8edfa).
+Green: `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `npm test` exit 0 (146 pass); `node src/cli.mjs doctor` exit 0; `node --test test/risk-gates.test.mjs` exit 0, 27 pass.
+Scope: integration notes only — no model start, transactional complete, lockout, lease, CI, provenance, observability, review, checkbox, or push.

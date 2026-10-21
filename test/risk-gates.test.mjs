@@ -1091,3 +1091,18 @@ test('shipped factory-run skill copies describe human-gate as profile humanGate 
     assert.doesNotMatch(loop, /--new-run/, `${rel} loop must not pass --new-run`);
   }
 });
+
+test('implementation notes record strict validate, npm test, and doctor', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/enforce-risk-gates-and-security-stage/implementation-notes.md',
+  );
+  assert.ok(
+    fs.existsSync(notesPath),
+    `missing implementation notes: ${notesPath}`,
+  );
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  assert.match(notes, /npx openspec validate enforce-risk-gates-and-security-stage --strict/);
+  assert.match(notes, /npm test/);
+  assert.match(notes, /node src\/cli\.mjs doctor/);
+});
