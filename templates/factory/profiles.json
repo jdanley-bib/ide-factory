@@ -17,7 +17,7 @@
   },
   "security-sensitive": {
     "checks": ["unit", "build", "dependency-audit", "secret-scan", "sast", "threat-review"],
-    "humanGate": false
+    "humanGate": true
   },
   "release": {
     "checks": ["unit", "build", "integration", "packaging"],

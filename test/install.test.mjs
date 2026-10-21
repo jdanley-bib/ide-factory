@@ -152,6 +152,39 @@ test('re-init leaves an existing check registry byte-for-byte unchanged', async 
   }
 });
 
+test('init writes release and security-sensitive humanGate true', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const profiles = JSON.parse(read(dir, '.factory/profiles.json'));
+    assert.equal(profiles.release.humanGate, true);
+    assert.equal(profiles['security-sensitive'].humanGate, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing profiles.json byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const profilesPath = path.join(dir, '.factory/profiles.json');
+    const custom = `${JSON.stringify({
+      docs: { checks: ['docs'], humanGate: false },
+      'security-sensitive': {
+        checks: ['unit', 'threat-review'],
+        humanGate: false,
+      },
+      release: { checks: ['unit'], humanGate: true },
+    }, null, 2)}\nPROFILES-SENTINEL\n`;
+    fs.writeFileSync(profilesPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(profilesPath, 'utf8'), custom);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('re-init preserves decisions, history, squad, and AGENTS.md', async () => {
   const dir = tempProject();
   try {

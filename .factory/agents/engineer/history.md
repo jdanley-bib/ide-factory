@@ -252,3 +252,11 @@ Implementer: bc-ce850c12-8e69-57a8-a2f1-f6cdd422ec79
 Red: `node --test test/risk-gates.test.mjs` exit 1 (5 failures: missing CLI security gate / security bucket / complete skip); `node src/cli.mjs verify run 30dbe229-266c-4a72-922e-ceebdc47f490 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/risk-gates.test.mjs` exit 0, 25 pass; with orchestration 44 pass.
 Scope: security-checking→awaiting-review requires passing CLI security record bound to attempt/clean HEAD; default kind threat-review when no security-patterned check; red and caller-supplied security payloads rejected; verify routes security-patterned kinds to evidence.security; complete refuses security-required work lacking that evidence. No shipped scanner argv, checkbox, review, complete, or push.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.1
+
+Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
+Implementer: bc-ad5b4df3-f20c-5aa7-8b8f-a3d9cc4a5073
+Red: `node --test test/install.test.mjs` exit 1 (1 failure: security-sensitive.humanGate false !== true); `node src/cli.mjs verify run 18d745da-e9df-445c-a5a5-9ab639d96f4b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/install.test.mjs` exit 0, 14 pass.
+Scope: profile template only — `security-sensitive.humanGate` true, `release.humanGate` remains true; new init writes both; re-init leaves existing profiles.json byte-for-byte unchanged. Did not edit this repo's `.factory/profiles.json`. No checkbox, review, complete, or push.
