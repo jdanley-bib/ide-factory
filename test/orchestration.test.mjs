@@ -243,6 +243,77 @@ test('security-sensitive verification routes to security-reviewer', async () => 
   }
 });
 
+test('security-sensitive verifying rejects awaiting-review bypass; run still names security-reviewer', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit]',
+      '    securityProfile: security-sensitive',
+      '    verificationProfile: frontend-low',
+      '    roles: [engineer, security-reviewer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err);
+    const attempt = JSON.parse(started.out);
+    await advanceToVerifying(dir, attempt.id, { passChecks: {} });
+
+    const bypass = await idefactory(dir, [
+      'attempt', 'transition', attempt.id, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(bypass.code, 0, bypass.err + bypass.out);
+    assert.match(bypass.err, /security|awaiting-review|verifying/i);
+    assert.equal(getAttempt(dir, attempt.id).state, 'verifying');
+
+    const result = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.match(result.out, /^Role: security-reviewer$/m);
+    const request = parseOrchestrationJson(result.out);
+    assert.equal(request.role, 'security-reviewer');
+    assert.equal(request.state, 'verifying');
+    assert.equal(request.nextState, 'security-checking');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('verificationProfile alone does not route to security-reviewer or block awaiting-review', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit]',
+      '    securityProfile: dependency-basic',
+      '    verificationProfile: security-sensitive',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    const item = getWorkItem(dir, 'demo', '1.1');
+    assert.equal(item.factory?.verificationProfile, 'security-sensitive');
+    assert.notEqual(item.factory?.securityProfile, 'security-sensitive');
+
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err);
+    const attempt = JSON.parse(started.out);
+    await advanceToVerifying(dir, attempt.id, { passChecks: {} });
+
+    const toReview = await idefactory(dir, [
+      'attempt', 'transition', attempt.id, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.equal(toReview.code, 0, toReview.err + toReview.out);
+    assert.equal(getAttempt(dir, attempt.id).state, 'awaiting-review');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('security-reviewer route in fresh session after sticky unchanged-state with remaining budget', async () => {
   const dir = tempProject();
   try {

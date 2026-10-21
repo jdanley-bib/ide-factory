@@ -91,7 +91,7 @@ export function transitionAttempt(project, attemptId, nextState, { evidence = {}
   }
   // Reject check-result payloads before any mutation so the attempt file stays unchanged.
   rejectCallerSuppliedCheckResults(evidence);
-  validateEvidence(attempt, nextState, evidence);
+  validateEvidence(project, attempt, nextState, evidence);
 
   if (nextState === 'implementing' && actorId) attempt.implementerId = actorId;
   if (nextState === 'accepted' || nextState === 'rejected') {
@@ -123,7 +123,15 @@ function rejectCallerSuppliedCheckResults(evidence) {
   }
 }
 
-function validateEvidence(attempt, nextState, evidence) {
+function requiresSecurityStage(item) {
+  // verificationProfile alone does not trigger the security stage.
+  if (!item?.factory) return false;
+  if (item.factory.securityProfile === 'security-sensitive') return true;
+  return (item.factory.checks || []).some((check) =>
+    /security|sast|threat|secret|audit/i.test(String(check)));
+}
+
+function validateEvidence(project, attempt, nextState, evidence) {
   if (nextState === 'red-confirmed') {
     const storedRed = attempt.evidence?.red;
     if (!storedRed || storedRed.passed !== false) {
@@ -133,7 +141,12 @@ function validateEvidence(attempt, nextState, evidence) {
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'verifying') {
-    // security-checking may be skipped when no security checks required
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    if (requiresSecurityStage(item)) {
+      throw new Error(
+        'security-sensitive work cannot transition verifying → awaiting-review; remain in verifying and use security-checking',
+      );
+    }
   }
   if (nextState === 'accepted') {
     if (!evidence.reviewerId && !attempt.reviewerId) {

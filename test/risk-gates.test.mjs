@@ -650,3 +650,129 @@ test('humanGate false on non-sensitive work reaches review without approval', as
     cleanup(dir);
   }
 });
+
+async function seedSecurityStageChange(dir, {
+  taskId = '3.1',
+  securityProfile = 'security-sensitive',
+  verificationProfile = 'frontend-low',
+  checks = ['unit'],
+  roles = ['engineer', 'security-reviewer', 'reviewer', 'scribe'],
+} = {}) {
+  assert.equal((await idefactory(dir, ['init'])).code, 0);
+  fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'openspec/changes/demo/tasks.md'),
+    [
+      `- [ ] ${taskId} Stage fixture`,
+      '  factory:',
+      '    kind: general',
+      `    checks: [${checks.join(', ')}]`,
+      `    securityProfile: ${securityProfile}`,
+      `    verificationProfile: ${verificationProfile}`,
+      `    roles: [${roles.join(', ')}]`,
+      '',
+    ].join('\n'),
+  );
+  assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
+}
+
+test('security-sensitive work rejects verifying to awaiting-review and stays verifying', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.1',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const item = getWorkItem(dir, 'demo', '3.1');
+    assert.equal(item.factory?.securityProfile, 'security-sensitive');
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.1']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToVerifying(dir, attemptId);
+
+    const beforeRaw = fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    );
+    const bad = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(bad.code, 0, bad.err + bad.out);
+    assert.match(bad.err, /security|awaiting-review|verifying/i);
+    assert.equal(getAttempt(dir, attemptId).state, 'verifying');
+    assert.equal(
+      fs.readFileSync(path.join(dir, '.factory', 'attempts', `${attemptId}.json`), 'utf8'),
+      beforeRaw,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('verificationProfile alone does not require the security stage', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.1',
+      securityProfile: 'dependency-basic',
+      verificationProfile: 'security-sensitive',
+      checks: ['unit'],
+      roles: ['engineer', 'reviewer', 'scribe'],
+    });
+    const item = getWorkItem(dir, 'demo', '3.1');
+    assert.equal(item.factory?.verificationProfile, 'security-sensitive');
+    assert.notEqual(item.factory?.securityProfile, 'security-sensitive');
+    assert.equal((item.factory?.checks || []).some((c) => /security|sast|threat|secret|audit/i.test(c)), false);
+
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.1']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToVerifying(dir, attemptId);
+
+    const ok = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.equal(ok.code, 0, ok.err + ok.out);
+    assert.equal(getAttempt(dir, attemptId).state, 'awaiting-review');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('security-sensitive verifying still requests security-reviewer on next run', async () => {
+  const dir = tempProject();
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '3.1',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.1']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToVerifying(dir, attemptId);
+
+    const bypass = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(bypass.code, 0);
+    assert.equal(getAttempt(dir, attemptId).state, 'verifying');
+
+    const result = await idefactory(dir, [
+      'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
+    ]);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.match(result.out, /^Role: security-reviewer$/m);
+    assert.match(result.out, /"role": "security-reviewer"/);
+    assert.match(result.out, /"nextState": "security-checking"/);
+    assert.doesNotMatch(result.out, /^Role: reviewer$/m);
+  } finally {
+    cleanup(dir);
+  }
+});

@@ -236,3 +236,11 @@ Implementer: bc-28a08772-dc3e-5db8-81b6-131c8bce22d8
 Red: `node --test test/risk-gates.test.mjs` exit 1 (2 failures: matching accept still human-gate; matching complete still rejected); `node src/cli.mjs verify run 049a0a00-f6c2-4187-ab0f-7baadd95180a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/risk-gates.test.mjs` exit 0, 16 pass.
 Scope: matching scoped approval authorizes accept/complete; wrong action/task, stale revision, expired window, or policy version mismatch reject; `humanGate: false` non-sensitive reaches review without approval. `.factory/active-change.json` treated as factory run-state so `run` does not self-invalidate the gate. No security-stage, scanner argv, checkbox, review, complete, or push.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/3.1
+
+Attempt: 934b44b7-55ff-47e4-8ddf-9313707ab641
+Implementer: bc-a95794d1-0bea-5a09-b8af-429f21713938
+Red: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 1 (3 failures: security-sensitive verifying→awaiting-review still allowed); `node src/cli.mjs verify run 934b44b7-55ff-47e4-8ddf-9313707ab641 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/risk-gates.test.mjs test/orchestration.test.mjs` exit 0, 38 pass.
+Scope: mandatory security stage only — security-sensitive (securityProfile or security-patterned checks) rejects verifying→awaiting-review and stays verifying; verificationProfile alone does not require the stage; next run still requests security-reviewer. No security evidence gate (3.2), scanner argv, checkbox, review, complete, or push.
