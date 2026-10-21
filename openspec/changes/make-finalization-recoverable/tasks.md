@@ -2,7 +2,7 @@
 
 ## 1. Journal and deterministic plan
 
-- [ ] 1.1 Add failing tests that a schema version 1 finalization journal binds change, task, attempt, clean source revision, completion date, ordered allowlisted targets, before/after digests, exact after bytes, and an immutable plan digest, and that corrupt, unsupported, path-traversing, identity-mismatched, or revision-mismatched journals fail without marking the item done. Implement journal validation and atomic creation. Verify with `node --test test/finalization-recovery.test.mjs`.
+- [x] 1.1 Add failing tests that a schema version 1 finalization journal binds change, task, attempt, clean source revision, completion date, ordered allowlisted targets, before/after digests, exact after bytes, and an immutable plan digest, and that corrupt, unsupported, path-traversing, identity-mismatched, or revision-mismatched journals fail without marking the item done. Implement journal validation and atomic creation. Verify with `node --test test/finalization-recovery.test.mjs`.
 - [ ] 1.2 Add failing tests that complete creates one deterministic plan for the checkbox, scribe marker, identity note, finalized attempt, intended work index, ready journal, and atomic work-item update; timestamps stay fixed across retries, and the work-item `done` write is the final correctness-critical write. Implement the planned target generation and verify with `node --test test/finalization-recovery.test.mjs`.
 
 ## 2. Replay and crash recovery
