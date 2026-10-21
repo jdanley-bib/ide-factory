@@ -2,7 +2,7 @@
   "id": "2.3",
   "change": "persist-bounded-run-sessions",
   "title": "Add failing tests that a session older than its wall-clock budget exits 0 with `wall-clock`, and that a clock earlier than `startedAt` exits 1 with `invalid-session`. Verify with `node --test test/run-session.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "2.2"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "143ad813-9542-4662-acfd-844349500751",
-  "updatedAt": "2026-10-21T18:01:07.773Z"
+  "updatedAt": "2026-10-21T18:05:47.370Z"
 }
