@@ -2,7 +2,7 @@
   "id": "4.2",
   "change": "enforce-risk-gates-and-security-stage",
   "title": "Update the factory-run skill copies under `.cursor/skills`, `.github/skills`, `.agents/skills`, `.claude/skills`, and `templates/skills` so each describes `human-gate` as the stop for a true profile `humanGate` and does not limit that stop to the release profile. The loop still does not pass `--new-run`. Verify by reading those five files in `node --test test/risk-gates.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "4.1"
   ],
@@ -30,5 +30,5 @@
     ]
   },
   "attemptId": "f6d2af51-ad7a-435f-9c0e-16e92bcc9924",
-  "updatedAt": "2026-10-21T21:22:51.388Z"
+  "updatedAt": "2026-10-21T21:35:29.101Z"
 }
