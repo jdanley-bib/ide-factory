@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: persist-bounded-run-sessions/3.3 (2026-10-21)
+Last finalized: persist-bounded-run-sessions/3.4 (2026-10-21)

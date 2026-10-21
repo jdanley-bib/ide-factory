@@ -2,7 +2,7 @@
   "id": "3.4",
   "change": "persist-bounded-run-sessions",
   "title": "Add a failing test that the security-reviewer route still exits 2 with one security-reviewer request when the session has remaining budget. Verify with `node --test test/orchestration.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "3.3"
   ],
@@ -30,5 +30,5 @@
     ]
   },
   "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
-  "updatedAt": "2026-10-21T18:52:11.391Z"
+  "updatedAt": "2026-10-21T19:09:25.765Z"
 }
