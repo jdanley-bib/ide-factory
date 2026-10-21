@@ -8,7 +8,7 @@
 ## 2. Replay and crash recovery
 
 - [x] 2.1 Add failing tests that replay skips an after-digest target, applies a before-digest target, rejects any other digest as a conflict, and repeats an already committed completion without changing bytes or duplicating checkbox, scribe, or attempt history. Implement compare-and-apply recovery, allow a matching finalized attempt with an unfinished journal to resume, and verify with `node --test test/finalization-recovery.test.mjs`.
-- [ ] 2.2 Add a library-only fault hook and table-driven failing tests before and after journal creation, every pre-commit target, the ready-journal write, and immediately before the commit point. At every boundary the failed call leaves the item not done and an uninjected retry reaches one byte-consistent final state. Add an orchestration regression that an unfinished finalized attempt with a matching journal emits `needs-complete`. Verify with `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs`.
+- [x] 2.2 Add a library-only fault hook and table-driven failing tests before and after journal creation, every pre-commit target, the ready-journal write, and immediately before the commit point. At every boundary the failed call leaves the item not done and an uninjected retry reaches one byte-consistent final state. Add an orchestration regression that an unfinished finalized attempt with a matching journal emits `needs-complete`. Verify with `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs`.
 
 ## 3. Lockout lifecycle
 
