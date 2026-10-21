@@ -240,3 +240,10 @@ Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
 Reviewer: bc-7ad72710-1c5b-5463-9806-51d6596afed3
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 14 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at a2f9a37); clean-head unit pass at c72a5cc worktreeClean. Product c72a5cc: template `security-sensitive.humanGate` true, `release.humanGate` remains true; new init writes both; re-init leaves existing profiles.json byte-for-byte unchanged via writeIfMissing. Repo `.factory/profiles.json` untouched (`security-sensitive.humanGate` still false). Transitions verifying → awaiting-review → accepted (post security-reviewer bc-daa18683-6b21-5890-a651-4ed360ffc333). No verify/complete.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.2
+
+Attempt: f6d2af51-ad7a-435f-9c0e-16e92bcc9924
+Reviewer: bc-f129bc18-3c3e-5980-a466-45f6084e62da
+Verdict: ACCEPT
+Re-ran `node --test test/risk-gates.test.mjs` exit 0, 26 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 5e61bd3); clean-head unit pass at 6ce9d47 worktreeClean. Product 6ce9d47: five factory-run skill copies describe human-gate as true profile `humanGate` (not release alone); Loop uses `--until human-gate` and does not pass `--new-run` (`--new-run` only under New session). Risk-gates skill-copy unit test locks wording. Transitions verifying → awaiting-review → accepted (post security-reviewer bc-48e201b4-4a68-5185-9464-4dd05771a55b). No verify/complete.
