@@ -39,3 +39,13 @@ Authorized-by: factory lead aligning the machine queue to the human task and app
 Work-item: persist-bounded-run-sessions/3.4
 Attempt: c923e6ab-933a-44a2-a41e-4969af7b9380
 Note: The classifier marked 3.4 security-sensitive because the task text names the security-reviewer route and inferred unit, build, dependency-audit, and threat-review. The human task verifies only `node --test test/orchestration.test.mjs`, the check registry maps only unit to `npm test`, and this approved change explicitly excludes security-stage enforcement and new security tooling. Keep the existing security-reviewer route and its independent review, but set the work item's completion checks to unit. Do not invent build, dependency-audit, or threat-review commands and do not record forged passing evidence.
+
+## 2026-10-21 accepted enforce-risk-gates-and-security-stage-2.2-unit-check
+
+Status: accepted
+Id: enforce-risk-gates-and-security-stage-2.2-unit-check
+Authorized-at: 2026-10-21T20:29:00Z
+Authorized-by: factory lead aligning the machine queue to the human task and approved scope
+Work-item: enforce-risk-gates-and-security-stage/2.2
+Attempt: 049a0a00-f6c2-4187-ab0f-7baadd95180a
+Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task tests approval security. The human task verifies only `node --test test/risk-gates.test.mjs`; the registry maps only unit to `npm test`; and the approved design explicitly forbids inventing scanner argv. Set completion checks to unit. Retain the security-sensitive route and independent security review, but do not forge build, dependency-audit, or threat-review evidence.
