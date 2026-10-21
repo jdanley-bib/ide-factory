@@ -46,3 +46,13 @@ Verdict: ACCEPT
 Product: 6f7ee25
 Commands: `node --test test/risk-gates.test.mjs` exit 0 (25 pass).
 Threat review: `assertPassingCliSecurityEvidence` (6f7ee25) gates `security-checking` → `awaiting-review` on passing CLI records bound to attempt id and clean HEAD; default required kind is `threat-review` when no check is security-patterned; red rows and caller-supplied `security` payloads fail closed; `verify` routes security-patterned kinds into `evidence.security`; `complete` also refuses security-required work lacking that evidence. Shipped `.factory/checks.json` stays unit-only (no scanner argv); tests use temporary registry mappings only. Bootstrap sets machine `securityProfile` to dependency-basic so this attempt is not forced through a live threat-review mapping. `evidence.security` left empty — no forged or labeled threat-review records. Attempt state not transitioned; coordinator routes to distinct reviewer.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/4.1
+
+Attempt: 18d745da-e9df-445c-a5a5-9ab639d96f4b
+Reviewer: bc-daa18683-6b21-5890-a651-4ed360ffc333
+Implementer: bc-ad5b4df3-f20c-5aa7-8b8f-a3d9cc4a5073
+Verdict: ACCEPT
+Product: c72a5cc
+Commands: `node --test test/install.test.mjs` exit 0 (14 pass).
+Threat review: Template `security-sensitive.humanGate` is true and `release.humanGate` remains true (c72a5cc). Init copies `profiles.json` via `writeIfMissing`, so re-init leaves an existing file byte-for-byte unchanged (install tests cover both). This repo's `.factory/profiles.json` is untouched (`security-sensitive.humanGate` still false at HEAD 6ee0264). Scope is template + install tests only; no scanner argv, no forged security evidence, no attempt transition.
