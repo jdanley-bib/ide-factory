@@ -319,3 +319,11 @@ Implementer: bc-4b9faad8-5f00-549e-adc3-cfb57b7969bf
 Reviewer: bc-f4310a0a-b92e-5893-9847-bf7b84186766
 Verdict: ACCEPT
 Inspected staging-directory rename publication (`tryPublishNewLease`), vanished-dir → `LEASE_HELD` without weakening corrupt/unsupported `LEASE_RECOVERY`, winner tombstone cleanup, and one-winner stale rename. Deterministic tests cover owner-publication gap (mkdir probe) and mid-read directory loss. Re-ran `node --test test/writer-lease.test.mjs` exit 0, 16 pass; stress 50× exit 0; `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 43 pass. No attempt mutation, complete, or push.
+
+## 2026-10-21 make-finalization-recoverable complete→journaled integration follow-up
+
+Product: c13f7dbc5e2ca4811f1961e31ac838af019bb441
+Implementer: bc-ce055288-021d-5690-a0f0-6825d222923c
+Reviewer: bc-c07cd477-9db7-5c65-bd8a-1832bee9833b
+Verdict: ACCEPT
+Inspected end-to-end: journal before target writes; schema v1 + planDigest include durable `commit`/`finalizedAt`; process-restart `recoverFinalization` applies frozen commit bytes without in-memory plan; accepted/finalize-failed/finalized+journal retries; dirty worktree only with matching source-bound journal; work-item `done` last atomic correctness write; ledger post-commit only; byte-stable repeat; library-only `faultHook` (no CLI/env fault control); HALT/lockout/humanGate/reviewer-differ/check+security evidence preserved. Three design tensions are necessary for crash-true recovery — recommend narrow artifact clarification (persist commit on journal; finalize-failed only pre-journal; dirty resume with matching journal HEAD), not product rollback. Re-ran `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 44 pass; `npm test` exit 0, 192 pass. No attempt mutation, complete, push, archive, or branch change.
