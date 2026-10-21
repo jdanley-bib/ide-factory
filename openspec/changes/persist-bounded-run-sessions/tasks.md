@@ -24,7 +24,7 @@
 ## 4. Defaults and skill re-entry
 
 - [x] 4.1 Add the positive agent-step, task, wall-clock, and failure defaults to the config template. Extend install tests so a new init writes those positive values and a second init leaves an existing `config.json` byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`.
-- [ ] 4.2 Update the factory-run skill copies under `.cursor/skills`, `.github/skills`, `.agents/skills`, `.claude/skills`, and `templates/skills` so each names `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state` as stops and does not instruct the IDE to pass `--new-run`. Verify by reading those five files in `node --test test/run-session.test.mjs`.
+- [x] 4.2 Update the factory-run skill copies under `.cursor/skills`, `.github/skills`, `.agents/skills`, `.claude/skills`, and `templates/skills` so each names `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state` as stops and does not instruct the IDE to pass `--new-run`. Verify by reading those five files in `node --test test/run-session.test.mjs`.
 
 ## 5. Integration
 

@@ -2,7 +2,7 @@
   "id": "4.2",
   "change": "persist-bounded-run-sessions",
   "title": "Update the factory-run skill copies under `.cursor/skills`, `.github/skills`, `.agents/skills`, `.claude/skills`, and `templates/skills` so each names `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state` as stops and does not instruct the IDE to pass `--new-run`. Verify by reading those five files in `node --test test/run-session.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "4.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
-  "updatedAt": "2026-10-21T19:16:46.407Z"
+  "updatedAt": "2026-10-21T19:24:07.307Z"
 }
