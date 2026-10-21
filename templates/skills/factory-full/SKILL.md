@@ -17,7 +17,7 @@ Human-started end-to-end pipeline: explore → propose (if needed) → plan → 
 1. If `.factory/team.md` is missing, tell the human to run `idefactory init` and stop.
 2. If `HALT` exists, stop.
 3. Read `.factory/governance.md`, `.factory/team.md`, and the latest `.factory/decisions.md` entries.
-4. Never call Ollama or a model HTTP API. Never invent a product from the web. The human's request is the product intent.
+4. The human's request is the product intent.
 
 ## Phase 1 — Explore
 

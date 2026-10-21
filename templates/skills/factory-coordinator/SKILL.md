@@ -17,8 +17,8 @@ You route work. You do not implement product code in the same turn.
 
 - If `.factory/team.md` is missing, tell the human to run `idefactory init` and stop.
 - Read `.factory/team.md`, `.factory/routing.md`, `.factory/governance.md`, the latest entries in `.factory/decisions.md`, and `.factory/identity/now.md`.
-- The IDE session model does the work. Never call Ollama. Never call a model HTTP API.
-- Never invent a product from the web. The human authors the OpenSpec change.
+- The IDE session model does the work.
+- The human authors the OpenSpec change.
 
 ## Where to send the request
 

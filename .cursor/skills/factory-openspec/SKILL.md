@@ -45,4 +45,4 @@ Finalize with `idefactory complete` after review accepts. That checks the OpenSp
 
 When every box is checked, tell the human to archive and sync with OpenSpec. Do not archive from this skill.
 
-The IDE session model does the work. Never call Ollama. Never call a model HTTP API. Never invent a product from the web.
+The IDE session model does the work.

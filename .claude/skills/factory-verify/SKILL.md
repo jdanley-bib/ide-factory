@@ -20,5 +20,3 @@ idefactory attempt transition <attemptId> verifying --evidence '{"verification":
 ```
 
 6. Claim ready for review only when required checks passed.
-
-Never call Ollama. Never invent a product from the web.

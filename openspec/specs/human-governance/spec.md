@@ -38,7 +38,7 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** the exit code is zero
 
 ### Requirement: Golden rules file
-The product SHALL ship a `GOLDEN_RULES.md` that forbids autonomous web ideation, Ollama, unapproved spend, and publishing, and init SHALL NOT overwrite an existing `GOLDEN_RULES.md`.
+The product SHALL ship a `GOLDEN_RULES.md` that forbids unapproved spend and publishing, and init SHALL NOT overwrite an existing `GOLDEN_RULES.md`.
 
 #### Scenario: Existing rules
 - **WHEN** `GOLDEN_RULES.md` already exists and init runs

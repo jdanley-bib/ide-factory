@@ -3,7 +3,7 @@
 Operational baseline for the IDE factory. Agents may read this file. Prefer append-only updates to decisions and histories.
 
 1. **Human-authored scope.** The human authors OpenSpec changes. The factory does not invent product scope.
-2. **IDE models only.** Do not start Ollama or any other model server. Do not call a model HTTP API from this factory. The IDE session the human opened is the only model budget.
+2. **IDE models only.** he IDE session the human opened is the only model budget.
 3. **Approve before publish or spend.** Do not publish packages, deploy, create paid resources, or open accounts unless the human recorded `idefactory approve`.
 4. **Honest verification.** Do not claim a check passed unless you ran it and it passed. A skipped check is not a pass.
 5. **Append-only memory.** Do not truncate `.factory/decisions.md` or agent histories. Append.

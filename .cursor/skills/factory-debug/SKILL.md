@@ -15,5 +15,3 @@ description: >
 4. Add a failing test for that cause if the current test does not already show it.
 5. Fix the cause and run the same command again.
 6. If the failure is outside the task, stop and report it. Do not expand the product.
-
-Never call Ollama. Never invent a product from the web.

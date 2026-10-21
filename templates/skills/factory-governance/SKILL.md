@@ -45,4 +45,4 @@ The note records the rejection. It does not delete product files. The lead assig
 
 If `HALT` exists at the project root, stop. The human clears it with `idefactory resume`.
 
-The IDE session model does the work. Never call Ollama. Never invent a product from the web.
+The IDE session model does the work.

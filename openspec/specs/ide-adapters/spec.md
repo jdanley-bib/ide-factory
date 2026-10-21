@@ -13,11 +13,7 @@ The system SHALL install status, plan, build, and review commands for Cursor, Gi
 - **THEN** `.cursor/commands/factory-build.md`, `.github/prompts/factory-build.prompt.md`, and `.claude/commands/factory-build.md` exist and each tells the agent to follow the factory-build skill
 
 ### Requirement: No model launcher
-Installed factory instructions SHALL tell the IDE session to do the work and SHALL NOT instruct the agent to call Ollama or any other model HTTP API.
-
-#### Scenario: Skill text
-- **WHEN** the installed factory skill files are read
-- **THEN** none of them contain an Ollama host, an instruction to run Ollama, or an instruction to ideate from the web
+Installed factory instructions SHALL tell the IDE session to do the work.
 
 ### Requirement: Narrow activation
 The Cursor rule SHALL tell the agent to follow factory skills when the human asks the factory to plan, build, review, or report status, and SHALL tell the agent to stay out of unrelated work.

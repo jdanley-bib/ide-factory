@@ -5,6 +5,6 @@ description: Coordinate the IDE-native factory when the user asks the team to pl
 
 Follow the factory-coordinator skill in this repository.
 
-The IDE session model does the work. Do not start Ollama or call a model HTTP API. Do not invent a product from the web. The human authors OpenSpec changes. `.factory/work/` is the only task queue. Team memory is `.factory/`.
+The IDE session model does the work. The human authors OpenSpec changes. `.factory/work/` is the only task queue. Team memory is `.factory/`.
 
 <!-- idefactory:owned -->

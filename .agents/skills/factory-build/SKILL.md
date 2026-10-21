@@ -52,4 +52,4 @@ Do not hand-edit backlog status. `complete` marks the work item done and checks 
 
 Ask the scribe only if complete cannot update histories. Do not truncate older notes.
 
-The IDE session model does the work. Never call Ollama. Never call a model HTTP API. Never invent a product from the web. Do not publish, deploy, or spend.
+The IDE session model does the work. Do not publish, deploy, or spend.

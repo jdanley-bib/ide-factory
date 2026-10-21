@@ -5,14 +5,14 @@ githubCopilot:
 context: |
   This repository is the IDE-native software factory.
   The human defines what to build by authoring an OpenSpec change. Do not invent products from the web.
-  The IDE session model (Cursor, GitHub Copilot, or Claude Code) does the work. Do not specify Ollama, a local model server, or a model HTTP API.
+  The IDE session model (Cursor, GitHub Copilot, or Claude Code) does the work.
   .factory/work/ is the only execution queue. OpenSpec tasks.md is the human plan. Team memory lives in .factory/.
   Installing into a project must preserve existing decisions, agent histories, and unrelated files.
   Do not modify .squad/ if present. Do not ship GOLDEN_RULES.md.
 
 rules:
   proposal:
-    - State what is out of scope, including autonomous ideation and Ollama
+    - State what is out of scope
   tasks:
     - Each checkbox must say how to verify it
     - Do not add a task that launches a model or researches the web for ideas

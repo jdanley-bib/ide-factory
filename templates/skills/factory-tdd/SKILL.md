@@ -15,5 +15,3 @@ description: >
 4. Write the minimum production code that makes the test pass.
 5. Run the test again and keep the output.
 6. Do not add production code for behavior the test does not cover yet.
-
-Never call Ollama. Never invent a product from the web.

@@ -2,8 +2,6 @@
 
 A software factory that runs inside Cursor, GitHub Copilot, and Claude Code. The human defines what to build with [OpenSpec](https://openspec.dev). `.factory/work/` is the only execution queue. Shared team memory lives in `.factory/`. The IDE's own model does the work.
 
-There is no Ollama host, no model HTTP client, and no loop that browses the web for product ideas. Backlog.md is not required.
-
 ## Add it to a project
 
 From a checkout of this repository:

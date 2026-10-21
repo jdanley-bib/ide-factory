@@ -7,6 +7,6 @@ When the human asks the factory or the team to plan, build, run, full pipeline, 
 
 Unrelated requests are left alone. Do not change `.factory/` or factory adapters for unrelated work.
 
-The IDE session model does the work. Never call Ollama or a model HTTP API. Never invent a product from the web. The human authors OpenSpec proposals.
+The IDE session model does the work. The human authors OpenSpec proposals.
 
 <!-- idefactory:owned -->

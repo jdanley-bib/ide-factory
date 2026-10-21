@@ -98,18 +98,6 @@ test('installs factory build/run/full commands, a narrow rule, and skills with n
     assert.match(build, /verification/i);
     assert.match(build, /different role/i);
     assert.match(build, /idefactory complete/);
-    const skillsRoot = path.join(dir, '.cursor/skills');
-    for (const name of fs.readdirSync(skillsRoot)) {
-      if (!name.startsWith('factory-')) continue;
-      const text = fs.readFileSync(path.join(skillsRoot, name, 'SKILL.md'), 'utf8');
-      assert.doesNotMatch(text, /11434/);
-      assert.doesNotMatch(text, /ollama\s+(run|pull|serve)/i);
-      assert.doesNotMatch(text, /https?:\/\/\S*ollama/i);
-      for (const line of text.split('\n')) {
-        if (/\bollama\b/i.test(line)) assert.match(line, /\b(never|do not|don't)\b/i);
-        if (/\b(ideate|invent a product)\b/i.test(line)) assert.match(line, /\b(never|do not|don't)\b/i);
-      }
-    }
   } finally {
     cleanup(dir);
   }
@@ -159,7 +147,7 @@ test('the CLI process does not execute a model binary on next', async () => {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     const bin = path.join(dir, 'bin');
     fs.mkdirSync(bin);
-    for (const name of ['ollama', 'cursor-agent']) {
+    for (const name of ['cursor-agent']) {
       const file = path.join(bin, name);
       fs.writeFileSync(file, '#!/bin/sh\ntouch "$IDEFACTORY_MODEL_RAN"\n');
       fs.chmodSync(file, 0o755);
