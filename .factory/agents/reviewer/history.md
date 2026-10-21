@@ -289,3 +289,10 @@ Attempt: 7fb6a76f-7c65-4252-aa20-95c69f0257be
 Reviewer: bc-7a38b257-e8b5-59fe-80a1-9204356fb466
 Verdict: ACCEPT
 Re-ran `node --test test/govern.test.mjs test/finalization-recovery.test.mjs` exit 0, 27 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 98974d1 worktreeClean:false); clean-head unit pass at 27ad7e4 worktreeClean. Product 27ad7e4: schema v1 created.json under printed lockout id (wx exclusive); resolve requires distinct resolver+reason and writes one immutable resolved.json; blocks/unblocks complete; exact repeat idempotent and conflicting inputs fail closed; legacy `*lockout*.md` resolve by exact basename+digest without rename/delete; five identical factory-governance skill copies document create/resolve. Scope exclusions held (no lease). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/4.1
+
+Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
+Reviewer: bc-6ddddde1-6bba-519d-8f14-b17c525be39f
+Verdict: ACCEPT
+Re-ran `node --test test/writer-lease.test.mjs` exit 0, 7 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 087b4de worktreeClean:false); clean-head unit pass at 33e2181 worktreeClean. Product 33e2181: schema v1 `owner.json` via exclusive mkdir acquire; live owner yields `LEASE_HELD` without contender mutation; success and handled-error release only matching lease id; read-only wrapper neither acquires nor removes. Scope exclusions held (no heartbeat, stale takeover, corrupt refusal, HALT bypass, CLI dispatch). Prior distinct security ACCEPT by bc-dbd9d8e9 (decision make-finalization-recoverable-4.1-unit-check). Transitions verifying → awaiting-review → accepted. No verify/complete/push.

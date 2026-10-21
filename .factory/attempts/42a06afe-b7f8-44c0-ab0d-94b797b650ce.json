@@ -2,10 +2,10 @@
   "id": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
   "change": "make-finalization-recoverable",
   "taskId": "4.1",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-a4e7d563-f44e-5b02-90bd-aae81e6abc87",
-  "reviewerId": null,
+  "reviewerId": "bc-6ddddde1-6bba-519d-8f14-b17c525be39f",
   "modelProfile": "security-strong",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-6ddddde1-6bba-519d-8f14-b17c525be39f",
+      "notes": "Independent review ACCEPT: schema v1 lease primitives; one-winner atomic acquire; LEASE_HELD without mutation; matching-id release on success/error; read-only wrapper; focused tests 7 pass; CLI red/clean evidence valid; prior security ACCEPT by bc-dbd9d8e9.",
+      "at": "2026-10-21T23:08:37.792Z"
+    },
     "changedFiles": [
       "src/lib/writer-lease.mjs",
       "test/writer-lease.test.mjs"
@@ -86,8 +91,16 @@
     {
       "at": "2026-10-21T23:05:55.194Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T23:08:34.671Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T23:08:37.792Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T22:59:43.725Z",
-  "updatedAt": "2026-10-21T23:05:55.194Z"
+  "updatedAt": "2026-10-21T23:08:37.792Z"
 }
