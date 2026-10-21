@@ -12,9 +12,11 @@ const REQUIRED_FIELDS = [
   'attemptId',
   'sourceRevision',
   'completionDate',
+  'finalizedAt',
   'phase',
   'planDigest',
   'targets',
+  'commit',
 ];
 
 /** Stable names for the six allowlisted pre-commit targets (ordered). */
@@ -97,6 +99,14 @@ export function planDigest(journal) {
       afterBytes: target?.afterBytes,
     }))
     : [];
+  const commit = journal.commit && typeof journal.commit === 'object'
+    ? {
+      path: journal.commit.path,
+      beforeDigest: journal.commit.beforeDigest,
+      afterDigest: journal.commit.afterDigest,
+      afterBytes: journal.commit.afterBytes,
+    }
+    : journal.commit;
   const plan = {
     schemaVersion: journal.schemaVersion,
     change: journal.change,
@@ -104,7 +114,9 @@ export function planDigest(journal) {
     attemptId: journal.attemptId,
     sourceRevision: journal.sourceRevision,
     completionDate: journal.completionDate,
+    finalizedAt: journal.finalizedAt,
     targets,
+    commit,
   };
   return contentDigest(canonicalJson(plan));
 }
@@ -144,6 +156,7 @@ export function validateFinalizationJournal(journal, options = {}) {
   requireNonEmptyString(journal, 'attemptId');
   requireNonEmptyString(journal, 'sourceRevision');
   requireNonEmptyString(journal, 'completionDate');
+  requireNonEmptyString(journal, 'finalizedAt');
   requireNonEmptyString(journal, 'planDigest');
 
   if (!ALLOWED_PHASES.has(journal.phase)) {
@@ -179,6 +192,9 @@ export function validateFinalizationJournal(journal, options = {}) {
   const targets = journal.targets.map((target, index) =>
     validateTarget(target, expectedPaths[index], projectRoot, index));
 
+  const expectedCommitPath = `.factory/work/items/${journal.change}--${journal.taskId}.json`;
+  const commit = validateCommitTarget(journal.commit, expectedCommitPath, projectRoot);
+
   const expectedPlanDigest = planDigest({
     schemaVersion: journal.schemaVersion,
     change: journal.change,
@@ -186,7 +202,9 @@ export function validateFinalizationJournal(journal, options = {}) {
     attemptId: journal.attemptId,
     sourceRevision: journal.sourceRevision,
     completionDate: journal.completionDate,
+    finalizedAt: journal.finalizedAt,
     targets,
+    commit,
   });
   if (journal.planDigest !== expectedPlanDigest) {
     throw new Error('finalization journal plan digest mismatch');
@@ -199,9 +217,11 @@ export function validateFinalizationJournal(journal, options = {}) {
     attemptId: journal.attemptId,
     sourceRevision: journal.sourceRevision,
     completionDate: journal.completionDate,
+    finalizedAt: journal.finalizedAt,
     phase: journal.phase,
     planDigest: expectedPlanDigest,
     targets,
+    commit,
   };
 }
 
@@ -348,9 +368,19 @@ export function buildFinalizationPlan(project, options = {}) {
     targetFrom(indexRel, indexBefore, indexAfter),
   ];
 
+  const commit = {
+    path: itemRel,
+    beforeDigest: contentDigest(itemBefore),
+    afterDigest: contentDigest(itemAfter),
+    afterBytes: itemAfter,
+    role: 'final-correctness-critical-write',
+  };
+
   // Journal self-target uses empty afterBytes in the storable prepared journal
   // so the document does not embed a copy of itself. The apply target carries
   // the ready-to-commit bytes (phase flip of that prepared document).
+  // Durable commit bytes are stored on the journal so process-restart recovery
+  // can apply the work-item done write without an in-memory plan.
   const journalWireTarget = {
     path: journalRel,
     beforeDigest: `sha256:${'0'.repeat(64)}`,
@@ -364,8 +394,15 @@ export function buildFinalizationPlan(project, options = {}) {
     attemptId,
     sourceRevision,
     completionDate,
+    finalizedAt,
     phase: 'prepared',
     targets: [...contentTargets, journalWireTarget],
+    commit: {
+      path: commit.path,
+      beforeDigest: commit.beforeDigest,
+      afterDigest: commit.afterDigest,
+      afterBytes: commit.afterBytes,
+    },
     planDigest: '',
   };
   journal.planDigest = planDigest(journal);
@@ -392,13 +429,6 @@ export function buildFinalizationPlan(project, options = {}) {
   };
 
   const targets = [...contentTargets, journalApplyTarget];
-  const commit = {
-    path: itemRel,
-    beforeDigest: contentDigest(itemBefore),
-    afterDigest: contentDigest(itemAfter),
-    afterBytes: itemAfter,
-    role: 'final-correctness-critical-write',
-  };
   const writeOrder = [...targets.map((target) => target.path), commit.path];
 
   return {
@@ -519,6 +549,26 @@ export function runJournaledFinalization(project, options = {}) {
   const sourceRevision = requireOptionString(options, 'sourceRevision');
   const faultHook = typeof options.faultHook === 'function' ? options.faultHook : null;
 
+  fireFaultHook(faultHook, 'before-journal-create');
+  const journalFile = finalizationJournalPath(project, attemptId);
+  if (fs.existsSync(journalFile)) {
+    // Resume from durable journal only — do not rebuild a plan from current bytes.
+    readFinalizationJournal(project, attemptId, {
+      change,
+      taskId,
+      attemptId,
+      sourceRevision,
+    });
+    fireFaultHook(faultHook, 'after-journal-create');
+    return recoverFinalization(project, {
+      change,
+      taskId,
+      attemptId,
+      sourceRevision,
+      faultHook,
+    });
+  }
+
   const plan = options.plan && typeof options.plan === 'object'
     ? options.plan
     : buildFinalizationPlan(project, {
@@ -537,23 +587,12 @@ export function runJournaledFinalization(project, options = {}) {
     throw new Error('journaled finalization plan requires a commit target');
   }
 
-  fireFaultHook(faultHook, 'before-journal-create');
-  const journalFile = finalizationJournalPath(project, attemptId);
-  if (!fs.existsSync(journalFile)) {
-    createFinalizationJournal(project, plan.journal, {
-      change,
-      taskId,
-      attemptId,
-      sourceRevision,
-    });
-  } else {
-    readFinalizationJournal(project, attemptId, {
-      change,
-      taskId,
-      attemptId,
-      sourceRevision,
-    });
-  }
+  createFinalizationJournal(project, plan.journal, {
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+  });
   fireFaultHook(faultHook, 'after-journal-create');
 
   return recoverFinalization(project, {
@@ -627,7 +666,7 @@ export function recoverFinalization(project, options = {}) {
     : resolveApplyTargets(journal);
   const commit = options.commit && typeof options.commit === 'object'
     ? options.commit
-    : null;
+    : resolveCommitTarget(journal);
 
   if (!canResumeFinalization(attempt, item, journal)) {
     throw new Error(
@@ -812,6 +851,46 @@ function validateTarget(target, expectedPath, projectRoot, index) {
   };
 }
 
+function validateCommitTarget(commit, expectedPath, projectRoot) {
+  if (!commit || typeof commit !== 'object' || Array.isArray(commit)) {
+    throw new Error('finalization journal commit must be an object');
+  }
+  requireNonEmptyString(commit, 'path');
+  requireNonEmptyString(commit, 'beforeDigest');
+  requireNonEmptyString(commit, 'afterDigest');
+  if (typeof commit.afterBytes !== 'string') {
+    throw new Error('finalization journal commit afterBytes must be a string');
+  }
+  assertSafeRelativePath(commit.path, projectRoot);
+  if (normalizeRelPath(commit.path) !== normalizeRelPath(expectedPath)) {
+    throw new Error(
+      `finalization journal commit path must be the work-item done target: ${commit.path}`,
+    );
+  }
+  const afterDigest = contentDigest(commit.afterBytes);
+  if (commit.afterDigest !== afterDigest) {
+    throw new Error('finalization journal commit afterDigest does not match afterBytes');
+  }
+  return {
+    path: normalizeRelPath(expectedPath),
+    beforeDigest: commit.beforeDigest,
+    afterDigest,
+    afterBytes: commit.afterBytes,
+  };
+}
+
+function resolveCommitTarget(journal) {
+  if (!journal?.commit || typeof journal.commit !== 'object') {
+    throw new Error('finalization journal missing durable commit target');
+  }
+  return {
+    path: normalizeRelPath(journal.commit.path),
+    beforeDigest: journal.commit.beforeDigest,
+    afterDigest: journal.commit.afterDigest,
+    afterBytes: journal.commit.afterBytes,
+  };
+}
+
 function assertSafeRelativePath(relPath, projectRoot) {
   if (relPath.includes('\0')) {
     throw new Error('finalization journal target path is invalid');
@@ -988,6 +1067,7 @@ function resolveApplyTargets(journal) {
         afterBytes: target.afterBytes,
       };
     }
+    // Match validateFinalizationJournal / createFinalizationJournal field order.
     const prepared = {
       schemaVersion: journal.schemaVersion,
       change: journal.change,
@@ -995,11 +1075,12 @@ function resolveApplyTargets(journal) {
       attemptId: journal.attemptId,
       sourceRevision: journal.sourceRevision,
       completionDate: journal.completionDate,
+      finalizedAt: journal.finalizedAt,
       phase: 'prepared',
       planDigest: journal.planDigest,
       targets: journal.targets,
+      commit: journal.commit,
     };
-    // Match validateFinalizationJournal / createFinalizationJournal field order.
     const preparedBytes = `${JSON.stringify(prepared, null, 2)}\n`;
     const readyBytes = `${JSON.stringify({ ...prepared, phase: 'ready-to-commit' }, null, 2)}\n`;
     return {

@@ -348,3 +348,11 @@ Context: clean full-suite verify exposed flaky 4.2 stale-takeover loser getting 
 Red: `node --test test/writer-lease.test.mjs` — new atomic-publication regression failed with `gaps=2 contender=LEASE_RECOVERY` (existing concurrent stale-takeover test also red under stress).
 Green: `node --test test/writer-lease.test.mjs` exit 0, 16 pass; stress 100× exit 0; `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 43 pass.
 Scope: staging-directory rename publication + missing lease dir → LEASE_HELD; preserve corrupt/unsupported fail-closed and one-winner stale rename. No attempt mutation, review, complete, or push.
+
+## 2026-10-21 make-finalization-recoverable integration follow-up (complete → journaled finalization)
+
+Implementer: bc-ce055288-021d-5690-a0f0-6825d222923c
+Context: audit found `completeWorkItem` still used legacy done-first writes and never called `runJournaledFinalization`; journal lacked durable commit bytes for process-restart recovery without an in-memory plan. Blocks true 5.1 acceptance. Did not mutate accepted attempt 5.1.
+Red: `node --test test/finalization-recovery.test.mjs` exit 1 — 20 pass / 4 fail (missing journal.commit; completeWorkItem ignored faultHook / did not journal).
+Green: `node --test test/finalization-recovery.test.mjs` exit 0, 24 pass; `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 44 pass; `npm test` exit 0, 192 pass.
+Scope: persist `finalizedAt`+`commit` on journal; resume from journal without rebuilding plan; wire `completeWorkItem` to journaled finalization with library-only faultHook; allow accepted/finalize-failed/finalized+journal retries; dirty-worktree resume only with matching journal HEAD; ledger after commit only. No review, complete, push, archive, or branch change.

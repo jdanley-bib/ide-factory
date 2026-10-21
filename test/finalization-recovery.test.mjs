@@ -1,8 +1,11 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { getAttempt } from '../src/lib/attempt.mjs';
+import { completeWorkItem } from '../src/lib/complete.mjs';
 import {
   allowlistedTargetPaths,
   buildFinalizationPlan,
@@ -20,7 +23,7 @@ import {
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
 import { getWorkItem, upsertWorkItem } from '../src/lib/work.mjs';
-import { cleanup, repoRoot, tempProject } from './helpers.mjs';
+import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const CHANGE = 'make-finalization-recoverable';
 const TASK_ID = '1.1';
@@ -56,6 +59,13 @@ function validJournal(overrides = {}) {
   const paths = allowlistedTargetPaths({ change, taskId, attemptId });
   const defaultTargets = paths.map((relPath, index) =>
     targetEntry(relPath, `before-${index}\n`, `after-${index}\n`));
+  const itemRel = `.factory/work/items/${change}--${taskId}.json`;
+  const defaultCommit = {
+    path: itemRel,
+    beforeDigest: sha256Digest('item-before\n'),
+    afterDigest: sha256Digest('item-after\n'),
+    afterBytes: 'item-after\n',
+  };
   const base = {
     schemaVersion: 1,
     change: CHANGE,
@@ -63,14 +73,24 @@ function validJournal(overrides = {}) {
     attemptId: ATTEMPT_ID,
     sourceRevision: SOURCE_REVISION,
     completionDate: COMPLETION_DATE,
+    finalizedAt: FINALIZED_AT,
     phase: 'prepared',
     targets: defaultTargets,
+    commit: defaultCommit,
     ...overrides,
   };
   if (!Object.hasOwn(overrides, 'targets') && !Object.hasOwn(overrides, 'planDigest')) {
     // Recompute allowlisted defaults when identity overrides change paths.
     base.targets = paths.map((relPath, index) =>
       targetEntry(relPath, `before-${index}\n`, `after-${index}\n`));
+  }
+  if (!Object.hasOwn(overrides, 'commit')) {
+    base.commit = {
+      path: `.factory/work/items/${base.change}--${base.taskId}.json`,
+      beforeDigest: sha256Digest('item-before\n'),
+      afterDigest: sha256Digest('item-after\n'),
+      afterBytes: 'item-after\n',
+    };
   }
   if (!Object.hasOwn(overrides, 'planDigest')) {
     base.planDigest = planDigest(base);
@@ -414,8 +434,14 @@ test('buildFinalizationPlan creates one deterministic plan for all pre-commit ta
     assert.equal(readyJournal.attemptId, PLAN_ATTEMPT_ID);
     assert.equal(readyJournal.sourceRevision, SOURCE_REVISION);
     assert.equal(readyJournal.completionDate, COMPLETION_DATE);
+    assert.equal(readyJournal.finalizedAt, FINALIZED_AT);
+    assert.equal(readyJournal.commit.path, plan.commit.path);
+    assert.equal(readyJournal.commit.afterBytes, plan.commit.afterBytes);
+    assert.equal(readyJournal.commit.afterDigest, plan.commit.afterDigest);
 
     assert.equal(plan.journal.phase, 'prepared');
+    assert.equal(plan.journal.finalizedAt, FINALIZED_AT);
+    assert.equal(plan.journal.commit.afterBytes, plan.commit.afterBytes);
     assert.equal(plan.journal.planDigest, planDigest(plan.journal));
     validateFinalizationJournal(plan.journal, {
       change: CHANGE,
@@ -1023,6 +1049,40 @@ test('runJournaledFinalization without faultHook reaches committed final state',
   }
 });
 
+test('recoverFinalization without in-memory plan applies durable journal commit', () => {
+  const dir = tempProject();
+  try {
+    seedRecoveryFixture(dir, { attemptState: 'accepted' });
+    const plan = buildFinalizationPlan(dir, recoveryPlanOptions());
+    assert.ok(plan.journal.commit, 'journal must persist durable commit target data');
+    createFinalizationJournal(dir, plan.journal, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+    });
+    writeText(path.join(dir, plan.targets[0].path), plan.targets[0].afterBytes);
+    writeText(path.join(dir, plan.targets[3].path), plan.targets[3].afterBytes);
+    assert.notEqual(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+
+    const result = recoverFinalization(dir, {
+      change: CHANGE,
+      taskId: RECOVERY_TASK_ID,
+      attemptId: RECOVERY_ATTEMPT_ID,
+      sourceRevision: SOURCE_REVISION,
+    });
+
+    assert.ok(result.status === 'committed' || result.status === 'resumed');
+    assert.equal(getWorkItem(dir, CHANGE, RECOVERY_TASK_ID).status, 'done');
+    assert.equal(
+      fs.readFileSync(path.join(dir, plan.commit.path), 'utf8'),
+      plan.commit.afterBytes,
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('implementation notes record strict validate, npm test, and doctor', () => {
   const notesPath = path.join(
     repoRoot,
@@ -1036,4 +1096,292 @@ test('implementation notes record strict validate, npm test, and doctor', () => 
   assert.match(notes, /npx openspec validate make-finalization-recoverable --strict/);
   assert.match(notes, /npm test/);
   assert.match(notes, /node src\/cli\.mjs doctor/);
+});
+
+function git(cwd, args) {
+  const result = spawnSync('git', args, {
+    cwd,
+    encoding: 'utf8',
+    shell: false,
+    env: {
+      ...process.env,
+      GIT_AUTHOR_NAME: 'idefactory-test',
+      GIT_AUTHOR_EMAIL: 'test@example.com',
+      GIT_COMMITTER_NAME: 'idefactory-test',
+      GIT_COMMITTER_EMAIL: 'test@example.com',
+    },
+  });
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  return result.stdout.trim();
+}
+
+function ensureFactoryGitignore(dir) {
+  const file = path.join(dir, '.gitignore');
+  const lines = [
+    '.factory/attempts/*',
+    '!.factory/attempts/.gitkeep',
+    '.factory/work/',
+    '.factory/ledger.jsonl',
+    '.factory/orchestration/*',
+    '!.factory/orchestration/.gitkeep',
+  ];
+  const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+  const extras = lines.filter((line) => !existing.split('\n').includes(line));
+  if (extras.length > 0) {
+    fs.writeFileSync(
+      file,
+      `${existing}${existing && !existing.endsWith('\n') ? '\n' : ''}${extras.join('\n')}\n`,
+    );
+  }
+}
+
+function ensureCleanGitCommit(dir) {
+  if (!fs.existsSync(path.join(dir, '.git'))) {
+    git(dir, ['init']);
+    git(dir, ['config', 'user.email', 'test@example.com']);
+    git(dir, ['config', 'user.name', 'idefactory-test']);
+  }
+  ensureFactoryGitignore(dir);
+  git(dir, ['add', '-A']);
+  const porcelain = spawnSync('git', ['status', '--porcelain'], {
+    cwd: dir,
+    encoding: 'utf8',
+    shell: false,
+  });
+  assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+  if (porcelain.stdout.trim().length > 0) {
+    git(dir, ['commit', '-m', 'checkpoint']);
+  }
+  return git(dir, ['rev-parse', 'HEAD']);
+}
+
+function writeCheckRegistry(dir, exitByKind) {
+  const checks = {};
+  for (const [kind, code] of Object.entries(exitByKind)) {
+    checks[kind] = {
+      argv: [process.execPath, '-e', `process.exit(${code})`],
+      cwdPolicy: 'project',
+      timeoutMs: 30_000,
+      artifacts: [],
+    };
+  }
+  fs.writeFileSync(
+    path.join(dir, '.factory/checks.json'),
+    `${JSON.stringify({ schemaVersion: 1, checks }, null, 2)}\n`,
+  );
+}
+
+async function seedCompleteFixture(dir) {
+  assert.equal((await idefactory(dir, ['init'])).code, 0);
+  fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
+  fs.writeFileSync(
+    path.join(dir, 'openspec/changes/demo/tasks.md'),
+    [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit]',
+      '    verificationProfile: frontend-low',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'),
+  );
+  assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
+  const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+  assert.equal(started.code, 0, started.err);
+  const attempt = JSON.parse(started.out);
+
+  writeCheckRegistry(dir, { unit: 1 });
+  assert.equal((await idefactory(dir, [
+    'verify', 'run', attempt.id, '--check', 'unit', '--red',
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attempt.id, 'implementing',
+    '--evidence', JSON.stringify({ implementerId: 'engineer-1' }),
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attempt.id, 'red-confirmed',
+    '--evidence', '{}',
+  ])).code, 0);
+
+  writeCheckRegistry(dir, { unit: 0 });
+  ensureCleanGitCommit(dir);
+  assert.equal((await idefactory(dir, [
+    'verify', 'run', attempt.id, '--check', 'unit',
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attempt.id, 'verifying',
+    '--evidence', '{}',
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attempt.id, 'awaiting-review',
+    '--evidence', '{}',
+  ])).code, 0);
+  assert.equal((await idefactory(dir, [
+    'attempt', 'transition', attempt.id, 'accepted',
+    '--evidence', JSON.stringify({ reviewerId: 'reviewer-1', verdict: 'ACCEPT' }),
+  ])).code, 0);
+
+  return attempt;
+}
+
+function snapshotCompleteTargets(dir, attemptId) {
+  const rels = [
+    'openspec/changes/demo/tasks.md',
+    '.factory/agents/scribe/history.md',
+    '.factory/identity/now.md',
+    `.factory/attempts/${attemptId}.json`,
+    '.factory/work/index.json',
+    `.factory/orchestration/finalizations/${attemptId}.json`,
+    '.factory/work/items/demo--1.1.json',
+  ];
+  return Object.fromEntries(
+    rels.map((rel) => {
+      const absolute = path.join(dir, rel);
+      return [rel, fs.existsSync(absolute) ? fs.readFileSync(absolute, 'utf8') : null];
+    }),
+  );
+}
+
+test('completeWorkItem journals before targets, recovers from injected precommit crash, and repeats byte-stable', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedCompleteFixture(dir);
+    const tasksBefore = fs.readFileSync(
+      path.join(dir, 'openspec/changes/demo/tasks.md'),
+      'utf8',
+    );
+    const frozen = {
+      completionDate: COMPLETION_DATE,
+      finalizedAt: FINALIZED_AT,
+    };
+
+    assert.throws(
+      () => completeWorkItem(dir, 'demo', '1.1', attempt.id, {
+        ...frozen,
+        faultHook: (boundary) => {
+          if (boundary === 'after-journal-create') {
+            throw new Error('injected fault at after-journal-create');
+          }
+        },
+      }),
+      /injected fault at after-journal-create/,
+    );
+
+    const journalPath = finalizationJournalPath(dir, attempt.id);
+    assert.equal(fs.existsSync(journalPath), true, 'journal must exist before target changes');
+    assert.equal(
+      fs.readFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), 'utf8'),
+      tasksBefore,
+      'targets must be unchanged when fault is after journal create',
+    );
+    assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
+    const journal = readFinalizationJournal(dir, attempt.id, {
+      change: 'demo',
+      taskId: '1.1',
+      attemptId: attempt.id,
+    });
+    assert.ok(journal.commit?.afterBytes, 'journal must persist durable commit bytes');
+    assert.equal(journal.finalizedAt, FINALIZED_AT);
+
+    assert.throws(
+      () => completeWorkItem(dir, 'demo', '1.1', attempt.id, {
+        faultHook: (boundary) => {
+          if (boundary === 'before-commit') {
+            throw new Error('injected fault at before-commit');
+          }
+        },
+      }),
+      /injected fault at before-commit/,
+    );
+    assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
+    for (const name of ['tasks', 'scribe', 'identity', 'attempt', 'index']) {
+      const rel = allowlistedTargetPaths({
+        change: 'demo',
+        taskId: '1.1',
+        attemptId: attempt.id,
+      })[['tasks', 'scribe', 'identity', 'attempt', 'index', 'ready-journal'].indexOf(name)];
+      const absolute = path.join(dir, rel);
+      assert.equal(
+        contentDigest(fs.readFileSync(absolute, 'utf8')),
+        journal.targets[['tasks', 'scribe', 'identity', 'attempt', 'index', 'ready-journal'].indexOf(name)]
+          .afterDigest,
+        `pre-commit target ${name} must be at after digest before commit`,
+      );
+    }
+    // ready-journal target stores empty afterBytes in the prepared document; disk phase is ready.
+    const readyOnDisk = JSON.parse(fs.readFileSync(journalPath, 'utf8'));
+    assert.equal(readyOnDisk.phase, 'ready-to-commit');
+    assert.equal(getAttempt(dir, attempt.id).state, 'finalized');
+
+    const recovered = completeWorkItem(dir, 'demo', '1.1', attempt.id, {});
+    assert.equal(recovered.item.status, 'done');
+    assert.equal(recovered.attempt.state, 'finalized');
+    assert.equal(
+      fs.readFileSync(path.join(dir, journal.commit.path), 'utf8'),
+      journal.commit.afterBytes,
+      'process-style retry must apply frozen journal commit bytes',
+    );
+    const afterFirst = snapshotCompleteTargets(dir, attempt.id);
+    assert.match(afterFirst['openspec/changes/demo/tasks.md'], /- \[x\] 1\.1 Add parser/);
+    assert.equal(
+      countMatches(afterFirst['.factory/agents/scribe/history.md'], /Attempt:\s*/g),
+      1,
+    );
+    assert.equal(
+      JSON.parse(afterFirst[`.factory/attempts/${attempt.id}.json`])
+        .history.filter((entry) => entry.state === 'finalized').length,
+      1,
+    );
+
+    const ledgerPath = path.join(dir, '.factory/ledger.jsonl');
+    const ledgerAfterCommit = fs.existsSync(ledgerPath)
+      ? fs.readFileSync(ledgerPath, 'utf8')
+      : '';
+    assert.match(ledgerAfterCommit, /"event":"complete"/);
+
+    const again = completeWorkItem(dir, 'demo', '1.1', attempt.id, {});
+    assert.equal(again.item.status, 'done');
+    assert.deepEqual(
+      snapshotCompleteTargets(dir, attempt.id),
+      afterFirst,
+      'repeat complete must be byte-stable',
+    );
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('completeWorkItem allows finalize-failed matching retry through journaled finalization', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedCompleteFixture(dir);
+    // Fault before journal create: production may mark finalize-failed without
+    // freezing a journal, then a later complete creates a journal from that state.
+    assert.throws(
+      () => completeWorkItem(dir, 'demo', '1.1', attempt.id, {
+        completionDate: COMPLETION_DATE,
+        finalizedAt: FINALIZED_AT,
+        faultHook: (boundary) => {
+          if (boundary === 'before-journal-create') {
+            throw new Error('injected fault at before-journal-create');
+          }
+        },
+      }),
+      /injected fault at before-journal-create/,
+    );
+    assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
+    assert.equal(fs.existsSync(finalizationJournalPath(dir, attempt.id)), false);
+    assert.equal(getAttempt(dir, attempt.id).state, 'finalize-failed');
+
+    const recovered = completeWorkItem(dir, 'demo', '1.1', attempt.id, {
+      completionDate: COMPLETION_DATE,
+      finalizedAt: FINALIZED_AT,
+    });
+    assert.equal(recovered.item.status, 'done');
+    assert.equal(recovered.attempt.state, 'finalized');
+    assert.equal(fs.existsSync(finalizationJournalPath(dir, attempt.id)), true);
+  } finally {
+    cleanup(dir);
+  }
 });
