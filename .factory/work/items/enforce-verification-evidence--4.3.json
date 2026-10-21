@@ -2,7 +2,7 @@
   "id": "4.3",
   "change": "enforce-verification-evidence",
   "title": "Change existing successful-completion fixtures to create a clean git worktree, register every required check, and obtain evidence from `verify run` or a signature-valid import. Verify the accepted attempt still finalizes by running `node --test test/orchestration.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "4.2"
   ],
@@ -27,6 +27,6 @@
       "4.2"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-21T16:11:21.782Z"
+  "attemptId": "afb8638d-2e0c-4707-8f18-3209896f130a",
+  "updatedAt": "2026-10-21T16:57:20.652Z"
 }

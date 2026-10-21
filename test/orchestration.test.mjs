@@ -427,6 +427,11 @@ test('complete finalizes work item and OpenSpec checkbox', async () => {
     assert.equal(getAttempt(dir, attempt.id).state, 'finalized');
     const tasks = fs.readFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), 'utf8');
     assert.match(tasks, /- \[x\] 1\.1 Add parser/);
+    const unit = getAttempt(dir, attempt.id).evidence.verification
+      .find((entry) => entry.kind === 'unit');
+    assert.ok(unit, 'finalize must keep a stored unit verification record');
+    assert.equal(unit.issuer, 'cli');
+    assert.equal(unit.sourceRevision, git(dir, ['rev-parse', 'HEAD']));
   } finally {
     cleanup(dir);
   }

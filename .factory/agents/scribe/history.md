@@ -53,3 +53,7 @@ Attempt: 1222a024-5505-4908-aa20-6a5194266804
 ## 2026-10-21 finalized enforce-verification-evidence/4.1
 
 Attempt: dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665
+
+## 2026-10-21 finalized enforce-verification-evidence/4.2
+
+Attempt: 1b6bdd69-d6b1-408e-aa05-c10d9ed94a7d

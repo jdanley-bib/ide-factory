@@ -1,0 +1,78 @@
+{
+  "id": "afb8638d-2e0c-4707-8f18-3209896f130a",
+  "change": "enforce-verification-evidence",
+  "taskId": "4.3",
+  "state": "accepted",
+  "implementerRole": "engineer",
+  "implementerId": "bc-0ef4d2fe-2a82-51e1-a793-9bfaedd232d4",
+  "reviewerId": "bc-7e305b58-af31-51d3-84e9-a3946635754d",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T16:59:15.150Z",
+      "finishedAt": "2026-10-21T17:00:12.586Z",
+      "logDigest": "sha256:65e010f38a0c28195d8f5ea94c97d38a8dee800adc2a674f84a78400d00ff7ed",
+      "artifactDigests": [],
+      "attemptId": "afb8638d-2e0c-4707-8f18-3209896f130a",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "13b594db04644c5e987e172fda327be8c82a6306"
+    },
+    "verification": [],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-7e305b58-af31-51d3-84e9-a3946635754d",
+      "notes": "Finalize fixture evidence comes from verify run.",
+      "at": "2026-10-21T17:02:15.615Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:57:20.652Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:57:20.652Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T17:02:15.491Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T17:02:15.524Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T17:02:15.554Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T17:02:15.585Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T17:02:15.616Z",
+      "state": "accepted"
+    }
+  ],
+  "createdAt": "2026-10-21T16:57:20.652Z",
+  "updatedAt": "2026-10-21T17:02:15.616Z"
+}

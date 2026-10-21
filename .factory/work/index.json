@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T16:44:12.319Z",
+  "updatedAt": "2026-10-21T16:57:20.652Z",
   "items": [
     {
       "change": "enforce-verification-evidence",
@@ -45,12 +45,12 @@
     {
       "change": "enforce-verification-evidence",
       "id": "4.2",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "enforce-verification-evidence",
       "id": "4.3",
-      "status": "todo"
+      "status": "in_progress"
     },
     {
       "change": "enforce-verification-evidence",

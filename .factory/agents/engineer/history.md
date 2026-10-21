@@ -64,3 +64,10 @@ Attempt: 1b6bdd69-d6b1-408e-aa05-c10d9ed94a7d
 Implementer: bc-38d8d8c1-19e9-530e-982b-87c7e9f5d6fe
 Red: forged passed:true was accepted before the gate; attempt-only dirt blocked a pass.
 Green: orchestration and verification-evidence tests exit 0, 44 pass.
+
+## 2026-10-21 enforce-verification-evidence/4.3
+
+Attempt: afb8638d-2e0c-4707-8f18-3209896f130a
+Implementer: bc-0ef4d2fe-2a82-51e1-a793-9bfaedd232d4
+Red: expected issuer hand-written, actual cli.
+Green: `node --test test/orchestration.test.mjs` exit 0, 16 pass.
