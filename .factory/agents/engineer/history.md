@@ -308,3 +308,11 @@ Implementer: bc-f9136866-3cd3-54a7-b04b-49280da24f59
 Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing exports finalizationFaultBoundaries/runJournaledFinalization); orchestration finalized+unfinished journal exited 0 max-tasks instead of needs-complete; `node src/cli.mjs verify run 53b91f30-220d-425e-8f86-e9b3dbbc18ab --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:060bfc130d40aa90e99a93627df3f3f12f68cc50da5f1da0a54a489baa4a1ea7).
 Green: `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 40 pass.
 Scope: library-only fault hook at journal and every pre-commit/ready-journal/before-commit boundary; table-driven recovery invariants; orchestration needs-complete for finalized+matching unfinished journal. No lockout, lease, complete wiring, review, or push.
+
+## 2026-10-21 make-finalization-recoverable/3.1
+
+Attempt: 7fb6a76f-7c65-4252-aa20-95c69f0257be
+Implementer: bc-aaa7940c-be3e-5ebc-8f9a-52dc1d4ee4e7
+Red: `node --test test/govern.test.mjs test/finalization-recovery.test.mjs` exit 1 (6 failures: created.json/print id, resolve path, blocking/unblock, idempotent/conflict, legacy basename+digest, governance skill resolve docs); `node src/cli.mjs verify run 7fb6a76f-7c65-4252-aa20-95c69f0257be --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:0f93a6d1d868aa2339a65d1500f945205897ef9ab8d76e43e5f167048bfced53).
+Green: `node --test test/govern.test.mjs test/finalization-recovery.test.mjs` exit 0, 27 pass; `npm test` exit 0, 172 pass.
+Scope: versioned lockout create/resolve with immutable schema v1 created.json/resolved.json; compatibility create alias; distinct resolver+reason; idempotent exact repeat and conflict rejection; legacy markdown resolve by basename+digest without mutation; shared hasActiveLockout blocking; five factory-governance skill copies. No lease, review, accept, complete, or push.

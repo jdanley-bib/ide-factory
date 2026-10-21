@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { completeWorkItem } from './complete.mjs';
-import { approve, doctor, lockout, reject, status } from './govern.mjs';
+import { approve, createLockout, doctor, reject, resolveLockout, status } from './govern.mjs';
 import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
@@ -31,7 +31,9 @@ Usage:
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
+  idefactory lockout create --agent <id> --reviewer <id> --reason "text" [--path dir]
   idefactory lockout --agent <id> --reviewer <id> --reason "text" [--path dir]
+  idefactory lockout resolve <id> --resolver <id> --reason "text" [--path dir]
   idefactory halt [path]
   idefactory resume [path]
 
@@ -133,12 +135,31 @@ export async function run(argv, io = {}) {
         return 0;
       }
       case 'lockout': {
-        const file = lockout(project, {
+        const sub = parsed.rest[0];
+        if (sub === 'resolve') {
+          const id = parsed.rest[1];
+          if (!id) {
+            throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "text"');
+          }
+          const result = resolveLockout(project, id, {
+            resolver: parsed.flags.resolver,
+            reason: parsed.flags.reason,
+          });
+          out(`Resolved lockout ${result.id}`);
+          return 0;
+        }
+        if (sub && sub !== 'create') {
+          throw new Error(
+            'Usage: idefactory lockout create --agent <id> --reason "text"\n'
+            + '       idefactory lockout resolve <id> --resolver <id> --reason "text"',
+          );
+        }
+        const result = createLockout(project, {
           agent: parsed.flags.agent,
           reviewer: parsed.flags.reviewer,
           reason: parsed.flags.reason,
         });
-        out(`Wrote ${path.relative(project, file)}`);
+        out(`Created lockout ${result.id}`);
         return 0;
       }
       case 'halt':

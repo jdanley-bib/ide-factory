@@ -6,6 +6,7 @@ import {
   finalizationJournalPath,
   readFinalizationJournal,
 } from './finalization-recovery.mjs';
+import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
@@ -510,12 +511,6 @@ function renderStop(reason, attempt, item) {
     `State: ${attempt.state}`,
     '',
   ].join('\n');
-}
-
-function hasActiveLockout(project) {
-  const dir = path.join(project, '.factory', 'orchestration');
-  if (!fs.existsSync(dir)) return false;
-  return fs.readdirSync(dir).some((name) => name.includes('lockout') && name.endsWith('.md'));
 }
 
 function readConfig(project) {

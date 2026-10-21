@@ -1,3 +1,4 @@
+import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
@@ -157,16 +158,273 @@ function readPolicyVersion(project) {
   return DEFAULT_POLICY_VERSION;
 }
 
-export function lockout(project, { agent, reviewer, reason }) {
-  if (!agent || !/^[a-z0-9-]+$/.test(agent)) throw new Error('Usage: idefactory lockout --agent <id> --reason "..."');
+/**
+ * Create an immutable schema version 1 lockout event directory.
+ * `idefactory lockout --agent ...` is an alias for this create path.
+ *
+ * @returns {{ id: string, createdPath: string }}
+ */
+export function createLockout(project, { agent, reviewer, reason }) {
+  if (!agent || !/^[a-z0-9-]+$/.test(agent)) {
+    throw new Error('Usage: idefactory lockout create --agent <id> --reason "..."');
+  }
   if (!reason) throw new Error('lockout requires --reason');
   const who = reviewer || 'reviewer';
-  const stamp = stampNow();
-  const file = path.join(project, '.factory', 'orchestration', `${stamp}-lockout.md`);
-  const body = `# Lockout\n\nAgent: ${agent}\nReviewer: ${who}\nReason: ${reason}\n`;
-  writeText(file, body);
-  ledger(project, 'lockout', { agent, reviewer: who });
-  return file;
+  const id = randomUUID();
+  const createdAt = new Date().toISOString();
+  const createdPath = lockoutCreatedPath(project, id);
+  const record = {
+    schemaVersion: 1,
+    id,
+    agent,
+    reviewer: who,
+    reason,
+    createdAt,
+  };
+  writeJsonExclusive(createdPath, record);
+  ledger(project, 'lockout', { agent, reviewer: who, id });
+  return { id, createdPath };
+}
+
+/** Compatibility alias for createLockout (CLI `lockout --agent ...`). */
+export function lockout(project, options) {
+  return createLockout(project, options);
+}
+
+/**
+ * Resolve a versioned lockout id or a legacy `*lockout*.md` basename.
+ * Exact repeats succeed without rewriting; conflicting inputs fail closed.
+ *
+ * @returns {{ id: string, resolvedPath: string }}
+ */
+export function resolveLockout(project, id, { resolver, reason }) {
+  if (!id || typeof id !== 'string') {
+    throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "..."');
+  }
+  if (!resolver || !/^[a-z0-9-]+$/.test(resolver)) {
+    throw new Error('lockout resolve requires --resolver <id>');
+  }
+  if (!reason) throw new Error('lockout resolve requires --reason');
+
+  const legacy = findLegacyLockout(project, id);
+  if (legacy) {
+    return resolveLegacyLockout(project, legacy, { resolver, reason });
+  }
+
+  const createdPath = lockoutCreatedPath(project, id);
+  if (!fs.existsSync(createdPath)) {
+    throw new Error(`Lockout not found: ${id}`);
+  }
+  const created = readJsonFile(createdPath);
+  if (!isValidCreatedRecord(created) || created.id !== id) {
+    throw new Error(`Lockout creation record is invalid: ${id}`);
+  }
+  if (resolver === created.agent) {
+    throw new Error('lockout resolver must be distinct from the locked agent');
+  }
+
+  const resolvedPath = lockoutResolvedPath(project, id);
+  const resolution = {
+    schemaVersion: 1,
+    resolver,
+    reason,
+    resolvedAt: new Date().toISOString(),
+  };
+  return writeOrMatchResolution(project, id, resolvedPath, resolution);
+}
+
+/**
+ * True when an unresolved versioned lockout or unresolved legacy markdown note
+ * is present under `.factory/orchestration/`.
+ */
+export function hasActiveLockout(project) {
+  const orch = path.join(project, '.factory', 'orchestration');
+  if (!fs.existsSync(orch)) return false;
+
+  const lockoutsDir = path.join(orch, 'lockouts');
+  if (fs.existsSync(lockoutsDir)) {
+    for (const entry of fs.readdirSync(lockoutsDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const createdPath = path.join(lockoutsDir, entry.name, 'created.json');
+      if (!fs.existsSync(createdPath)) continue;
+      const created = readJsonFile(createdPath);
+      if (!isValidCreatedRecord(created)) return true;
+      if (created.legacyPath) continue; // legacy activity decided from the markdown + matching events
+      const resolvedPath = path.join(lockoutsDir, entry.name, 'resolved.json');
+      if (!fs.existsSync(resolvedPath) || !isValidResolvedRecord(readJsonFile(resolvedPath))) {
+        return true;
+      }
+    }
+  }
+
+  for (const name of fs.readdirSync(orch)) {
+    if (!name.includes('lockout') || !name.endsWith('.md')) continue;
+    if (!legacyLockoutResolved(project, name)) return true;
+  }
+  return false;
+}
+
+function resolveLegacyLockout(project, legacy, { resolver, reason }) {
+  const { basename, absPath, relPath, body, digest, agent } = legacy;
+  if (resolver === agent) {
+    throw new Error('lockout resolver must be distinct from the locked agent');
+  }
+
+  const createdPath = lockoutCreatedPath(project, basename);
+  if (!fs.existsSync(createdPath)) {
+    const created = {
+      schemaVersion: 1,
+      id: basename,
+      agent,
+      reviewer: legacy.reviewer,
+      reason: legacy.reason,
+      createdAt: new Date().toISOString(),
+      legacyPath: relPath,
+      legacyDigest: digest,
+    };
+    writeJsonExclusive(createdPath, created);
+  } else {
+    const existing = readJsonFile(createdPath);
+    if (!isValidCreatedRecord(existing)
+      || existing.legacyPath !== relPath
+      || existing.legacyDigest !== digest) {
+      throw new Error(`Legacy lockout creation reference conflict: ${basename}`);
+    }
+  }
+
+  // Never rename or delete the legacy note; re-read to prove bytes unchanged so far.
+  const currentBody = fs.readFileSync(absPath, 'utf8');
+  if (contentDigest(currentBody) !== digest) {
+    throw new Error(`Legacy lockout note changed during resolve: ${basename}`);
+  }
+
+  const resolvedPath = lockoutResolvedPath(project, basename);
+  const resolution = {
+    schemaVersion: 1,
+    resolver,
+    reason,
+    resolvedAt: new Date().toISOString(),
+  };
+  const result = writeOrMatchResolution(project, basename, resolvedPath, resolution);
+  const afterBody = fs.readFileSync(absPath, 'utf8');
+  if (contentDigest(afterBody) !== digest) {
+    throw new Error(`Legacy lockout note must not be mutated: ${basename}`);
+  }
+  return result;
+}
+
+function writeOrMatchResolution(project, id, resolvedPath, resolution) {
+  if (fs.existsSync(resolvedPath)) {
+    const existing = readJsonFile(resolvedPath);
+    if (!isValidResolvedRecord(existing)) {
+      throw new Error(`Lockout resolution record is invalid: ${id}`);
+    }
+    if (existing.resolver === resolution.resolver && existing.reason === resolution.reason) {
+      return { id, resolvedPath };
+    }
+    throw new Error(`Lockout already resolved with conflicting inputs: ${id}`);
+  }
+  writeJsonExclusive(resolvedPath, resolution);
+  ledger(project, 'lockout-resolve', { id, resolver: resolution.resolver });
+  return { id, resolvedPath };
+}
+
+function findLegacyLockout(project, id) {
+  if (id.includes('/') || id.includes('\\') || id === '..' || id === '.') return null;
+  const orch = path.join(project, '.factory', 'orchestration');
+  if (!id.includes('lockout') || !id.endsWith('.md')) return null;
+  const absPath = path.join(orch, id);
+  if (!fs.existsSync(absPath) || !fs.statSync(absPath).isFile()) return null;
+  const body = fs.readFileSync(absPath, 'utf8');
+  const fields = parseLegacyLockoutFields(body);
+  return {
+    basename: id,
+    absPath,
+    relPath: `.factory/orchestration/${id}`,
+    body,
+    digest: contentDigest(body),
+    agent: fields.agent,
+    reviewer: fields.reviewer,
+    reason: fields.reason,
+  };
+}
+
+function legacyLockoutResolved(project, basename) {
+  const absPath = path.join(project, '.factory', 'orchestration', basename);
+  if (!fs.existsSync(absPath)) return false;
+  const body = fs.readFileSync(absPath, 'utf8');
+  const digest = contentDigest(body);
+  const relPath = `.factory/orchestration/${basename}`;
+  const createdPath = lockoutCreatedPath(project, basename);
+  const resolvedPath = lockoutResolvedPath(project, basename);
+  if (!fs.existsSync(createdPath) || !fs.existsSync(resolvedPath)) return false;
+  const created = readJsonFile(createdPath);
+  const resolved = readJsonFile(resolvedPath);
+  return isValidCreatedRecord(created)
+    && created.legacyPath === relPath
+    && created.legacyDigest === digest
+    && isValidResolvedRecord(resolved);
+}
+
+function parseLegacyLockoutFields(body) {
+  const agent = (body.match(/^Agent:\s*(.+)$/m) || [])[1]?.trim() || '';
+  const reviewer = (body.match(/^Reviewer:\s*(.+)$/m) || [])[1]?.trim() || 'reviewer';
+  const reason = (body.match(/^Reason:\s*(.+)$/m) || [])[1]?.trim() || '';
+  if (!agent || !/^[a-z0-9-]+$/.test(agent)) {
+    throw new Error('legacy lockout note must name a valid Agent');
+  }
+  return { agent, reviewer, reason };
+}
+
+function isValidCreatedRecord(record) {
+  return Boolean(
+    record
+    && record.schemaVersion === 1
+    && typeof record.id === 'string'
+    && typeof record.agent === 'string'
+    && typeof record.reason === 'string'
+    && typeof record.createdAt === 'string',
+  );
+}
+
+function isValidResolvedRecord(record) {
+  return Boolean(
+    record
+    && record.schemaVersion === 1
+    && typeof record.resolver === 'string'
+    && typeof record.reason === 'string'
+    && typeof record.resolvedAt === 'string',
+  );
+}
+
+function lockoutCreatedPath(project, id) {
+  return path.join(project, '.factory', 'orchestration', 'lockouts', id, 'created.json');
+}
+
+function lockoutResolvedPath(project, id) {
+  return path.join(project, '.factory', 'orchestration', 'lockouts', id, 'resolved.json');
+}
+
+function contentDigest(text) {
+  return `sha256:${createHash('sha256').update(text, 'utf8').digest('hex')}`;
+}
+
+function writeJsonExclusive(file, value) {
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  const fd = fs.openSync(file, 'wx');
+  try {
+    fs.writeFileSync(fd, `${JSON.stringify(value, null, 2)}\n`);
+  } finally {
+    fs.closeSync(fd);
+  }
+}
+
+function readJsonFile(file) {
+  try {
+    return JSON.parse(readText(file));
+  } catch {
+    return null;
+  }
 }
 
 function recordDecision(project, id, note, status) {

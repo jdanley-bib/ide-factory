@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, transitionAttempt } from './attempt.mjs';
+import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
 import {
   assertPassingCliSecurityEvidence,
@@ -240,12 +241,6 @@ function appendScribeNote(project, change, taskId, attemptId) {
   if (fs.existsSync(now)) {
     writeText(now, `# Now\n\nLast finalized: ${change}/${taskId} (${stamp})\n`);
   }
-}
-
-function hasActiveLockout(project) {
-  const dir = path.join(project, '.factory', 'orchestration');
-  if (!fs.existsSync(dir)) return false;
-  return fs.readdirSync(dir).some((name) => name.includes('lockout') && name.endsWith('.md'));
 }
 
 function readConfig(project) {
