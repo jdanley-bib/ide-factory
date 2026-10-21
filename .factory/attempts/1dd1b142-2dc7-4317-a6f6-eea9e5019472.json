@@ -2,10 +2,10 @@
   "id": "1dd1b142-2dc7-4317-a6f6-eea9e5019472",
   "change": "persist-bounded-run-sessions",
   "taskId": "1.1",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-4ee1c51e-7df4-5fc9-b731-b6c83c54f755",
-  "reviewerId": null,
+  "reviewerId": "bc-08118c0e-bda9-592a-9c98-e05854379b0f",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "46245a7bfab5562c8842ddef54a1887f3260c866"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T17:36:56.033Z",
+        "finishedAt": "2026-10-21T17:37:27.258Z",
+        "logDigest": "sha256:8f227d6561a64d7e897e731833f5e0a1dc504575ddee02064974dca0a7fc42d4",
+        "artifactDigests": [],
+        "attemptId": "1dd1b142-2dc7-4317-a6f6-eea9e5019472",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "0d986a77d317eb1dddfe862b95652af314d38fbc"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-08118c0e-bda9-592a-9c98-e05854379b0f",
+      "notes": "ACCEPT: CLI red (issuer=cli, exit 1) present; unit pass bound to 0d986a7; focused tests cover required fields and unsupported/non-JSON rejection without replacement; impl limited to validateRunSession/readRunSession. Re-ran node --test test/run-session.test.mjs exit 0 (3 pass).",
+      "at": "2026-10-21T17:38:19.144Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-21T17:36:23.971Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T17:37:27.300Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T17:38:19.080Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T17:38:19.144Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-21T17:34:41.386Z",
-  "updatedAt": "2026-10-21T17:36:23.971Z"
+  "updatedAt": "2026-10-21T17:38:19.144Z"
 }

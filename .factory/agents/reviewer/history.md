@@ -78,3 +78,10 @@ Attempt: 8152331d-3d0a-49ec-9726-4448883624c9
 Reviewer: bc-3897f2e7-ff02-5b9e-9735-d9dced3845f6
 Verdict: ACCEPT
 Re-ran strict validate exit 0, doctor exit 0, npm test exit 0 (77 pass).
+
+## 2026-10-21 persist-bounded-run-sessions/1.1
+
+Attempt: 1dd1b142-2dc7-4317-a6f6-eea9e5019472
+Reviewer: bc-08118c0e-bda9-592a-9c98-e05854379b0f
+Verdict: ACCEPT
+Re-ran `node --test test/run-session.test.mjs` exit 0, 3 pass. CLI red present; unit pass at 0d986a7; validator/parser scope only.
