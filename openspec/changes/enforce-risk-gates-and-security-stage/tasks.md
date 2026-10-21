@@ -13,7 +13,7 @@
 ## 3. Security stage
 
 - [x] 3.1 Add failing tests that security-sensitive work rejects a transition from `verifying` to `awaiting-review` and leaves the attempt in `verifying`, that `verificationProfile` alone does not require the security stage, and that the next run request still names the security-reviewer role. Verify with `node --test test/risk-gates.test.mjs test/orchestration.test.mjs`.
-- [ ] 3.2 Add failing tests that a transition from `security-checking` to `awaiting-review` is rejected without a passing CLI security record, succeeds when that record is bound to the attempt and the current clean source revision, and is rejected for a recorded red result or a caller-supplied security payload. When no check is security-patterned, the required kind is `threat-review`. Do not add scanner argv to the shipped check registry. Verify with `node --test test/risk-gates.test.mjs`.
+- [x] 3.2 Add failing tests that a transition from `security-checking` to `awaiting-review` is rejected without a passing CLI security record, succeeds when that record is bound to the attempt and the current clean source revision, and is rejected for a recorded red result or a caller-supplied security payload. When no check is security-patterned, the required kind is `threat-review`. Do not add scanner argv to the shipped check registry. Verify with `node --test test/risk-gates.test.mjs`.
 
 ## 4. Install and skill text
 
