@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T22:59:43.725Z",
+  "updatedAt": "2026-10-21T23:10:31.621Z",
   "items": [
     {
       "change": "enforce-risk-gates-and-security-stage",
@@ -130,7 +130,7 @@
     {
       "change": "make-finalization-recoverable",
       "id": "4.1",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "change": "make-finalization-recoverable",

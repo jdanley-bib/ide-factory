@@ -16,7 +16,7 @@
 
 ## 4. One-writer lease
 
-- [ ] 4.1 Add failing tests that atomic lease acquisition has exactly one winner, a non-expired owner makes a second writer fail clearly without mutation, success and handled errors release only the matching lease id, and read-only commands neither acquire nor remove a lease. Implement the schema version 1 lease and command wrapper primitives. Verify with `node --test test/writer-lease.test.mjs`.
+- [x] 4.1 Add failing tests that atomic lease acquisition has exactly one winner, a non-expired owner makes a second writer fail clearly without mutation, success and handled errors release only the matching lease id, and read-only commands neither acquire nor remove a lease. Implement the schema version 1 lease and command wrapper primitives. Verify with `node --test test/writer-lease.test.mjs`.
 - [ ] 4.2 Add failing fake-clock and multi-process tests for one-minute heartbeat, five-minute expiry, one-winner stale-directory takeover, owner-loss failure, corrupt/unsupported lease refusal, HALT bypass, and top-level coverage of init, upgrade, sync-tasks, next, run, attempt mutations, verify, complete, approve, reject, lockout create/resolve, and resume. Wire CLI dispatch without nested acquisition and verify with `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs`.
 
 ## 5. Integration
