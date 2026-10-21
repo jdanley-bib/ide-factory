@@ -66,3 +66,13 @@ Verdict: ACCEPT
 Product: 6ce9d47
 Commands: `node --test test/risk-gates.test.mjs` exit 0 (26 pass).
 Threat review: Five factory-run skill copies (`.cursor`, `.github`, `.agents`, `.claude`, `templates`) describe `human-gate` as the stop for a true profile `humanGate`, not the release profile alone (6ce9d47). Loop sections use `--until human-gate` and do not pass `--new-run` (`--new-run` remains only under New session, human only). Risk-gates skill-copy unit test locks the wording. Scope is skill text + test only; no scanner argv, no forged security evidence, no attempt transition.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/5.1
+
+Attempt: c55fda80-405c-41b0-ae1c-743da4435908
+Reviewer: bc-4bc55479-78ad-5095-900b-66e5a3a91307
+Implementer: bc-f2d26bc7-6fcf-5b41-a1e2-967cfaac57bc
+Verdict: ACCEPT
+Product: 11ccb4b
+Commands: `npx openspec validate enforce-risk-gates-and-security-stage --strict` exit 0; `node --test test/risk-gates.test.mjs` exit 0 (27 pass).
+Threat review: Integration notes (11ccb4b) honestly record strict OpenSpec validate, `npm test` (146 pass), and `doctor: ok`; focused risk-gates test locks those three command strings. Diff is notes + engineer history + one assertion test only — no transactional finalization, lockout resolution, leases, CI, provenance, observability, or archive. Distinct from implementer. `evidence.security` left empty — no forged check evidence. Attempt state not transitioned.
