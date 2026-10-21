@@ -284,3 +284,11 @@ Implementer: bc-dbaa9b47-88a9-5be9-b262-7585198dac69
 Red: `node --test test/finalization-recovery.test.mjs` exit 1 (ERR_MODULE_NOT_FOUND for `src/lib/finalization-recovery.mjs`); `node src/cli.mjs verify run 25abe23f-bfaf-4489-b0cc-8e014bacc45f --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/finalization-recovery.test.mjs` exit 0, 8 pass.
 Scope: journal validation and atomic creation only — schema v1 bind/allowlist/planDigest; corrupt, unsupported, path-traversing, identity-mismatched, revision-mismatched fail closed without marking done. No replay, fault injection, lockout, lease, complete wiring, review, or push.
+
+## 2026-10-21 make-finalization-recoverable/1.2
+
+Attempt: 46a2aac4-ca25-4b93-a9db-ee047d77be5c
+Implementer: bc-e0b69195-d4e8-574f-a362-216d96aaf86f
+Red: `node --test test/finalization-recovery.test.mjs` exit 1 (missing export `buildFinalizationPlan`); `node src/cli.mjs verify run 46a2aac4-ca25-4b93-a9db-ee047d77be5c --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:e5c0b609c549019138f96282e7cad459345c6d4ac4854f3befd01ed0570e1082).
+Green: `node --test test/finalization-recovery.test.mjs` exit 0, 10 pass.
+Scope: planned target generation only — deterministic plan for checkbox, scribe marker, identity, finalized attempt, intended index, ready journal, and atomic work-item done as final correctness-critical write; frozen completionDate/finalizedAt. No replay, fault injection, lockout, lease, complete wiring, review, or push.

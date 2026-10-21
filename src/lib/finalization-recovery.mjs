@@ -181,6 +181,212 @@ export function validateFinalizationJournal(journal, options = {}) {
 }
 
 /**
+ * Build one deterministic finalization plan for the allowlisted pre-commit
+ * targets plus the atomic work-item `done` commit point.
+ *
+ * Timestamps come only from the caller-supplied `completionDate` and
+ * `finalizedAt`, so retries with the same inputs produce identical bytes.
+ * The work-item update is returned as the final correctness-critical write
+ * and is not applied by this function.
+ *
+ * @param {string} project
+ * @param {{
+ *   change: string,
+ *   taskId: string,
+ *   attemptId: string,
+ *   sourceRevision: string,
+ *   completionDate: string,
+ *   finalizedAt: string,
+ * }} options
+ * @returns {{
+ *   change: string,
+ *   taskId: string,
+ *   attemptId: string,
+ *   sourceRevision: string,
+ *   completionDate: string,
+ *   finalizedAt: string,
+ *   journal: object,
+ *   targets: object[],
+ *   commit: object,
+ *   writeOrder: string[],
+ *   finalCorrectnessCriticalWrite: string,
+ * }}
+ */
+export function buildFinalizationPlan(project, options = {}) {
+  if (!project || typeof project !== 'string') {
+    throw new Error('project is required to build a finalization plan');
+  }
+  const change = requireOptionString(options, 'change');
+  const taskId = requireOptionString(options, 'taskId');
+  const attemptId = requireOptionString(options, 'attemptId');
+  const sourceRevision = requireOptionString(options, 'sourceRevision');
+  const completionDate = requireOptionString(options, 'completionDate');
+  const finalizedAt = requireOptionString(options, 'finalizedAt');
+
+  const paths = allowlistedTargetPaths({ change, taskId, attemptId });
+  const [
+    tasksRel,
+    scribeRel,
+    identityRel,
+    attemptRel,
+    indexRel,
+    journalRel,
+  ] = paths;
+  const itemRel = `.factory/work/items/${change}--${taskId}.json`;
+
+  const tasksBefore = readProjectText(project, tasksRel, { required: true });
+  const tasksAfter = withCheckedCheckbox(tasksBefore, taskId);
+
+  const scribeBefore = readProjectText(project, scribeRel, { required: false });
+  const scribeAfter = withScribeMarker(scribeBefore, {
+    change,
+    taskId,
+    attemptId,
+    completionDate,
+  });
+
+  const identityBefore = readProjectText(project, identityRel, { required: false });
+  const identityAfter = `# Now\n\nLast finalized: ${change}/${taskId} (${completionDate})\n`;
+
+  const attemptBefore = readProjectText(project, attemptRel, { required: true });
+  let attempt;
+  try {
+    attempt = JSON.parse(attemptBefore);
+  } catch (err) {
+    throw new Error(`finalization plan attempt JSON is corrupt: ${err.message}`);
+  }
+  if (!attempt || typeof attempt !== 'object' || Array.isArray(attempt)) {
+    throw new Error('finalization plan attempt must be an object');
+  }
+  const attemptAfterObj = {
+    ...attempt,
+    state: 'finalized',
+    updatedAt: finalizedAt,
+    evidence: {
+      ...(attempt.evidence && typeof attempt.evidence === 'object' ? attempt.evidence : {}),
+      completed: true,
+    },
+    history: [
+      ...(Array.isArray(attempt.history) ? attempt.history : []),
+      { at: finalizedAt, state: 'finalized' },
+    ],
+  };
+  const attemptAfter = `${JSON.stringify(attemptAfterObj, null, 2)}\n`;
+
+  const indexBefore = readProjectText(project, indexRel, { required: true });
+  let index;
+  try {
+    index = JSON.parse(indexBefore);
+  } catch (err) {
+    throw new Error(`finalization plan work index JSON is corrupt: ${err.message}`);
+  }
+  if (!index || typeof index !== 'object' || Array.isArray(index)) {
+    throw new Error('finalization plan work index must be an object');
+  }
+  const items = Array.isArray(index.items) ? index.items.map((entry) => {
+    if (entry && entry.change === change && entry.id === taskId) {
+      return { ...entry, status: 'done' };
+    }
+    return entry;
+  }) : [];
+  if (!items.some((entry) => entry && entry.change === change && entry.id === taskId)) {
+    items.push({ change, id: taskId, status: 'done' });
+  }
+  const indexAfter = `${JSON.stringify({
+    ...index,
+    version: index.version ?? 1,
+    updatedAt: finalizedAt,
+    items,
+  }, null, 2)}\n`;
+
+  const itemBefore = readProjectText(project, itemRel, { required: true });
+  let item;
+  try {
+    item = JSON.parse(itemBefore);
+  } catch (err) {
+    throw new Error(`finalization plan work item JSON is corrupt: ${err.message}`);
+  }
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    throw new Error('finalization plan work item must be an object');
+  }
+  const itemAfter = `${JSON.stringify({
+    ...item,
+    status: 'done',
+    updatedAt: finalizedAt,
+  }, null, 2)}\n`;
+
+  const contentTargets = [
+    targetFrom(tasksRel, tasksBefore, tasksAfter),
+    targetFrom(scribeRel, scribeBefore, scribeAfter),
+    targetFrom(identityRel, identityBefore, identityAfter),
+    targetFrom(attemptRel, attemptBefore, attemptAfter),
+    targetFrom(indexRel, indexBefore, indexAfter),
+  ];
+
+  // Journal self-target uses empty afterBytes in the storable prepared journal
+  // so the document does not embed a copy of itself. The apply target carries
+  // the ready-to-commit bytes (phase flip of that prepared document).
+  const journalWireTarget = {
+    path: journalRel,
+    beforeDigest: `sha256:${'0'.repeat(64)}`,
+    afterDigest: contentDigest(''),
+    afterBytes: '',
+  };
+  const journal = {
+    schemaVersion: SUPPORTED_SCHEMA_VERSION,
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+    completionDate,
+    phase: 'prepared',
+    targets: [...contentTargets, journalWireTarget],
+    planDigest: '',
+  };
+  journal.planDigest = planDigest(journal);
+  validateFinalizationJournal(journal, {
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+    projectRoot: project,
+  });
+
+  const preparedBytes = `${JSON.stringify(journal, null, 2)}\n`;
+  const readyBytes = `${JSON.stringify({ ...journal, phase: 'ready-to-commit' }, null, 2)}\n`;
+  const journalApplyTarget = {
+    path: journalRel,
+    beforeDigest: contentDigest(preparedBytes),
+    afterDigest: contentDigest(readyBytes),
+    afterBytes: readyBytes,
+  };
+
+  const targets = [...contentTargets, journalApplyTarget];
+  const commit = {
+    path: itemRel,
+    beforeDigest: contentDigest(itemBefore),
+    afterDigest: contentDigest(itemAfter),
+    afterBytes: itemAfter,
+    role: 'final-correctness-critical-write',
+  };
+  const writeOrder = [...targets.map((target) => target.path), commit.path];
+
+  return {
+    change,
+    taskId,
+    attemptId,
+    sourceRevision,
+    completionDate,
+    finalizedAt,
+    journal,
+    targets,
+    commit,
+    writeOrder,
+    finalCorrectnessCriticalWrite: commit.path,
+  };
+}
+
+/**
  * Atomically create a prepared finalization journal.
  * On validation failure, writes nothing and does not mark the work item done.
  *
@@ -374,4 +580,53 @@ function canonicalJson(value) {
   }
   const keys = Object.keys(value).sort();
   return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalJson(value[key])}`).join(',')}}`;
+}
+
+function requireOptionString(options, field) {
+  if (typeof options?.[field] !== 'string' || options[field].length === 0) {
+    throw new Error(`finalization plan requires ${field}`);
+  }
+  return options[field];
+}
+
+function readProjectText(project, relPath, { required }) {
+  const absolute = path.join(project, relPath);
+  if (!fs.existsSync(absolute)) {
+    if (required) {
+      throw new Error(`finalization plan missing required target: ${relPath}`);
+    }
+    return '';
+  }
+  return fs.readFileSync(absolute, 'utf8');
+}
+
+function targetFrom(relPath, beforeText, afterText) {
+  return {
+    path: normalizeRelPath(relPath),
+    beforeDigest: contentDigest(beforeText),
+    afterDigest: contentDigest(afterText),
+    afterBytes: afterText,
+  };
+}
+
+function withCheckedCheckbox(tasksText, taskId) {
+  const pattern = new RegExp(`^(- \\[)[^\\]]*(\\]\\s+${escapeRegExp(taskId)}\\s+)`, 'm');
+  if (!pattern.test(tasksText)) {
+    throw new Error(`Checkbox ${taskId} not found in OpenSpec tasks.md`);
+  }
+  return tasksText.replace(pattern, '$1x$2');
+}
+
+function withScribeMarker(historyText, { change, taskId, attemptId, completionDate }) {
+  const marker = `## ${completionDate} finalized ${change}/${taskId}\n\nAttempt: ${attemptId}\n`;
+  if (historyText.includes(`Attempt: ${attemptId}`)) {
+    return historyText.endsWith('\n') ? historyText : `${historyText}\n`;
+  }
+  if (!historyText) return `${marker}`;
+  const base = historyText.endsWith('\n') ? historyText : `${historyText}\n`;
+  return `${base}\n${marker}`;
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
