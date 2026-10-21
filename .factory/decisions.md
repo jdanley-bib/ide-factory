@@ -29,3 +29,13 @@ Authorized-by: factory lead aligning the machine queue to the human task and the
 Work-item: enforce-verification-evidence/4.1
 Attempt: dad29b9c-88bc-4ad3-8ee9-c1b51e4fe665
 Note: The classifier marked 4.1 security-sensitive because the task text contains "security results", and inferred checks unit, build, dependency-audit, and threat-review. The human task verifies only `node --test test/orchestration.test.mjs`. The approved design ships a registry whose only argv is unit -> npm test and forbids inventing build, SAST, or threat-review commands. Security review still ran: reviewer bc-6880a005-5532-5942-8e01-c14e1872901f accepted the transition gate; `npm test` exited 0 and `npm audit --audit-level=high` exited 0. Those audit and build results are not recorded as passing check evidence. The work item checks used for complete are set to unit so finalization matches the human verification command. This does not add a build tool, a risk gate, or a forged pass.
+
+## 2026-10-21 accepted persist-bounded-run-sessions-3.4-unit-check
+
+Status: accepted
+Id: persist-bounded-run-sessions-3.4-unit-check
+Authorized-at: 2026-10-21T18:52:30Z
+Authorized-by: factory lead aligning the machine queue to the human task and approved scope
+Work-item: persist-bounded-run-sessions/3.4
+Attempt: c923e6ab-933a-44a2-a41e-4969af7b9380
+Note: The classifier marked 3.4 security-sensitive because the task text names the security-reviewer route and inferred unit, build, dependency-audit, and threat-review. The human task verifies only `node --test test/orchestration.test.mjs`, the check registry maps only unit to `npm test`, and this approved change explicitly excludes security-stage enforcement and new security tooling. Keep the existing security-reviewer route and its independent review, but set the work item's completion checks to unit. Do not invent build, dependency-audit, or threat-review commands and do not record forged passing evidence.

@@ -165,3 +165,11 @@ Implementer: bc-f3b5c95b-9398-5acb-99cd-3c40bc7f48a5
 Red: `node --test test/run-session.test.mjs` exit 1, 2 fail (complete fingerprint not persisted; repeat complete not unchanged-state); HALT cases already green; `node src/cli.mjs verify run d21c6018-7133-4b58-a5f2-3a53c613c50d --check unit --red` stored exitCode 1 / passed:false (issuer=cli).
 Green: `node --test test/run-session.test.mjs` exit 0, 32 pass.
 Scope: complete request persists scribe fingerprint without incrementing agentSteps; repeat complete → unchanged-state; HALT before create and on existing session (regression tests only) — no skill/default/review/complete/commit/push.
+
+## 2026-10-21 persist-bounded-run-sessions/3.4
+
+Attempt: c923e6ab-933a-44a2-a41e-4969af7b9380
+Implementer: bc-71e04e8a-ab36-5609-b0b5-5a71762974c2
+Red: temporary mutation in `openOrResumeRunSession` made `--new-run` resume sticky closed sessions; `node --test test/orchestration.test.mjs` exit 1, 1 fail (`security-reviewer route in fresh session…`: `0 !== 2`, stdout `Run stopped (unchanged-state) for demo.`, no security-reviewer request); `node src/cli.mjs verify run c923e6ab-933a-44a2-a41e-4969af7b9380 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, logDigest sha256:300575144b9fbd16c2771ba6b43c52032b4f7a5166cf867de36271bdf3720896). Mutation removed before handoff; rejected earlier auto-reopen of sticky `unchanged-state` (spec requires `--new-run`).
+Green: `node --test test/orchestration.test.mjs` exit 0, 17 pass; `node --test test/run-session.test.mjs` exit 0, 32 pass.
+Scope: orchestration regression test only (`--new-run` after sticky unchanged-state → one security-reviewer request); no production delta retained — no security enforcement/tools/review/complete/commit/push.

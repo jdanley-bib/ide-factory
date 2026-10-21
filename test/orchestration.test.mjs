@@ -243,6 +243,57 @@ test('security-sensitive verification routes to security-reviewer', async () => 
   }
 });
 
+test('security-reviewer route in fresh session after sticky unchanged-state with remaining budget', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    checks: [unit, threat-review]',
+      '    securityProfile: security-sensitive',
+      '    verificationProfile: security-sensitive',
+      '    roles: [engineer, security-reviewer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err);
+    const attempt = JSON.parse(started.out);
+
+    const maxAgentSteps = 10;
+    const first = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
+    assert.equal(first.code, 2, first.err + first.out);
+    assert.match(first.out, /^Role: engineer$/m);
+
+    const unchanged = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
+    assert.equal(unchanged.code, 0, unchanged.err + unchanged.out);
+    assert.match(`${unchanged.err}\n${unchanged.out}`, /unchanged-state/);
+    assert.doesNotMatch(`${unchanged.err}\n${unchanged.out}`, /# Orchestration request/);
+
+    await advanceToVerifying(dir, attempt.id, { passChecks: {} });
+
+    const stickyResume = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
+    assert.equal(stickyResume.code, 0, stickyResume.err + stickyResume.out);
+    assert.match(`${stickyResume.err}\n${stickyResume.out}`, /unchanged-state/);
+    assert.doesNotMatch(`${stickyResume.err}\n${stickyResume.out}`, /# Orchestration request/);
+
+    const securityRun = await idefactory(dir, [
+      'run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps), '--new-run',
+    ]);
+    assert.equal(securityRun.code, 2, securityRun.err + securityRun.out);
+    const securityRoleLines = [...securityRun.out.matchAll(/^Role: security-reviewer$/gm)];
+    assert.equal(securityRoleLines.length, 1, 'must print exactly one security-reviewer request');
+    assert.match(securityRun.out, /\.factory\/agents\/security-reviewer\/charter\.md/);
+    assert.doesNotMatch(securityRun.out, /\.factory\/agents\/reviewer\/charter\.md/);
+    const request = parseOrchestrationJson(securityRun.out);
+    assert.equal(request.role, 'security-reviewer');
+    assert.equal(request.state, 'verifying');
+    assert.equal(request.nextState, 'security-checking');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('illegal attempt transition from assigned to accepted fails', async () => {
   const dir = tempProject();
   try {

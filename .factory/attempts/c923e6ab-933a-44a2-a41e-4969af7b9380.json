@@ -1,0 +1,89 @@
+{
+  "id": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "3.4",
+  "state": "red-confirmed",
+  "implementerRole": "engineer",
+  "implementerId": "bc-71e04e8a-ab36-5609-b0b5-5a71762974c2",
+  "reviewerId": null,
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T19:00:46.354Z",
+      "finishedAt": "2026-10-21T19:01:47.123Z",
+      "logDigest": "sha256:300575144b9fbd16c2771ba6b43c52032b4f7a5166cf867de36271bdf3720896",
+      "artifactDigests": [],
+      "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T18:57:38.768Z",
+        "finishedAt": "2026-10-21T18:58:36.455Z",
+        "logDigest": "sha256:d63cb701b98b13f0d893ad3f370ad1d0fa13ebae0a745c460e0570a85805cae6",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": false,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": false,
+        "sourceRevision": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+      }
+    ],
+    "security": [],
+    "review": null,
+    "changedFiles": [
+      "test/orchestration.test.mjs",
+      ".factory/agents/engineer/history.md"
+    ],
+    "baseRev": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T18:52:11.391Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T18:52:11.392Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T18:56:22.458Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T18:57:09.165Z",
+      "state": "red-confirmed"
+    }
+  ],
+  "createdAt": "2026-10-21T18:52:11.391Z",
+  "updatedAt": "2026-10-21T19:01:47.128Z"
+}
