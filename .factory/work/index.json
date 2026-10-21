@@ -1,7 +1,52 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-21T19:48:33.076Z",
+  "updatedAt": "2026-10-21T20:05:36.700Z",
   "items": [
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "1.1",
+      "status": "in_progress"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "1.2",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "2.1",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "2.2",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "3.1",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "3.2",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "4.1",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "4.2",
+      "status": "todo"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "5.1",
+      "status": "todo"
+    },
     {
       "change": "enforce-verification-evidence",
       "id": "1.1",

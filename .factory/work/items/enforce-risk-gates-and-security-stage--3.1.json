@@ -1,0 +1,33 @@
+{
+  "id": "3.1",
+  "change": "enforce-risk-gates-and-security-stage",
+  "title": "Add failing tests that security-sensitive work rejects a transition from `verifying` to `awaiting-review` and leaves the attempt in `verifying`, that `verificationProfile` alone does not require the security stage, and that the next run request still names the security-reviewer role. Verify with `node --test test/risk-gates.test.mjs test/orchestration.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that security-sensitive work rejects a transition from `verifying` to `awaiting-review` and leaves the attempt in `verifying`, that `verificationProfile` alone does not require the security stage, and that the next run request still names the security-reviewer role. Verify with `node --test test/risk-gates.test.mjs test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "security",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit",
+      "build",
+      "dependency-audit",
+      "threat-review"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "security-sensitive",
+    "verificationProfile": "security-sensitive",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T20:05:30.940Z"
+}

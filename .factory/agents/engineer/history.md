@@ -204,3 +204,11 @@ Implementer: bc-ae8483c8-42ea-5aa9-8256-d83a75f8468b
 Red: missing `openspec/changes/persist-bounded-run-sessions/implementation-notes.md`; `node --test test/run-session.test.mjs` 34 pass / 1 fail; `node src/cli.mjs verify run … --check unit --red` stored evidence.red exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `npx openspec validate persist-bounded-run-sessions --strict` exit 0; `npm test` exit 0 (115 pass); `node src/cli.mjs doctor` exit 0; `node --test test/run-session.test.mjs` exit 0, 35 pass.
 Scope: integration notes only — no model start, risk gate, transactional complete, lockout, CI, provenance, review, or complete.
+
+## 2026-10-21 enforce-risk-gates-and-security-stage/1.1
+
+Attempt: e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d
+Implementer: bc-08b83f75-6cbc-5040-906d-abdcc6efdcf2
+Red: `node --test test/risk-gates.test.mjs` exit 1 (ERR_MODULE_NOT_FOUND for `src/lib/risk-gates.mjs`); `node src/cli.mjs verify run e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/risk-gates.test.mjs` exit 0, 5 pass.
+Scope: scoped-approval validator only (`validateScopedApproval` / `writeScopedApproval`) — no approve CLI wiring, human-gate, security stage, lockout, CI, provenance, or complete.

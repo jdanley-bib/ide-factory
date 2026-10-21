@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "enforce-risk-gates-and-security-stage",
+  "title": "Add failing tests that a schema version 1 approval records change, task, source revision, action, approver, issuance, expiry, and policy version, and that a missing field, an action other than `accept` or `complete`, an expiry more than 24 hours after issuance, or an approver equal to the implementer is rejected without writing a file. Implement that validator and verify with `node --test test/risk-gates.test.mjs`.",
+  "status": "in_progress",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that a schema version 1 approval records change, task, source revision, action, approver, issuance, expiry, and policy version, and that a missing field, an action other than `accept` or `complete`, an expiry more than 24 hours after issuance, or an approver equal to the implementer is rejected without writing a file. Implement that validator and verify with `node --test test/risk-gates.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d",
+  "updatedAt": "2026-10-21T20:05:36.700Z"
+}

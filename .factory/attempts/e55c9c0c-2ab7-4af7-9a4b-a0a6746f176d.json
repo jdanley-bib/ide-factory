@@ -1,0 +1,61 @@
+{
+  "id": "e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "1.1",
+  "state": "red-confirmed",
+  "implementerRole": "engineer",
+  "implementerId": "bc-08b83f75-6cbc-5040-906d-abdcc6efdcf2",
+  "reviewerId": null,
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T20:07:07.677Z",
+      "finishedAt": "2026-10-21T20:07:38.815Z",
+      "logDigest": "sha256:cbbafb29664ad13bae0ab6497d4f810e2cf8af84e577fe9cc61a4c1159fb8767",
+      "artifactDigests": [],
+      "attemptId": "e55c9c0c-2ab7-4af7-9a4b-a0a6746f176d",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "5be884238a07a4a9e20a103b34d4e832eaf2165d"
+    },
+    "verification": [],
+    "security": [],
+    "review": null,
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T20:05:36.699Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T20:05:36.701Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T20:06:18.277Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T20:07:44.055Z",
+      "state": "red-confirmed"
+    }
+  ],
+  "createdAt": "2026-10-21T20:05:36.699Z",
+  "updatedAt": "2026-10-21T20:07:44.055Z"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "4.1",
+  "change": "enforce-risk-gates-and-security-stage",
+  "title": "Set `security-sensitive.humanGate` to true in the profile template and keep `release.humanGate` true. Add failing install tests that a new init writes both values and a second init leaves an existing `profiles.json` byte-for-byte unchanged. Do not edit this repo's `.factory/profiles.json`. Verify with `node --test test/install.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Set `security-sensitive.humanGate` to true in the profile template and keep `release.humanGate` true. Add failing install tests that a new init writes both values and a second init leaves an existing `profiles.json` byte-for-byte unchanged. Do not edit this repo's `.factory/profiles.json`. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "security",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit",
+      "build",
+      "dependency-audit",
+      "threat-review"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "security-sensitive",
+    "verificationProfile": "security-sensitive",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-21T20:05:30.941Z"
+}
