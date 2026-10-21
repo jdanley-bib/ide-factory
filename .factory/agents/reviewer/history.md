@@ -311,3 +311,11 @@ Reviewer: bc-98a08a6b-7aeb-541d-8777-c11db7f00b38
 Implementer: bc-c064be93-5bd6-54d5-aebc-9344f8749e47
 Verdict: ACCEPT
 Re-ran `npx openspec validate make-finalization-recoverable --strict` exit 0; `node --test test/finalization-recovery.test.mjs` exit 0, 21 pass; `node src/cli.mjs doctor` exit 0. Confirmed notes honesty: npm test 187/187 (re-run exit 0 after one intermittent writer-lease stale-takeover flake unrelated to 5.1). CLI red present (issuer cli, kind unit, exitCode 1, passed false at 912bb226 worktreeClean:false; simulated missing notes → 20 pass / 1 fail); clean-head unit pass at 60e4ba8 worktreeClean. Product 60e4ba8: implementation-notes + notes assertion test + engineer history only. Scope exclusions held (no model start, CI/provenance, observability, gate/evidence policy, archive, checkbox, complete, push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-21 make-finalization-recoverable/4.2 follow-up (publication race)
+
+Product: 423c525d4038efbd2b4cc641635e4134c8f3ae41
+Implementer: bc-4b9faad8-5f00-549e-adc3-cfb57b7969bf
+Reviewer: bc-f4310a0a-b92e-5893-9847-bf7b84186766
+Verdict: ACCEPT
+Inspected staging-directory rename publication (`tryPublishNewLease`), vanished-dir → `LEASE_HELD` without weakening corrupt/unsupported `LEASE_RECOVERY`, winner tombstone cleanup, and one-winner stale rename. Deterministic tests cover owner-publication gap (mkdir probe) and mid-read directory loss. Re-ran `node --test test/writer-lease.test.mjs` exit 0, 16 pass; stress 50× exit 0; `node --test test/writer-lease.test.mjs test/orchestration.test.mjs test/govern.test.mjs` exit 0, 43 pass. No attempt mutation, complete, or push.
