@@ -422,3 +422,12 @@ Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `id-token: write`
 Green: `node --test test/ci-provenance.test.mjs` exit 0, 6 pass; `npm test` exit 0 (198 pass); `node src/cli.mjs verify run 82557439-e1d2-4207-b490-1460c136a444 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, logDigest sha256:f92652e851c9b91961af0dd084fc37136dba15455628b0e82b7349b80c79d49a, sourceRevision 2428745c0945f4565f06904a97294270c041bbeb — factory chore after product 4c43e39).
 Release workflow: `contents: read`, `id-token: write`, `attestations: write`; `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8` (`subject-path: release/sbom.cdx.json`) after SBOM annotation; no SLSA Build L2/L3 claims.
 Scope: release SBOM provenance attestation only — no branch controls, npm publish, forge admin API, observability, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/4.1
+
+Attempt: c6790978-0806-44b4-b659-eac3c9ccba3d
+Implementer: bc-48a1b099-8bf4-58c4-82d7-6d9ba303bd5d
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/branch-review-controls.json` and `.github/CODEOWNERS`); `node src/cli.mjs verify run c6790978-0806-44b4-b659-eac3c9ccba3d --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:32d84c1d405936ba970fc8916c8893322ad99a0b578f3e61bcb0b13ad2eb8ff6).
+Green: (pending clean-HEAD `npm test` verify run).
+Declaration: `.github/branch-review-controls.json` schemaVersion 1, `requiredStatusCheckName` baseline, `requiredApprovingReviewCount` 1, `allowForcePushes` false, `protectedBranch` main, `enforcedByForge` false; `.github/CODEOWNERS` `* @jdanley-bib`; tests scan `.github`, `scripts`, and `src` for forbidden forge admin API patterns.
+Scope: branch review declaration only — no forge admin API, npm publish, observability, review, accept, complete, or push.

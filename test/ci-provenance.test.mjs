@@ -729,3 +729,85 @@ test('release workflow attests annotated SBOM with actions/attest-build-provenan
     'attest step must identify the SBOM via subject-path only',
   );
 });
+
+const branchReviewControlsPath = path.join(repoRoot, '.github', 'branch-review-controls.json');
+const codeownersPath = path.join(repoRoot, '.github', 'CODEOWNERS');
+
+/** Paths scanned for forbidden forge branch-protection admin API usage. */
+const FORGE_ADMIN_SCAN_ROOTS = [
+  path.join(repoRoot, '.github'),
+  path.join(repoRoot, 'scripts'),
+  path.join(repoRoot, 'src'),
+];
+
+const FORBIDDEN_FORGE_ADMIN_PATTERNS = [
+  /\bgh\s+api\b[^\n]*\brepos\/[^\s]+\/rulesets\b/i,
+  /\bgh\s+api\b[^\n]*\brulesets\b/i,
+  /api\.github\.com\/repos\/[^/\s]+\/[^/\s]+\/rulesets\b/i,
+  /api\.github\.com\/repos\/[^/\s]+\/[^/\s]+\/branches\/[^/\s]+\/protection\b/i,
+  /\/repos\/[^/\s]+\/[^/\s]+\/branches\/[^/\s]+\/protection\b/i,
+];
+
+function listTextFilesUnder(dir, { extensions } = {}) {
+  const hits = [];
+  if (!fs.existsSync(dir)) return hits;
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'node_modules') continue;
+      hits.push(...listTextFilesUnder(full, { extensions }));
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    if (extensions && !extensions.some((ext) => entry.name.endsWith(ext))) continue;
+    hits.push(full);
+  }
+  return hits;
+}
+
+test('branch-review-controls declaration, CODEOWNERS, and no forge admin API in implementation', () => {
+  assert.ok(
+    fs.existsSync(branchReviewControlsPath),
+    `missing ${branchReviewControlsPath}`,
+  );
+  const declaration = JSON.parse(fs.readFileSync(branchReviewControlsPath, 'utf8'));
+  assert.equal(declaration.schemaVersion, 1, 'branch-review-controls schemaVersion must be 1');
+  assert.equal(
+    declaration.requiredStatusCheckName,
+    'baseline',
+    'required status check name must match baseline job',
+  );
+  assert.equal(declaration.requiredApprovingReviewCount, 1, 'must require one approving review');
+  assert.equal(declaration.allowForcePushes, false, 'force-push must be disabled');
+  assert.equal(declaration.protectedBranch, 'main', 'protected branch must be main');
+  assert.equal(
+    declaration.enforcedByForge,
+    false,
+    'declaration must not claim forge enforcement until a human enables it',
+  );
+
+  assert.ok(fs.existsSync(codeownersPath), `missing ${codeownersPath}`);
+  const codeowners = fs.readFileSync(codeownersPath, 'utf8');
+  assert.match(
+    codeowners,
+    /^\*\s+@jdanley-bib\s*$/m,
+    'CODEOWNERS must assign all paths to @jdanley-bib',
+  );
+
+  const scanExtensions = ['.mjs', '.js', '.yml', '.yaml', '.sh', '.json'];
+  const scanned = [];
+  for (const root of FORGE_ADMIN_SCAN_ROOTS) {
+    scanned.push(...listTextFilesUnder(root, { extensions: scanExtensions }));
+  }
+  for (const filePath of scanned) {
+    if (path.basename(filePath) === 'branch-review-controls.json') continue;
+    const body = fs.readFileSync(filePath, 'utf8');
+    for (const pattern of FORBIDDEN_FORGE_ADMIN_PATTERNS) {
+      assert.doesNotMatch(
+        body,
+        pattern,
+        `implementation must not call forge admin APIs to change branch protection (${path.relative(repoRoot, filePath)})`,
+      );
+    }
+  }
+});

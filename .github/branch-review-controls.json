@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "protectedBranch": "main",
+  "requiredStatusCheckName": "baseline",
+  "requiredApprovingReviewCount": 1,
+  "allowForcePushes": false,
+  "enforcedByForge": false,
+  "humanEnablement": "A repository admin enables a GitHub ruleset on main with the required baseline check, one approving review, and force-push disabled after the baseline CI job exists."
+}
