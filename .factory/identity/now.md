@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: make-finalization-recoverable/5.1 (2026-10-22)
+Last finalized: establish-factory-ci-and-provenance/1.1 (2026-10-22)

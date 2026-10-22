@@ -2,7 +2,7 @@
 
 ## 1. Baseline CI
 
-- [ ] 1.1 Add a failing test that the baseline job runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`, and that a non-zero command fails the job. Implement `.github/workflows/ci.yml` with job name `baseline` on pull request and push, using Node 22. Verify with `node --test test/ci-provenance.test.mjs`.
+- [x] 1.1 Add a failing test that the baseline job runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`, and that a non-zero command fails the job. Implement `.github/workflows/ci.yml` with job name `baseline` on pull request and push, using Node 22. Verify with `node --test test/ci-provenance.test.mjs`.
 - [ ] 1.2 Add a failing test that the baseline workflow uses `contents: read`, pins every third-party action to a full commit SHA, and does not use `pull_request_target` or `continue-on-error`. Update the workflow to match. Verify with `node --test test/ci-provenance.test.mjs`.
 
 ## 2. Security scanning

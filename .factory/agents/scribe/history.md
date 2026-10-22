@@ -193,3 +193,7 @@ Attempt: 29c52e9a-6ec4-4fdd-a733-7b7248bce462
 ## 2026-10-22 finalized make-finalization-recoverable/5.1
 
 Attempt: 9247289a-042d-4ef4-8e9c-1f98d80ee70f
+
+## 2026-10-22 finalized establish-factory-ci-and-provenance/1.1
+
+Attempt: b494d2f8-f24e-49c5-81de-125461fbccd4
