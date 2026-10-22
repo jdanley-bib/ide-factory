@@ -343,3 +343,11 @@ Reviewer: bc-d083ee18-0f90-5d61-818d-3dc36ffe9faa
 Implementer: bc-33d9fdda-7d9d-5e59-b875-2d211ac741eb
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 2 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 64ae490 worktreeClean:false); clean-head unit pass at cfbe42b worktreeClean. Product cfbe42b: `permissions.contents: read`; `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` # v4.4.0 and `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020` # v4.4.0 match official `commits/v4` and `refs/tags/v4.4.0`; no `pull_request_target` or `continue-on-error`. Scope exclusions held (no scanners, release, branch controls, complete, or push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.1
+
+Attempt: e44e3bae-3ba6-4d98-a64f-7471ce36f9be
+Reviewer: bc-7449c915-1397-5e10-94d0-439d8cfe4fe4
+Implementer: bc-b658b85d-4eed-58e3-a1f3-bba903e07794
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 3 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 820df42 worktreeClean:false; engineer notes missing `secret-scan` job); clean-head unit pass at b2dbe02 worktreeClean. Product b2dbe02: exact `secretlint@13.0.7` + `@secretlint/secretlint-rule-preset-recommend@13.0.7` (dev only); `.secretlintrc.json` recommend preset; shared `npx secretlint "**/*"` in CI `secret-scan` and focused test (no `continue-on-error`); CLI `maskSecrets` default (no `--no-maskSecrets`); seeded Slack-shaped fixture assembled from base64 at runtime (contiguous value absent from tree). Scope exclusions held (no Semgrep/2.2, release, branch controls, checks.json scanner argv, complete, or push). Prior distinct security ACCEPT by bc-303a83a1 (decision establish-factory-ci-and-provenance-2.1-unit-check; evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
