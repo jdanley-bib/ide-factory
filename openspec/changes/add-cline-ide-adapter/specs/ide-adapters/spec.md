@@ -1,0 +1,73 @@
+# Spec Delta
+
+## MODIFIED Requirements
+
+### Requirement: Shared command set
+The system SHALL install status, plan, build, run, full, and review commands for Cursor, GitHub Copilot, Claude Code, and Cline.
+
+#### Scenario: Command files
+- **WHEN** init finishes
+- **THEN** each supported IDE has adapter files for status, plan, build, run, full, and review
+- **AND** each command directs the IDE to its corresponding factory skill
+
+#### Scenario: Cline workflow files
+- **WHEN** init finishes
+- **THEN** `.cline/workflows/` contains `factory-status.md`, `factory-plan.md`, `factory-build.md`, `factory-run.md`, `factory-full.md`, and `factory-review.md`
+- **AND** each workflow directs Cline to the same factory skill as the matching Cursor command
+
+### Requirement: No model launcher
+Installed factory skills SHALL tell the IDE session to do the work. Installed factory skills and commands SHALL NOT direct the CLI to launch a model process.
+
+#### Scenario: Adapter instructions
+- **WHEN** installed factory skills are inspected
+- **THEN** they state that the IDE session model does the work
+- **AND** installed factory skills and commands contain no instruction for the factory CLI to launch a model
+
+#### Scenario: Cline adapter instructions
+- **WHEN** installed Cline skills and Cline workflow commands are inspected
+- **THEN** `.cline/skills/factory-coordinator/SKILL.md` states that the IDE session model does the work
+- **AND** those Cline files contain no instruction for the factory CLI to launch a model
+
+### Requirement: Upgrade refreshes adapters only
+`idefactory upgrade` SHALL refresh factory-owned adapter files, including the Cline rule, Cline skills, and Cline workflow commands, and SHALL NOT replace an existing decisions log.
+
+#### Scenario: Upgrade keeps decisions
+- **WHEN** `decisions.md` has a custom entry and upgrade runs
+- **THEN** the custom entry remains
+
+#### Scenario: Upgrade refreshes a Cline skill
+- **WHEN** a factory-owned file under `.cline/skills/` has been changed and upgrade runs
+- **THEN** that file matches the current factory skill again
+- **AND** the custom decisions entry remains
+
+## ADDED Requirements
+
+### Requirement: Cline skill copies
+The system SHALL install the same factory skill directories under `.cline/skills/` that it installs for the other IDEs.
+
+#### Scenario: Skill directories
+- **WHEN** init finishes
+- **THEN** `.cline/skills/` contains `factory-coordinator`, `factory-openspec`, `factory-build`, `factory-run`, `factory-full`, `factory-governance`, `factory-tdd`, `factory-verify`, and `factory-debug`
+- **AND** each of those directories contains `SKILL.md`
+
+### Requirement: Cline narrow activation
+The Cline rule SHALL tell the agent to follow factory skills for factory plan, build, review, or status requests, and SHALL tell the agent to leave unrelated work alone.
+
+#### Scenario: Cline rule file
+- **WHEN** `.cline/rules/factory.md` is read
+- **THEN** it states that unrelated requests are left alone
+
+### Requirement: Single Cline rule tree
+The system SHALL install the factory Cline rule, skills, and workflows only under `.cline/` and SHALL NOT create `.clinerules/`.
+
+#### Scenario: Legacy tree absent
+- **WHEN** init finishes in a project that had no `.clinerules/` directory
+- **THEN** `.clinerules/` does not exist
+
+### Requirement: No Cline queue
+Installing the Cline adapter SHALL NOT create a work queue other than `.factory/work/` and SHALL NOT add a Cline orchestration command.
+
+#### Scenario: Queue stays shared
+- **WHEN** init finishes
+- **THEN** `.factory/work/index.json` exists
+- **AND** `.cline/` does not contain a `work/` directory
