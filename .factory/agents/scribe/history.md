@@ -211,3 +211,7 @@ Attempt: e44e3bae-3ba6-4d98-a64f-7471ce36f9be
 Attempt: d1db173b-f29e-407b-ab70-9674892ba8ce
 
 `complete` failed: dirty worktree (security-reviewer history, orchestration run, active-change); committed factory sync `76bcb12`, retry failed with `attestation sourceRevision does not match current clean HEAD` (unit evidence at `63ede06`, HEAD `76bcb12` after review ACCEPT `a0e718f` and scribe sync). Work item still `in_progress`, attempt `accepted`.
+
+## 2026-10-22 finalized establish-factory-ci-and-provenance/3.1
+
+Attempt: ad20dce0-6681-4507-a396-26b6a50c2b9b
