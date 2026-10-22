@@ -456,3 +456,11 @@ Implementer: cline-engineer-1.2
 Red: temporary omit of `.cline/skills` from `writeAdapters` destinations; `node src/cli.mjs verify run 9f8f15dc-e453-489d-899c-2634a7928443 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:1809b24294bef490ff2badf1fc819e01043c116675b1a9e1cf8e63808bff7f13); new preserve/upgrade test failed with 1.1 Cline skills test.
 Green: restored `.cline/skills`; `node --test test/install.test.mjs` exit 0, 16 pass; production `install.mjs` unchanged after restore.
 Scope: install test only — init leaves app.js and `.cline/rules/team-style.md` unchanged; upgrade restores edited `.cline/skills/factory-coordinator/SKILL.md`, keeps CUSTOM-DECISION-KEEP and team-style, does not delete other `.cline/` files; no doctor, AGENTS.md, second queue, CI, review, complete, or push.
+
+## 2026-10-22 add-cline-ide-adapter/1.3
+
+Attempt: a7444fda-e693-4524-8958-4450ddbebfd8
+Implementer: cline-engineer-1.3
+Red: temporarily removed `The IDE session model does the work.` from `templates/skills/factory-coordinator/SKILL.md`; `node src/cli.mjs verify run a7444fda-e693-4524-8958-4450ddbebfd8 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit); sentence restored before commit.
+Green: `node --test test/install.test.mjs` exit 0, 16 pass (pending full `verify run --check unit` after commit).
+Scope: install test only — extend no-model scan to `.cline/skills` and `.cline/workflows`; launchPattern unchanged; no CI, doctor, instruction fragment, queue, gates, lockout, review, complete, or push.

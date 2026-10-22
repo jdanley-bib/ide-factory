@@ -294,7 +294,7 @@ test('installed factory skills state the IDE session model and do not launch a m
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     const launchPattern = /idefactory\b[\s\S]{0,80}\b(launch|start)\b[\s\S]{0,40}\bmodel\b|\bcursor-agent\b/i;
-    for (const root of ['.cursor/skills', '.claude/skills', '.github/skills']) {
+    for (const root of ['.cursor/skills', '.claude/skills', '.github/skills', '.cline/skills']) {
       const skillRoot = path.join(dir, root);
       for (const name of fs.readdirSync(skillRoot).sort()) {
         const rel = path.join(root, name, 'SKILL.md');
@@ -308,7 +308,10 @@ test('installed factory skills state the IDE session model and do not launch a m
       }
     }
     for (const command of SHARED_COMMANDS) {
-      for (const rel of adapterPaths(command)) {
+      for (const rel of [
+        ...adapterPaths(command),
+        `.cline/workflows/factory-${command}.md`,
+      ]) {
         assert.doesNotMatch(
           read(dir, rel),
           launchPattern,
