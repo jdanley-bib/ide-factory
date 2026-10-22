@@ -393,3 +393,13 @@ Green: `node --test test/ci-provenance.test.mjs` exit 0, 4 pass.
 Tooling: Semgrep `1.182.0` via `python3 -m pip install --user` (exact pin; not an npm/runtime dependency); CI adds `$HOME/.local/bin` to `GITHUB_PATH`.
 Shared command: `semgrep --error --metrics=off --config p/javascript` (CI job `sast`, no `continue-on-error`).
 Scope: Semgrep SAST only — temp seeded express XSS fixture exits non-zero; no insecure fixture committed. No release, branch controls, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.2
+
+Attempt: d1db173b-f29e-407b-ab70-9674892ba8ce
+Implementer: bc-4ba8835d-2693-569c-a077-834313f33abd
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (fail-closed `scripts/run-semgrep.mjs` / `sast` job not green after lockout); `node src/cli.mjs verify run d1db173b-f29e-407b-ab70-9674892ba8ce --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:9e4c4b8c6dea80a343ccad10026ce188b6f13485b26a177cd4528618b422928b).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 4 pass.
+Tooling: `scripts/run-semgrep.mjs` fail-closed wrapper (no download/install; `--skip-semgrep` escape hatch not used in baseline or `sast` CI).
+Shared command: `node scripts/run-semgrep.mjs` invokes `semgrep --error --metrics=off --config p/javascript` when the binary is on PATH (CI job `sast`, no `continue-on-error`, no pip installer).
+Scope: Semgrep fail-closed SAST — absent binary exits non-zero; `--skip-semgrep` warns and records `SEMGREP_SKIP`; stub proves required argv; installer traps untouched. No release, branch controls, review, accept, complete, or push.

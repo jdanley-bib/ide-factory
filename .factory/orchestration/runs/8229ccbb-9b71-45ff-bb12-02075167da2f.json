@@ -4,14 +4,14 @@
   "change": "establish-factory-ci-and-provenance",
   "status": "open",
   "startedAt": "2026-10-22T00:17:18.736Z",
-  "lastObservedAt": "2026-10-22T00:47:52.413Z",
+  "lastObservedAt": "2026-10-22T01:08:47.969Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 7,
+  "agentSteps": 8,
   "completedTasks": 3,
   "failureCount": 0,
   "baselineDoneIds": [],
@@ -21,7 +21,7 @@
     "action": "agent-step",
     "role": "engineer",
     "taskId": "2.2",
-    "attemptId": "983f8451-bce2-4aa9-bbe7-fb139d2bf2b1",
+    "attemptId": "d1db173b-f29e-407b-ab70-9674892ba8ce",
     "attemptState": "assigned",
     "workItemStatus": "in_progress"
   },

@@ -22,6 +22,15 @@ const BASELINE_COMMANDS = [
 const SECRETLINT_COMMAND = 'npx secretlint "**/*"';
 
 /**
+ * Shared local/CI Semgrep wrapper (exact string must appear as a CI run step).
+ * Invokes Semgrep with --error --metrics=off --config p/javascript when present.
+ */
+const SEMGREP_COMMAND = 'node scripts/run-semgrep.mjs';
+
+/** Required Semgrep argv after the binary name. */
+const SEMGREP_ARGS = ['--error', '--metrics=off', '--config', 'p/javascript'];
+
+/**
  * Deterministic high-confidence Slack bot token fixture — not a live credential.
  * Built at runtime so the contiguous token never appears in the committed tree.
  */
@@ -222,5 +231,158 @@ test('shared secretlint command fails on seeded secret, passes clean tree, masks
   } finally {
     if (dirtyDir) rmSync(dirtyDir, { recursive: true, force: true });
     if (cleanDir) rmSync(cleanDir, { recursive: true, force: true });
+  }
+});
+
+function sastJobBlock(yaml) {
+  const match = yaml.match(/(?:^|\n)(\s*)sast\s*:\s*\n([\s\S]*?)(?=\n\1[A-Za-z0-9_-]+\s*:\s*\n|\n*$)/);
+  assert.ok(match, 'workflow must define a job named sast');
+  return match[2];
+}
+
+function nodeBinDir() {
+  return path.dirname(process.execPath);
+}
+
+/**
+ * Run the shared Semgrep command with a controlled PATH (stub or absent binary only).
+ * Never relies on a real Semgrep install and never installs one.
+ */
+function runSharedSemgrep({ args = [], pathDirs = [], cwd = repoRoot } = {}) {
+  const env = {
+    ...process.env,
+    PATH: [...pathDirs, nodeBinDir()].join(path.delimiter),
+  };
+  // Drop leftover user installs so tests cannot accidentally invoke a real binary.
+  delete env.PYTHONPATH;
+  delete env.PIP_USER;
+  return spawnSync(process.execPath, [path.join(repoRoot, 'scripts', 'run-semgrep.mjs'), ...args], {
+    cwd,
+    env,
+    encoding: 'utf8',
+  });
+}
+
+function writeExecutable(filePath, body) {
+  fs.writeFileSync(filePath, body, { mode: 0o755 });
+}
+
+test('Semgrep command fails closed when absent, --skip-semgrep warns and records, CI does not skip or install', () => {
+  const yaml = readWorkflow();
+
+  const baseline = baselineJobBlock(yaml);
+  assert.doesNotMatch(
+    baseline,
+    /--skip-semgrep/,
+    'baseline CI must not pass --skip-semgrep',
+  );
+
+  const job = sastJobBlock(yaml);
+  assert.doesNotMatch(
+    job,
+    /^\s*continue-on-error\s*:\s*true\s*$/m,
+    'sast job must not set continue-on-error: true',
+  );
+  assert.doesNotMatch(
+    job,
+    /--skip-semgrep/,
+    'sast job must not pass --skip-semgrep',
+  );
+  assert.doesNotMatch(
+    job,
+    /\b(pip|pip3|python3?\s+-m\s+pip)\b.*\bsemgrep\b|\bsemgrep\s*==|\binstall\b.*\bsemgrep\b/i,
+    'sast job must not install Semgrep',
+  );
+
+  const steps = runSteps(job);
+  const commands = steps.map((step) => step.command);
+  assert.ok(
+    commands.includes(SEMGREP_COMMAND),
+    `sast job must run \`${SEMGREP_COMMAND}\`; found: ${JSON.stringify(commands)}`,
+  );
+  const semgrepStep = steps.find((step) => step.command === SEMGREP_COMMAND);
+  assert.equal(
+    semgrepStep.continueOnError,
+    false,
+    `\`${SEMGREP_COMMAND}\` must fail the job on non-zero exit (no continue-on-error)`,
+  );
+
+  let trapDir;
+  let stubDir;
+  let argvPath;
+  try {
+    // Trap common installers/downloaders: if the command tries to fetch Semgrep, mark failure.
+    trapDir = mkdtempSync(path.join(tmpdir(), 'semgrep-trap-'));
+    const trapMarker = path.join(trapDir, 'download-attempted');
+    const trapBody = `#!/bin/sh\necho trapped > "${trapMarker}"\nexit 1\n`;
+    for (const name of ['pip', 'pip3', 'curl', 'wget', 'npm']) {
+      writeExecutable(path.join(trapDir, name), trapBody);
+    }
+    // python3 trap only for pip-install invocations; otherwise allow nothing useful.
+    writeExecutable(
+      path.join(trapDir, 'python3'),
+      `#!/bin/sh\necho trapped > "${trapMarker}"\nexit 1\n`,
+    );
+
+    const absent = runSharedSemgrep({ pathDirs: [trapDir] });
+    const absentOutput = `${absent.stdout || ''}${absent.stderr || ''}`;
+    assert.notEqual(
+      absent.status,
+      0,
+      `absent Semgrep binary must exit non-zero; output:\n${absentOutput}`,
+    );
+    assert.ok(
+      !fs.existsSync(trapMarker),
+      'Semgrep command must not download or install anything when the binary is absent',
+    );
+
+    const skipped = runSharedSemgrep({ args: ['--skip-semgrep'], pathDirs: [trapDir] });
+    const skipOut = skipped.stdout || '';
+    const skipErr = skipped.stderr || '';
+    const skipCombined = `${skipOut}${skipErr}`;
+    assert.equal(
+      skipped.status,
+      0,
+      `--skip-semgrep must exit zero; output:\n${skipCombined}`,
+    );
+    assert.match(
+      skipCombined,
+      /semgrep.*skip|skip.*semgrep/i,
+      `--skip-semgrep must print a clear warning; output:\n${skipCombined}`,
+    );
+    assert.match(
+      skipOut,
+      /^SEMGREP_SKIP$/m,
+      `--skip-semgrep must record SEMGREP_SKIP on stdout; stdout:\n${skipOut}`,
+    );
+    assert.ok(
+      !fs.existsSync(trapMarker),
+      '--skip-semgrep must not download or install anything',
+    );
+
+    // Stub binary records argv; proves the shared command uses the required Semgrep flags.
+    stubDir = mkdtempSync(path.join(tmpdir(), 'semgrep-stub-'));
+    argvPath = path.join(stubDir, 'argv.json');
+    writeExecutable(
+      path.join(stubDir, 'semgrep'),
+      `#!/bin/sh\nprintf '%s\\n' "$@" > "${argvPath}"\nexit 0\n`,
+    );
+    const stubbed = runSharedSemgrep({ pathDirs: [stubDir, trapDir] });
+    const stubOutput = `${stubbed.stdout || ''}${stubbed.stderr || ''}`;
+    assert.equal(
+      stubbed.status,
+      0,
+      `stub Semgrep must be invoked successfully; output:\n${stubOutput}`,
+    );
+    assert.ok(fs.existsSync(argvPath), 'stub Semgrep must have been executed');
+    const recordedArgs = fs.readFileSync(argvPath, 'utf8').trim().split('\n').filter(Boolean);
+    assert.deepEqual(
+      recordedArgs,
+      SEMGREP_ARGS,
+      `shared command must invoke Semgrep with ${JSON.stringify(SEMGREP_ARGS)}; got ${JSON.stringify(recordedArgs)}`,
+    );
+  } finally {
+    if (trapDir) rmSync(trapDir, { recursive: true, force: true });
+    if (stubDir) rmSync(stubDir, { recursive: true, force: true });
   }
 });
