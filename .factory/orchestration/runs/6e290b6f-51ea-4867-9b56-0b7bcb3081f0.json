@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "6e290b6f-51ea-4867-9b56-0b7bcb3081f0",
+  "change": "add-cline-ide-adapter",
+  "status": "open",
+  "startedAt": "2026-10-22T14:31:59.909Z",
+  "lastObservedAt": "2026-10-22T15:25:16.007Z",
+  "budgets": {
+    "maxAgentSteps": 48,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 12,
+  "completedTasks": 6,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "complete",
+    "role": "scribe",
+    "taskId": "3.1",
+    "attemptId": "27e6311a-e7fa-4b6a-b780-424369c3e88e",
+    "attemptState": "accepted",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}
