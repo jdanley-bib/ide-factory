@@ -2,7 +2,7 @@
   "id": "82557439-e1d2-4207-b490-1460c136a444",
   "change": "establish-factory-ci-and-provenance",
   "taskId": "3.2",
-  "state": "red-confirmed",
+  "state": "verifying",
   "implementerRole": "engineer",
   "implementerId": "bc-b6db62db-72eb-5062-a9c4-75690e46a863",
   "reviewerId": null,
@@ -32,7 +32,32 @@
       "worktreeClean": false,
       "sourceRevision": "d727050ff7c0e51bf533fdf8e362cfcfd02fd593"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T01:49:13.346Z",
+        "finishedAt": "2026-10-22T01:50:44.489Z",
+        "logDigest": "sha256:f92652e851c9b91961af0dd084fc37136dba15455628b0e82b7349b80c79d49a",
+        "artifactDigests": [],
+        "attemptId": "82557439-e1d2-4207-b490-1460c136a444",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "2428745c0945f4565f06904a97294270c041bbeb"
+      }
+    ],
     "security": [],
     "review": null,
     "changedFiles": [],
@@ -54,8 +79,12 @@
     {
       "at": "2026-10-22T01:48:41.611Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T01:50:48.784Z",
+      "state": "verifying"
     }
   ],
   "createdAt": "2026-10-22T01:45:25.265Z",
-  "updatedAt": "2026-10-22T01:48:41.611Z"
+  "updatedAt": "2026-10-22T01:50:48.784Z"
 }

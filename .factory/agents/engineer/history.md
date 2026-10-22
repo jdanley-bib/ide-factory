@@ -419,6 +419,6 @@ Scope: release SBOM only — no SLSA attestation (3.2), branch controls, review,
 Attempt: 82557439-e1d2-4207-b490-1460c136a444
 Implementer: bc-b6db62db-72eb-5062-a9c4-75690e46a863
 Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `id-token: write`, `attestations: write`, and `actions/attest-build-provenance` after annotation); `node src/cli.mjs verify run 82557439-e1d2-4207-b490-1460c136a444 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:f6587be20761f29487ce30aff00eee789ce36b0b0d488b6b012cd05cfeb74e3c).
-Green: `node --test test/ci-provenance.test.mjs` exit 0, 6 pass (pending clean-HEAD `npm test` verify run).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 6 pass; `npm test` exit 0 (198 pass); `node src/cli.mjs verify run 82557439-e1d2-4207-b490-1460c136a444 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, logDigest sha256:f92652e851c9b91961af0dd084fc37136dba15455628b0e82b7349b80c79d49a, sourceRevision 2428745c0945f4565f06904a97294270c041bbeb — factory chore after product 4c43e39).
 Release workflow: `contents: read`, `id-token: write`, `attestations: write`; `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8` (`subject-path: release/sbom.cdx.json`) after SBOM annotation; no SLSA Build L2/L3 claims.
 Scope: release SBOM provenance attestation only — no branch controls, npm publish, forge admin API, observability, review, accept, complete, or push.
