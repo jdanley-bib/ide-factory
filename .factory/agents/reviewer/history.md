@@ -335,3 +335,11 @@ Reviewer: bc-c93441f3-240b-5937-878d-0d671bf55e48
 Implementer: bc-a02322a9-e6eb-588f-bb2f-47944a1a24f6
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 1 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at c2d6222 worktreeClean:false; engineer notes missing `.github/workflows/ci.yml`); clean-head unit pass at 7ce63ec worktreeClean. Product 7ce63ec: `.github/workflows/ci.yml` job `baseline` on pull_request/push, Node 22, four fail-closed commands (`npm ci`, `npm test`, `npm audit --audit-level=high`, `npx openspec validate --all`) with no continue-on-error on those steps; focused test locks that behavior. Scope exclusions held (SHA pins/contents:read/pull_request_target are 1.2; no scanners, release, branch controls, complete, or push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/1.2
+
+Attempt: dd43c46e-b924-454b-8e90-7311a3646ec3
+Reviewer: bc-d083ee18-0f90-5d61-818d-3dc36ffe9faa
+Implementer: bc-33d9fdda-7d9d-5e59-b875-2d211ac741eb
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 2 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 64ae490 worktreeClean:false); clean-head unit pass at cfbe42b worktreeClean. Product cfbe42b: `permissions.contents: read`; `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` # v4.4.0 and `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020` # v4.4.0 match official `commits/v4` and `refs/tags/v4.4.0`; no `pull_request_target` or `continue-on-error`. Scope exclusions held (no scanners, release, branch controls, complete, or push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
