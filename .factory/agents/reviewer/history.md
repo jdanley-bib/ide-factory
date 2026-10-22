@@ -414,3 +414,11 @@ Reviewer: cline-reviewer-1.3
 Implementer: cline-engineer-1.3
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 62357b2 worktreeClean:false); unit pass at ff80ce66 worktreeClean. Product ff80ce66: install test only — no-model scan roots include `.cline/skills`; workflows add `.cline/workflows/factory-${command}.md`; launchPattern unchanged; coordinator template still states IDE session model does the work; no CI, doctor, instructions, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
+
+## 2026-10-22 add-cline-ide-adapter/1.4
+
+Attempt: ab8b238f-b2fb-4c54-a363-a3a6161b6248
+Reviewer: cline-reviewer-1.4
+Implementer: cline-engineer-1.4
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 17 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at fbb9cf97 worktreeClean:false); unit pass at 018744f worktreeClean. Product 018744f: instruction fragment + install test — `templates/fragments/instructions.md` names `.cline/rules/factory.md`; AGENTS.md factory-section test requires that path; no new instruction-file target; no CI, doctor, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
