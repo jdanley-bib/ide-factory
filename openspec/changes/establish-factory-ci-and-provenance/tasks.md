@@ -13,7 +13,7 @@
 ## 3. Release provenance
 
 - [x] 3.1 Add a failing test that a version-tag workflow generates a CycloneDX SBOM containing locked production and development dependencies, including `@fission-ai/openspec`, plus lockfile and source-revision metadata. Implement `.github/workflows/release.yml` with the pinned `@cyclonedx/cyclonedx-npm` command. Verify with `node --test test/ci-provenance.test.mjs`.
-- [ ] 3.2 Add a failing test that provenance uses `actions/attest-build-provenance` with the final SBOM as `subject-path`, requests identity-token write only for attestation, and does not claim SLSA Build L2 or L3. Implement that attestation step and verify with `node --test test/ci-provenance.test.mjs`.
+- [x] 3.2 Add a failing test that provenance uses `actions/attest-build-provenance` with the final SBOM as `subject-path`, requests identity-token write only for attestation, and does not claim SLSA Build L2 or L3. Implement that attestation step and verify with `node --test test/ci-provenance.test.mjs`.
 
 ## 4. Branch and review controls
 

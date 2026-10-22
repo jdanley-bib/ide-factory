@@ -215,3 +215,7 @@ Attempt: d1db173b-f29e-407b-ab70-9674892ba8ce
 ## 2026-10-22 finalized establish-factory-ci-and-provenance/3.1
 
 Attempt: ad20dce0-6681-4507-a396-26b6a50c2b9b
+
+## 2026-10-22 finalized establish-factory-ci-and-provenance/3.2
+
+Attempt: 82557439-e1d2-4207-b490-1460c136a444
