@@ -24,6 +24,12 @@ const CYCLONEDX_COMMAND =
 /** Post-step that records lockfile digest and source revision in SBOM metadata. */
 const ANNOTATE_SBOM_COMMAND = 'node scripts/annotate-release-sbom.mjs release/sbom.cdx.json';
 
+/** Final SBOM path attested after annotation (exact string in release workflow). */
+const SBOM_SUBJECT_PATH = 'release/sbom.cdx.json';
+
+/** Pinned actions/attest-build-provenance commit (v4.2.2). */
+const ATTEST_BUILD_PROVENANCE_SHA = '4d101475d8b20a2381f78447822ac1eab6504dd8';
+
 const SBOM_LOCKFILE_PROPERTY = 'lockfile-sha256';
 const SBOM_SOURCE_REVISION_PROPERTY = 'source-revision';
 
@@ -414,6 +420,25 @@ function releaseJobBlock(yaml) {
   return match[2];
 }
 
+function releaseJobSteps(yaml) {
+  const job = releaseJobBlock(yaml);
+  const steps = [];
+  const stepBlocks = job.split(/\n\s*-\s+/).slice(1);
+  for (const block of stepBlocks) {
+    const usesMatch = block.match(/\buses\s*:\s*(.+)/);
+    const runMatch = block.match(/\brun\s*:\s*(?:\|\s*\n([\s\S]*?)(?=\n\s*\w|\n*$)|(.+))/);
+    if (usesMatch) {
+      const ref = usesMatch[1].replace(/\s+#.*$/, '').trim();
+      steps.push({ kind: 'uses', ref, raw: block });
+    } else if (runMatch) {
+      const body = (runMatch[1] || runMatch[2] || '').trim();
+      const command = body.split('\n')[0].trim();
+      steps.push({ kind: 'run', command, raw: block });
+    }
+  }
+  return steps;
+}
+
 function packageNameFromLockPath(depPath) {
   if (!depPath.startsWith('node_modules/')) return null;
   const withoutPrefix = depPath.slice('node_modules/'.length);
@@ -534,13 +559,8 @@ test('version-tag release workflow generates CycloneDX SBOM with locked deps and
 
   assert.match(
     yaml,
-    /^\s*permissions\s*:\s*\n(?:\s+.+\n)*?\s+contents\s*:\s*read\s*$/m,
+    /^\s*contents\s*:\s*read\b/m,
     'release workflow must set permissions.contents to read',
-  );
-  assert.doesNotMatch(
-    yaml,
-    /^\s*id-token\s*:\s*write\b/m,
-    'release workflow must not request id-token: write (attestation is task 3.2)',
   );
   assert.doesNotMatch(
     yaml,
@@ -622,5 +642,90 @@ test('version-tag release workflow generates CycloneDX SBOM with locked deps and
     sbomProperty(sbom, SBOM_SOURCE_REVISION_PROPERTY),
     gitHeadRevision(),
     'SBOM metadata must include the source revision',
+  );
+});
+
+test('release workflow attests annotated SBOM with actions/attest-build-provenance and release attestation permissions', () => {
+  const yaml = readReleaseWorkflow();
+
+  assert.match(
+    yaml,
+    /^\s*contents\s*:\s*read\b/m,
+    'release workflow must request contents: read',
+  );
+  assert.match(
+    yaml,
+    /^\s*id-token\s*:\s*write\b/m,
+    'release workflow must request id-token: write for attestation',
+  );
+  assert.match(
+    yaml,
+    /^\s*attestations\s*:\s*write\b/m,
+    'release workflow must request attestations: write',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /^\s*contents\s*:\s*write\b/m,
+    'release workflow must not request contents: write',
+  );
+
+  assert.doesNotMatch(
+    yaml,
+    /slsa\.dev\/provenance\/v0\.2/i,
+    'release workflow must not claim SLSA provenance v0.2 (Build L2/L3)',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /slsa\.github\.io\/spec\/v0\.2/i,
+    'release workflow must not claim SLSA spec v0.2 (Build L2/L3)',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /\bSLSA\s+Build\s+L[23]\b/i,
+    'release workflow must not claim SLSA Build L2 or L3',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /\bbuildLevel\s*:\s*[23]\b/,
+    'release workflow must not set SLSA buildLevel 2 or 3',
+  );
+
+  const steps = releaseJobSteps(yaml);
+  const annotateIndex = steps.findIndex(
+    (step) => step.kind === 'run' && step.command === ANNOTATE_SBOM_COMMAND,
+  );
+  assert.ok(annotateIndex >= 0, `release job must run \`${ANNOTATE_SBOM_COMMAND}\``);
+
+  const attestIndex = steps.findIndex(
+    (step) => step.kind === 'uses' && step.ref.startsWith('actions/attest-build-provenance@'),
+  );
+  assert.ok(attestIndex >= 0, 'release job must use actions/attest-build-provenance');
+  assert.ok(
+    attestIndex > annotateIndex,
+    'attest-build-provenance must run after SBOM annotation',
+  );
+
+  const attestStep = steps[attestIndex];
+  const at = attestStep.ref.lastIndexOf('@');
+  const attestPin = attestStep.ref.slice(at + 1);
+  assert.ok(
+    FULL_SHA.test(attestPin),
+    `attest-build-provenance must be pinned to a full commit SHA: ${attestStep.ref}`,
+  );
+  assert.equal(
+    attestPin,
+    ATTEST_BUILD_PROVENANCE_SHA,
+    `attest-build-provenance must be pinned to ${ATTEST_BUILD_PROVENANCE_SHA}`,
+  );
+
+  assert.match(
+    attestStep.raw,
+    new RegExp(`subject-path\\s*:\\s*${SBOM_SUBJECT_PATH.replace(/\./g, '\\.')}`),
+    `attest step must set subject-path to ${SBOM_SUBJECT_PATH}`,
+  );
+  assert.doesNotMatch(
+    attestStep.raw,
+    /\bsubject-digest\s*:/,
+    'attest step must identify the SBOM via subject-path only',
   );
 });

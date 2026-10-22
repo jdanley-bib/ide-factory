@@ -413,3 +413,12 @@ Green: `node --test test/ci-provenance.test.mjs` exit 0, 5 pass; `npm test` exit
 Tooling: `@cyclonedx/cyclonedx-npm@6.0.1` exact devDependency; shared commands `npx @cyclonedx/cyclonedx-npm@6.0.1 --package-lock-only --output-file release/sbom.cdx.json` and `node scripts/annotate-release-sbom.mjs release/sbom.cdx.json` (lockfile `sha256:` digest + `source-revision` metadata properties).
 Release workflow: `.github/workflows/release.yml` job `release` on tag `v[0-9]+.[0-9]+.[0-9]+`, `contents: read` only (no `id-token: write`), full-SHA action pins, `npm ci` + CycloneDX + annotate + SBOM artifact upload; no npm publish.
 Scope: release SBOM only — no SLSA attestation (3.2), branch controls, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/3.2
+
+Attempt: 82557439-e1d2-4207-b490-1460c136a444
+Implementer: bc-b6db62db-72eb-5062-a9c4-75690e46a863
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `id-token: write`, `attestations: write`, and `actions/attest-build-provenance` after annotation); `node src/cli.mjs verify run 82557439-e1d2-4207-b490-1460c136a444 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:f6587be20761f29487ce30aff00eee789ce36b0b0d488b6b012cd05cfeb74e3c).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 6 pass (pending clean-HEAD `npm test` verify run).
+Release workflow: `contents: read`, `id-token: write`, `attestations: write`; `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8` (`subject-path: release/sbom.cdx.json`) after SBOM annotation; no SLSA Build L2/L3 claims.
+Scope: release SBOM provenance attestation only — no branch controls, npm publish, forge admin API, observability, review, accept, complete, or push.
