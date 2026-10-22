@@ -1,0 +1,35 @@
+{
+  "id": "1.2",
+  "change": "reconcile-factory-specifications",
+  "title": "Add or refine orchestration contract tests for one-role requests, illegal attempt transitions, security-reviewer routing, distinct reviewers, required evidence, finalization, and HALT; verify with `node --test test/orchestration.test.mjs`",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "Add or refine orchestration contract tests for one-role requests, illegal attempt transitions, security-reviewer routing, distinct reviewers, required evidence, finalization, and HALT; verify with `node --test test/orchestration.test.mjs` works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit",
+      "threat-review"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "security-sensitive",
+    "verificationProfile": "security-sensitive",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "bee9aa4c-e37d-4854-ba1c-58be9659645f",
+  "updatedAt": "2026-10-21T15:31:25.272Z"
+}

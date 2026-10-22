@@ -1,0 +1,71 @@
+{
+  "id": "b5589489-cdb4-422e-9e8b-d7a7c31d2f32",
+  "change": "enforce-verification-evidence",
+  "taskId": "1.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-5566208d-f7e0-5f94-99d8-aea8b155e704",
+  "reviewerId": "bc-95126116-33e0-559f-bba4-afc32961d522",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/verification-evidence.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "6 assertion failures: missing command digest and Missing expected exception for shell string, empty argv, bad schema version, parent path, and absolute path"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/verification-evidence.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-95126116-33e0-559f-bba4-afc32961d522",
+      "notes": "Registry schema tests pass and match the check-registry requirement.",
+      "at": "2026-10-21T16:14:58.865Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:11:56.685Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:11:56.686Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:14:14.989Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:14:15.024Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:14:15.057Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:14:58.822Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:14:58.865Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:15:02.468Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:11:56.685Z",
+  "updatedAt": "2026-10-21T16:15:02.468Z"
+}

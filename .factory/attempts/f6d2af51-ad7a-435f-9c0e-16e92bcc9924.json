@@ -1,0 +1,131 @@
+{
+  "id": "f6d2af51-ad7a-435f-9c0e-16e92bcc9924",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "4.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-7e555273-1c59-5f81-a461-d70b73089dc6",
+  "reviewerId": "bc-f129bc18-3c3e-5980-a466-45f6084e62da",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T21:25:27.461Z",
+      "finishedAt": "2026-10-21T21:27:15.002Z",
+      "logDigest": "sha256:b098bfc917385bc18729be2a8f38f55a6e8275effd27c841d7825ced28ea6cf9",
+      "artifactDigests": [],
+      "attemptId": "f6d2af51-ad7a-435f-9c0e-16e92bcc9924",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "5e61bd3ca403dcb98fdc4e646c46fd5096b881d7"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T21:28:27.376Z",
+        "finishedAt": "2026-10-21T21:29:58.333Z",
+        "logDigest": "sha256:680ccad3c4a48758c6288f3ffb6dd4f78c970508171f58405887a21bedaf9592",
+        "artifactDigests": [],
+        "attemptId": "f6d2af51-ad7a-435f-9c0e-16e92bcc9924",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "6ce9d4712ebf4e7fb38d5f8ddc075812680644c0"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T21:33:58.162Z",
+        "finishedAt": "2026-10-21T21:35:29.057Z",
+        "logDigest": "sha256:6593c3b1b89f9436baba8461552cded99fb59337d8e58b5d2afdf852431c3847",
+        "artifactDigests": [],
+        "attemptId": "f6d2af51-ad7a-435f-9c0e-16e92bcc9924",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "6ccb6c3f42921e655cade81b8f8b8808b2042540"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-f129bc18-3c3e-5980-a466-45f6084e62da",
+      "notes": "Independent review ACCEPT: risk-gates 26/26; five factory-run skills humanGate wording; loop no --new-run; post security-reviewer bc-48e201b4-4a68-5185-9464-4dd05771a55b",
+      "at": "2026-10-21T21:33:21.867Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T21:22:51.388Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T21:22:51.389Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T21:23:56.557Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T21:27:21.567Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T21:30:03.119Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T21:33:21.834Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T21:33:21.867Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T21:35:29.108Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T21:22:51.388Z",
+  "updatedAt": "2026-10-21T21:35:29.108Z"
+}

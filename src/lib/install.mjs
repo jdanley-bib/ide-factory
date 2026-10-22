@@ -20,6 +20,7 @@ const STATE_FILES = [
   'governance.md',
   'ceremonies.md',
   'profiles.json',
+  'checks.json',
   'README.md',
   'identity/now.md',
   'identity/wisdom.md',
@@ -123,6 +124,7 @@ function writeAdapters(project) {
     '.claude/skills',
     '.github/skills',
     '.agents/skills',
+    '.cline/skills',
   ];
   for (const name of fs.readdirSync(skills)) {
     const from = path.join(skills, name);
@@ -146,6 +148,10 @@ function writeAdapters(project) {
       path.join(project, '.github/prompts', `${command.name}.prompt.md`),
       `---\ndescription: ${command.description}\nagent: factory\n---\n\n${owned}`,
     );
+    writeText(
+      path.join(project, '.cline/workflows', `${command.name}.md`),
+      owned,
+    );
   }
   writeText(
     path.join(project, '.cursor/rules/factory.mdc'),
@@ -154,6 +160,10 @@ function writeAdapters(project) {
   writeText(
     path.join(project, '.github/agents/factory.agent.md'),
     readText(path.join(templatesRoot, 'copilot/factory.agent.md')),
+  );
+  writeText(
+    path.join(project, '.cline/rules/factory.md'),
+    readText(path.join(templatesRoot, 'cline/rules/factory.md')),
   );
 }
 

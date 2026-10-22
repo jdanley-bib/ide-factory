@@ -1,0 +1,32 @@
+{
+  "id": "2.2",
+  "change": "enforce-verification-evidence",
+  "title": "Add failing tests that a stored record includes schema version, kind, runner name and version, command digest, exit code, timestamps, source revision, log digest, artifact digests, and attempt id, and that a missing exit code is rejected. Verify with `node --test test/verification-evidence.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "2.1"
+  ],
+  "acceptanceCriteria": [
+    "Add failing tests that a stored record includes schema version, kind, runner name and version, command digest, exit code, timestamps, source revision, log digest, artifact digests, and attempt id, and that a missing exit code is rejected. Verify with `node --test test/verification-evidence.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "2.1"
+    ]
+  },
+  "attemptId": "157decc0-c73a-4736-961d-5691cfb2473f",
+  "updatedAt": "2026-10-21T16:23:57.490Z"
+}

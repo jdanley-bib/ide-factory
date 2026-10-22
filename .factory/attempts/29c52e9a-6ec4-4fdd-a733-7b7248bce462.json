@@ -1,0 +1,155 @@
+{
+  "id": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
+  "change": "make-finalization-recoverable",
+  "taskId": "4.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-03a962db-89ec-5031-86e3-ffbba1993901",
+  "reviewerId": "bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T23:12:46.034Z",
+      "finishedAt": "2026-10-21T23:14:17.161Z",
+      "logDigest": "sha256:c98e8af0e566fa12a790234f983e4926ad27d01034db7dc5537a3a2b510a9f2d",
+      "artifactDigests": [],
+      "attemptId": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "dcf3336f959d54748f0c54a02d8edfe5a83e94d6"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:16:33.622Z",
+        "finishedAt": "2026-10-21T23:18:04.805Z",
+        "logDigest": "sha256:39d0607c86c72db1f6a063da53139b35cc41ad6407ab0af7c2e808004ccc38e5",
+        "artifactDigests": [],
+        "attemptId": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "98e443b6af9d305372d9925de485f5be0c326bf7"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:19:11.192Z",
+        "finishedAt": "2026-10-21T23:20:42.406Z",
+        "logDigest": "sha256:6e70625d38e5fc414ee93c79cd86cd8c46dbd3326d426a52a0b69d62b842a5d9",
+        "artifactDigests": [],
+        "attemptId": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "4bc2628d5cd3d9294dd21b4a18d42c96437bec76"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:23:00.816Z",
+        "finishedAt": "2026-10-21T23:24:32.026Z",
+        "logDigest": "sha256:04ec1a4433be38b9c6e035ec8efb0d3ce737544f496deb8c4afb11d2f50dfe26",
+        "artifactDigests": [],
+        "attemptId": "29c52e9a-6ec4-4fdd-a733-7b7248bce462",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "39508a88110beb5e2b8a2fa037c6b11299998099"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-457fb09b-e368-5c7d-80dd-e88d9146c8bb",
+      "notes": "Independent review ACCEPT: heartbeat/expiry, one-winner stale takeover, owner-loss, corrupt refusal, HALT bypass, command classification for all named mutations and read-only, no nested acquisition, 4.1 release-race rename fix; focused tests 41 pass; CLI red at dcf3336 and clean unit at 98e443b/97eb307 (+4bc2628 rebind) valid.",
+      "at": "2026-10-21T23:22:33.043Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T23:10:34.919Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T23:10:34.920Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T23:11:39.272Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T23:14:21.128Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T23:18:08.758Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T23:22:32.954Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T23:22:33.043Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T23:24:32.079Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T23:10:34.919Z",
+  "updatedAt": "2026-10-21T23:24:32.079Z"
+}

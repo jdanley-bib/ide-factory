@@ -1,0 +1,71 @@
+{
+  "id": "89275f35-8d19-45fa-b922-448c8679960e",
+  "change": "enforce-verification-evidence",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-875dcaed-920d-5d98-a11a-c8753b51b2fe",
+  "reviewerId": "bc-11032359-83ed-5a05-8df9-de76d8c8c10e",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/verification-evidence.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "5 assertion failures: Unknown command verify, help missing verify run, stub left evidence.red empty"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/verification-evidence.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-11032359-83ed-5a05-8df9-de76d8c8c10e",
+      "notes": "verify run derives pass from exit code and ignores caller red.",
+      "at": "2026-10-21T16:20:46.042Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:17:05.141Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:17:05.142Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:19:57.857Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:19:57.888Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:19:57.925Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:20:46.010Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:20:46.042Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:20:46.082Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:17:05.141Z",
+  "updatedAt": "2026-10-21T16:20:46.082Z"
+}

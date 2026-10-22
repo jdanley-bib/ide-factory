@@ -31,6 +31,9 @@
     "reviewerMustDiffer": true
   },
   "run": {
-    "defaultMaxTasks": 20
+    "defaultMaxAgentSteps": 20,
+    "defaultMaxTasks": 20,
+    "defaultMaxWallClockMs": 14400000,
+    "defaultMaxFailures": 5
   }
 }

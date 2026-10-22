@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runId": "495f3c44-b71d-4763-aff5-11248aba3161",
+  "change": "make-finalization-recoverable",
+  "status": "open",
+  "startedAt": "2026-10-21T22:05:34.462Z",
+  "lastObservedAt": "2026-10-22T00:03:29.218Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 16,
+  "completedTasks": 8,
+  "failureCount": 1,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [
+    "9247289a-042d-4ef4-8e9c-1f98d80ee70f:2026-10-21T23:36:31.565Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4"
+  ],
+  "lastRequestFingerprint": {
+    "action": "agent-step",
+    "role": "reviewer",
+    "taskId": "5.1",
+    "attemptId": "9247289a-042d-4ef4-8e9c-1f98d80ee70f",
+    "attemptState": "verifying",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

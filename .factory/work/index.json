@@ -1,4 +1,316 @@
 {
   "version": 1,
-  "items": []
+  "updatedAt": "2026-10-22T15:24:50.771Z",
+  "items": [
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "1.3",
+      "status": "done"
+    },
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "1.4",
+      "status": "done"
+    },
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "add-cline-ide-adapter",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "2.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "3.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "4.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "4.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-risk-gates-and-security-stage",
+      "id": "5.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "2.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "2.3",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "2.4",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "4.1",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "4.2",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "4.3",
+      "status": "done"
+    },
+    {
+      "change": "enforce-verification-evidence",
+      "id": "5.1",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "2.2",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "3.2",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "4.1",
+      "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "5.1",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "2.2",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "4.1",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "4.2",
+      "status": "done"
+    },
+    {
+      "change": "make-finalization-recoverable",
+      "id": "5.1",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "1.3",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "2.2",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "2.3",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "2.4",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "2.5",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "3.1",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "3.2",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "3.3",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "3.4",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "4.1",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "4.2",
+      "status": "done"
+    },
+    {
+      "change": "persist-bounded-run-sessions",
+      "id": "5.1",
+      "status": "done"
+    },
+    {
+      "change": "reconcile-factory-specifications",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "reconcile-factory-specifications",
+      "id": "1.2",
+      "status": "done"
+    },
+    {
+      "change": "reconcile-factory-specifications",
+      "id": "1.3",
+      "status": "done"
+    },
+    {
+      "change": "reconcile-factory-specifications",
+      "id": "2.1",
+      "status": "done"
+    },
+    {
+      "change": "reconcile-factory-specifications",
+      "id": "2.2",
+      "status": "done"
+    }
+  ]
 }

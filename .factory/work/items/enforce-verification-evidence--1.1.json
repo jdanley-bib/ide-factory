@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "enforce-verification-evidence",
+  "title": "Add failing tests that a schema-valid registry accepts an argv array, project working-directory policy, timeout, and artifact list, and that a shell command string, empty argv, unsupported schema version, or path outside the project is rejected. Implement the validator until `node --test test/verification-evidence.test.mjs` passes those cases.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests that a schema-valid registry accepts an argv array, project working-directory policy, timeout, and artifact list, and that a shell command string, empty argv, unsupported schema version, or path outside the project is rejected. Implement the validator until `node --test test/verification-evidence.test.mjs` passes those cases. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "b5589489-cdb4-422e-9e8b-d7a7c31d2f32",
+  "updatedAt": "2026-10-21T16:15:02.461Z"
+}

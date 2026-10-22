@@ -1,0 +1,135 @@
+{
+  "id": "934b44b7-55ff-47e4-8ddf-9313707ab641",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "3.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-a95794d1-0bea-5a09-b8af-429f21713938",
+  "reviewerId": "bc-3546052c-8d33-5088-89c7-271d503b325d",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T20:47:42.384Z",
+      "finishedAt": "2026-10-21T20:48:43.849Z",
+      "logDigest": "sha256:9b25a9c5bd44a3886f600a2b775f88b1471c80f4cf28a24db5b04f2d6638abca",
+      "artifactDigests": [],
+      "attemptId": "934b44b7-55ff-47e4-8ddf-9313707ab641",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "2a572f3d63f82a1b213fea307dd86b7b6641ff81"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:50:15.229Z",
+        "finishedAt": "2026-10-21T20:51:16.118Z",
+        "logDigest": "sha256:f2eb84d1f8a7007ff10a9e0d1b16dceeb191f559ce603c931d8ab42a0f3f39c1",
+        "artifactDigests": [],
+        "attemptId": "934b44b7-55ff-47e4-8ddf-9313707ab641",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "afa2b0a33bf1c931460c267dee1ccfa148e8551b"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:55:13.495Z",
+        "finishedAt": "2026-10-21T20:56:14.330Z",
+        "logDigest": "sha256:cd709cf388e91acc732fcca4fa7dbaf80f9b5f90f46db41d230df83d248450f5",
+        "artifactDigests": [],
+        "attemptId": "934b44b7-55ff-47e4-8ddf-9313707ab641",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "7fbc61cf960de0d250b48fc431fc4ffdc126ead8"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-3546052c-8d33-5088-89c7-271d503b325d",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs test/orchestration.test.mjs exit 0, 38 pass. CLI red issuer cli exitCode 1 passed false at 2a572f3; clean-head unit pass at afa2b0a worktreeClean. Bypass verifying→awaiting-review rejected for securityProfile/security-patterned checks; verificationProfile alone legal; next run still Role security-reviewer / nextState security-checking. Post security-reviewer bc-f9ea047e-5815-5278-b118-08acdd05d9ab. No 3.2 evidence gate, scanner argv, or complete.",
+      "at": "2026-10-21T20:54:35.773Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T20:42:31.133Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T20:42:31.134Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T20:45:13.938Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T20:48:46.852Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T20:51:19.673Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T20:52:54.420Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T20:54:35.718Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:54:35.773Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T20:56:14.399Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T20:42:31.133Z",
+  "updatedAt": "2026-10-21T20:56:14.399Z"
+}

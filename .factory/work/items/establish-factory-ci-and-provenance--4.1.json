@@ -1,0 +1,28 @@
+{
+  "id": "4.1",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Add a failing test that `.github/branch-review-controls.json` names required check `baseline`, one approving review, force-push disabled, protected branch `main`, and `enforcedByForge` false, and that implementation contains no forge admin API call. Add that declaration and `.github/CODEOWNERS` for `@jdanley-bib`. Verify with `node --test test/ci-provenance.test.mjs`.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that `.github/branch-review-controls.json` names required check `baseline`, one approving review, force-push disabled, protected branch `main`, and `enforcedByForge` false, and that implementation contains no forge admin API call. Add that declaration and `.github/CODEOWNERS` for `@jdanley-bib`. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "backend",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "backend-api",
+    "dependencies": []
+  },
+  "attemptId": "c6790978-0806-44b4-b659-eac3c9ccba3d",
+  "updatedAt": "2026-10-22T02:08:08.077Z"
+}

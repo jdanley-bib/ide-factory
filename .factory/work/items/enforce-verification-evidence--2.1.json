@@ -1,0 +1,28 @@
+{
+  "id": "2.1",
+  "change": "enforce-verification-evidence",
+  "title": "Add failing tests for `verify run`: exit zero stores a derived pass, exit non-zero is not passing, `--red` stores a record only on a non-zero exit, and a caller-supplied red object is not stored. Implement the command with `shell: false` until those tests pass.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add failing tests for `verify run`: exit zero stores a derived pass, exit non-zero is not passing, `--red` stores a record only on a non-zero exit, and a caller-supplied red object is not stored. Implement the command with `shell: false` until those tests pass. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "89275f35-8d19-45fa-b922-448c8679960e",
+  "updatedAt": "2026-10-21T16:20:46.075Z"
+}

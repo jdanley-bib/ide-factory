@@ -1,8 +1,26 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
+import {
+  canResumeFinalization,
+  finalizationJournalPath,
+  readFinalizationJournal,
+} from './finalization-recovery.mjs';
+import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
+import {
+  checkHostUsageBudgets,
+  InvalidBudgetError,
+  openOrResumeRunSession,
+  parseExposedHostMetric,
+  refreshCompletedTasks,
+  refreshFailures,
+  resolveNewSessionBudgets,
+  STICKY_STOP_REASONS,
+  writeRunSession,
+} from './run-session.mjs';
+import { humanGateAllows } from './risk-gates.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
@@ -13,6 +31,12 @@ export function runFactory(project, env, {
   change,
   until = 'human-gate',
   maxTasks,
+  maxAgentSteps,
+  maxTokens,
+  maxCost,
+  hostTokens,
+  hostCost,
+  newRun = false,
 } = {}) {
   if (halted(project)) {
     const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
@@ -28,9 +52,117 @@ export function runFactory(project, env, {
     };
   }
 
-  syncTasks(project, change, env);
   const config = readConfig(project);
-  const limit = Number(maxTasks || config.run?.defaultMaxTasks || 20);
+  let sessionBudgets;
+  let hostUsage;
+  try {
+    sessionBudgets = resolveNewSessionBudgets(config, {
+      maxTasks,
+      maxAgentSteps,
+      maxTokens,
+      maxCost,
+    });
+    hostUsage = {
+      hostTokens: parseExposedHostMetric(hostTokens, env.IDEFACTORY_HOST_TOKENS, {
+        label: 'host-tokens',
+        integer: true,
+      }),
+      hostCost: parseExposedHostMetric(hostCost, env.IDEFACTORY_HOST_COST, {
+        label: 'host-cost',
+        integer: false,
+      }),
+    };
+  } catch (err) {
+    if (err instanceof InvalidBudgetError) {
+      return {
+        code: EXIT_ERROR,
+        text: `Run stopped (invalid-budget) for ${change}.\n`,
+        stopReason: 'invalid-budget',
+        request: null,
+      };
+    }
+    throw err;
+  }
+  const now = new Date();
+  let session = openOrResumeRunSession(project, {
+    change,
+    budgets: sessionBudgets,
+    now,
+    newRun,
+    resumeFlags: { maxTasks, maxAgentSteps },
+    config,
+  });
+  if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (${session.stopReason}) for ${change}.\n`,
+      stopReason: session.stopReason,
+      request: null,
+    };
+  }
+  const hostStop = checkHostUsageBudgets(session, hostUsage);
+  if (hostStop) {
+    session = closeRunSession(project, session, hostStop.stopReason, hostStop.patch);
+    return {
+      code: hostStop.code,
+      text: `Run stopped (${hostStop.stopReason}) for ${change}.\n`,
+      stopReason: hostStop.stopReason,
+      request: null,
+    };
+  }
+  const startedMs = Date.parse(session.startedAt);
+  const nowMs = now.getTime();
+  if (Number.isFinite(startedMs) && nowMs < startedMs) {
+    session = closeRunSession(project, session, 'invalid-session');
+    return {
+      code: EXIT_ERROR,
+      text: `Run stopped (invalid-session) for ${change}.\n`,
+      stopReason: 'invalid-session',
+      request: null,
+    };
+  }
+  if (Number.isFinite(startedMs) && nowMs - startedMs >= session.budgets.maxWallClockMs) {
+    session = closeRunSession(project, session, 'wall-clock');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (wall-clock) for ${change}.\n`,
+      stopReason: 'wall-clock',
+      request: null,
+    };
+  }
+  if (session.agentSteps >= session.budgets.maxAgentSteps) {
+    session = closeRunSession(project, session, 'max-agent-steps');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-agent-steps) for ${change}.\n`,
+      stopReason: 'max-agent-steps',
+      request: null,
+    };
+  }
+
+  syncTasks(project, change, env);
+  session = refreshCompletedTasks(project, session);
+  if (session.completedTasks >= session.budgets.maxTasks) {
+    session = closeRunSession(project, session, 'max-tasks');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-tasks) for ${change}.\n`,
+      stopReason: 'max-tasks',
+      request: null,
+    };
+  }
+  session = refreshFailures(project, session);
+  if (session.failureCount >= session.budgets.maxFailures) {
+    session = closeRunSession(project, session, 'max-failures');
+    return {
+      code: EXIT_OK,
+      text: `Run stopped (max-failures) for ${change}.\n`,
+      stopReason: 'max-failures',
+      request: null,
+    };
+  }
+
+  const limit = session.budgets.maxTasks;
   let progressed = 0;
 
   while (progressed < limit) {
@@ -45,7 +177,7 @@ export function runFactory(project, env, {
     }
 
     const inProgress = listWorkItems(project, change).find((item) => item.status === 'in_progress');
-    const item = inProgress || selectReady(project, change);
+    let item = inProgress || selectReady(project, change);
     if (!item) {
       return {
         code: EXIT_ERROR,
@@ -59,6 +191,7 @@ export function runFactory(project, env, {
       const role = primaryRole(item);
       const modelProfile = item.factory?.modelProfile || profileForRole(config, role);
       attempt = startAttempt(project, change, item.id, { role, modelProfile });
+      item = getWorkItem(project, change, item.id);
     }
 
     if (attempt.state === 'rejected') {
@@ -70,7 +203,28 @@ export function runFactory(project, env, {
       };
     }
 
-    if (attempt.state === 'accepted') {
+    if (attempt.state === 'accepted' || needsCompleteForUnfinishedJournal(project, attempt, item)) {
+      const fingerprint = {
+        action: 'complete',
+        role: 'scribe',
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      };
+      if (fingerprintsEqual(session.lastRequestFingerprint, fingerprint)) {
+        session = closeRunSession(project, session, 'unchanged-state');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (unchanged-state) for ${change}.\n`,
+          stopReason: 'unchanged-state',
+          request: null,
+        };
+      }
+      session = persistCompleteBeforeRequest(project, session, fingerprint);
+      const message = attempt.state === 'accepted'
+        ? 'Attempt accepted. Run idefactory complete to finalize.'
+        : 'Finalization journal unfinished. Run idefactory complete to resume.';
       return {
         code: EXIT_NEEDS_AGENT,
         text: renderRequest({
@@ -79,7 +233,7 @@ export function runFactory(project, env, {
           item,
           attempt,
           modelProfile: profileForRole(config, 'scribe'),
-          message: 'Attempt accepted. Run idefactory complete to finalize.',
+          message,
         }),
         stopReason: 'needs-complete',
         request: { action: 'complete', change, taskId: item.id, attemptId: attempt.id },
@@ -88,6 +242,32 @@ export function runFactory(project, env, {
 
     const stage = stageForState(attempt.state, item);
     if (stage.needsAgent) {
+      if (
+        stage.nextState === 'accepted'
+        && !humanGateAllows(project, {
+          action: 'accept',
+          verificationProfile: item.factory?.verificationProfile,
+          change: attempt.change || change,
+          task: item.id,
+          implementerId: attempt.implementerId,
+        })
+      ) {
+        return {
+          code: EXIT_OK,
+          text: renderStop('human-gate', attempt, item),
+          stopReason: 'human-gate',
+          request: null,
+        };
+      }
+      if (session.agentSteps >= session.budgets.maxAgentSteps) {
+        session = closeRunSession(project, session, 'max-agent-steps');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (max-agent-steps) for ${change}.\n`,
+          stopReason: 'max-agent-steps',
+          request: null,
+        };
+      }
       const request = {
         action: 'agent-step',
         role: stage.role,
@@ -102,6 +282,31 @@ export function runFactory(project, env, {
         checks: item.factory?.checks || [],
         verificationProfile: item.factory?.verificationProfile,
       };
+      const fingerprint = {
+        action: 'agent-step',
+        role: stage.role,
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      };
+      if (fingerprintsEqual(session.lastRequestFingerprint, fingerprint)) {
+        session = closeRunSession(project, session, 'unchanged-state');
+        return {
+          code: EXIT_OK,
+          text: `Run stopped (unchanged-state) for ${change}.\n`,
+          stopReason: 'unchanged-state',
+          request: null,
+        };
+      }
+      session = persistAgentStepBeforeRequest(project, session, {
+        action: 'agent-step',
+        role: stage.role,
+        taskId: item.id,
+        attemptId: attempt.id,
+        attemptState: attempt.state,
+        workItemStatus: item.status,
+      });
       ledger(project, 'run-needs-agent', { change, taskId: item.id, role: stage.role, state: attempt.state });
       return {
         code: EXIT_NEEDS_AGENT,
@@ -113,13 +318,6 @@ export function runFactory(project, env, {
 
     // Pure file advances are limited; if we cannot advance, stop.
     progressed += 1;
-    if (until === 'human-gate' && item.factory?.verificationProfile === 'release') {
-      return {
-        code: EXIT_OK,
-        text: renderStop('human-gate', attempt, item),
-        stopReason: 'human-gate',
-      };
-    }
   }
 
   return {
@@ -127,6 +325,67 @@ export function runFactory(project, env, {
     text: `Stopped after max-tasks=${limit} for ${change}.\n`,
     stopReason: 'max-tasks',
   };
+}
+
+function needsCompleteForUnfinishedJournal(project, attempt, item) {
+  if (!attempt || !item || item.status === 'done') return false;
+  if (attempt.state !== 'finalized' && attempt.state !== 'finalize-failed') return false;
+  const file = finalizationJournalPath(project, attempt.id);
+  if (!fs.existsSync(file)) return false;
+  try {
+    const journal = readFinalizationJournal(project, attempt.id, {
+      change: attempt.change,
+      taskId: attempt.taskId,
+      attemptId: attempt.id,
+    });
+    return canResumeFinalization(attempt, item, journal);
+  } catch {
+    return false;
+  }
+}
+
+function fingerprintsEqual(a, b) {
+  if (!a || !b) return false;
+  return a.action === b.action
+    && a.role === b.role
+    && a.taskId === b.taskId
+    && a.attemptId === b.attemptId
+    && a.attemptState === b.attemptState
+    && a.workItemStatus === b.workItemStatus;
+}
+
+function persistAgentStepBeforeRequest(project, session, fingerprint) {
+  const written = writeRunSession(project, {
+    ...session,
+    agentSteps: session.agentSteps + 1,
+    lastObservedAt: new Date().toISOString(),
+    lastRequestFingerprint: fingerprint,
+  });
+  // Best-effort: ledger() must not block a valid session write.
+  ledger(project, 'run-agent-step', {
+    change: written.change,
+    runId: written.runId,
+    agentSteps: written.agentSteps,
+  });
+  return written;
+}
+
+function persistCompleteBeforeRequest(project, session, fingerprint) {
+  return writeRunSession(project, {
+    ...session,
+    lastObservedAt: new Date().toISOString(),
+    lastRequestFingerprint: fingerprint,
+  });
+}
+
+function closeRunSession(project, session, stopReason, extra = {}) {
+  return writeRunSession(project, {
+    ...session,
+    ...extra,
+    status: 'closed',
+    stopReason,
+    lastObservedAt: new Date().toISOString(),
+  });
 }
 
 function stageForState(state, item) {
@@ -252,12 +511,6 @@ function renderStop(reason, attempt, item) {
     `State: ${attempt.state}`,
     '',
   ].join('\n');
-}
-
-function hasActiveLockout(project) {
-  const dir = path.join(project, '.factory', 'orchestration');
-  if (!fs.existsSync(dir)) return false;
-  return fs.readdirSync(dir).some((name) => name.includes('lockout') && name.endsWith('.md'));
 }
 
 function readConfig(project) {

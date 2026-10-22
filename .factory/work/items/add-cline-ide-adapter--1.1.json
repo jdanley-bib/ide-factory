@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "add-cline-ide-adapter",
+  "title": "Add a failing test that init writes `.cline/rules/factory.md` stating that unrelated requests are left alone, copies `factory-coordinator`, `factory-openspec`, `factory-build`, `factory-run`, `factory-full`, `factory-governance`, `factory-tdd`, `factory-verify`, and `factory-debug` into `.cline/skills/<name>/SKILL.md`, writes `.cline/workflows/factory-status.md`, `factory-plan.md`, `factory-build.md`, `factory-run.md`, `factory-full.md`, and `factory-review.md` directing the same skills as the matching Cursor commands, and does not create `.cline/work/` or `.clinerules/`. Add `templates/cline/rules/factory.md` and the `writeAdapters` writes for that rule, `.cline/skills`, and those workflows. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that init writes `.cline/rules/factory.md` stating that unrelated requests are left alone, copies `factory-coordinator`, `factory-openspec`, `factory-build`, `factory-run`, `factory-full`, `factory-governance`, `factory-tdd`, `factory-verify`, and `factory-debug` into `.cline/skills/<name>/SKILL.md`, writes `.cline/workflows/factory-status.md`, `factory-plan.md`, `factory-build.md`, `factory-run.md`, `factory-full.md`, and `factory-review.md` directing the same skills as the matching Cursor commands, and does not create `.cline/work/` or `.clinerules/`. Add `templates/cline/rules/factory.md` and the `writeAdapters` writes for that rule, `.cline/skills`, and those workflows. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "25d7c140-147c-4c27-bd15-39a69a7d4eb5",
+  "updatedAt": "2026-10-22T14:41:43.772Z"
+}

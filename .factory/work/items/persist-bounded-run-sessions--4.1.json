@@ -1,0 +1,28 @@
+{
+  "id": "4.1",
+  "change": "persist-bounded-run-sessions",
+  "title": "Add the positive agent-step, task, wall-clock, and failure defaults to the config template. Extend install tests so a new init writes those positive values and a second init leaves an existing `config.json` byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add the positive agent-step, task, wall-clock, and failure defaults to the config template. Extend install tests so a new init writes those positive values and a second init leaves an existing `config.json` byte-for-byte unchanged. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "e63c39e8-9c29-419e-af8e-769c141de8d5",
+  "updatedAt": "2026-10-21T19:16:46.159Z"
+}

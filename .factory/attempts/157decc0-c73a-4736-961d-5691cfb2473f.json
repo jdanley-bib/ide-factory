@@ -1,0 +1,71 @@
+{
+  "id": "157decc0-c73a-4736-961d-5691cfb2473f",
+  "change": "enforce-verification-evidence",
+  "taskId": "2.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-41c68f83-a9cd-56d8-8cf7-8468331ec1d5",
+  "reviewerId": "bc-4f81c0ca-61e8-5c6a-bca4-f1751b8900cc",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "node --test test/verification-evidence.test.mjs",
+      "passed": false,
+      "exitCode": 1,
+      "summary": "schemaVersion undefined !== 1 and validateCheckRecord missing exception"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "node --test test/verification-evidence.test.mjs",
+        "passed": true,
+        "exitCode": 0
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-4f81c0ca-61e8-5c6a-bca4-f1751b8900cc",
+      "notes": "Evidence schema fields are stored and a missing exit code is rejected.",
+      "at": "2026-10-21T16:23:57.454Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T16:20:46.126Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T16:20:46.127Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T16:23:04.311Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T16:23:04.347Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T16:23:04.381Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T16:23:57.419Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T16:23:57.454Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T16:23:57.498Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T16:20:46.126Z",
+  "updatedAt": "2026-10-21T16:23:57.498Z"
+}

@@ -1,0 +1,131 @@
+{
+  "id": "c55fda80-405c-41b0-ae1c-743da4435908",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "5.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-f2d26bc7-6fcf-5b41-a1e2-967cfaac57bc",
+  "reviewerId": "bc-2bcc3a49-cb7c-5f23-af68-6496693c6c78",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T21:37:47.278Z",
+      "finishedAt": "2026-10-21T21:39:40.250Z",
+      "logDigest": "sha256:4b6c06f7dc5b3f960482b7ebfdb96a626d68e91233961cfbf13aa52ea4d8edfa",
+      "artifactDigests": [],
+      "attemptId": "c55fda80-405c-41b0-ae1c-743da4435908",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "423fd37b26f36705610078451535cd808a29f507"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T21:42:25.230Z",
+        "finishedAt": "2026-10-21T21:43:56.065Z",
+        "logDigest": "sha256:750f1101106282d52f047e57e673b5ec4f1facfff8ce535a2f805dff54a11d0a",
+        "artifactDigests": [],
+        "attemptId": "c55fda80-405c-41b0-ae1c-743da4435908",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "11ccb4bfae20a80b2d145ddcdf23129397a2d9df"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T21:47:38.788Z",
+        "finishedAt": "2026-10-21T21:49:09.691Z",
+        "logDigest": "sha256:4cf15e65723b59bbba637c33b0501fefa752771a1055ff42fa1701ce20e72b4a",
+        "artifactDigests": [],
+        "attemptId": "c55fda80-405c-41b0-ae1c-743da4435908",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "4b50119d7e855c352158654d89d0f4ce0d9933b1"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-2bcc3a49-cb7c-5f23-af68-6496693c6c78",
+      "notes": "Independent review ACCEPT: OpenSpec strict validate exit 0; risk-gates 27/27; CLI red exitCode 1 passed false; clean unit pass at 11ccb4b; notes match validate/npm test/doctor; scope exclusions held; post security-reviewer bc-4bc55479-78ad-5095-900b-66e5a3a91307",
+      "at": "2026-10-21T21:47:06.059Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T21:35:29.184Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T21:35:29.185Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T21:36:32.076Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T21:39:42.617Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T21:43:58.673Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T21:47:06.026Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T21:47:06.059Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T21:49:09.742Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T21:35:29.184Z",
+  "updatedAt": "2026-10-21T21:49:09.742Z"
+}

@@ -1,0 +1,132 @@
+{
+  "id": "e44e3bae-3ba6-4d98-a64f-7471ce36f9be",
+  "change": "establish-factory-ci-and-provenance",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-b658b85d-4eed-58e3-a1f3-bba903e07794",
+  "reviewerId": "bc-7449c915-1397-5e10-94d0-439d8cfe4fe4",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-22T00:37:53.555Z",
+      "finishedAt": "2026-10-22T00:39:24.786Z",
+      "logDigest": "sha256:654955fabac68fa3649be60713bb721c74b62f020a8159bd28787277491b39dd",
+      "artifactDigests": [],
+      "attemptId": "e44e3bae-3ba6-4d98-a64f-7471ce36f9be",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "820df42d0a8c7f8c11f7f895b886ec32893916d4"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:40:47.927Z",
+        "finishedAt": "2026-10-22T00:42:19.089Z",
+        "logDigest": "sha256:031287bc9d936e9ee8c2e1c570e51747bd715d2afbcee966f3936819437ce6b7",
+        "artifactDigests": [],
+        "attemptId": "e44e3bae-3ba6-4d98-a64f-7471ce36f9be",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "b2dbe02ec95284d04875f4ce35bf922642d52179"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:46:14.984Z",
+        "finishedAt": "2026-10-22T00:47:46.388Z",
+        "logDigest": "sha256:99895a716969480a49c01ab1df436914394da4ea83d4c0dd4c2141b11b1fcef6",
+        "artifactDigests": [],
+        "attemptId": "e44e3bae-3ba6-4d98-a64f-7471ce36f9be",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "011ab2261c67238c4b0d0576096bf347dc49ed2a"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-7449c915-1397-5e10-94d0-439d8cfe4fe4",
+      "notes": "Independent product review: CLI red (issuer=cli, exitCode 1, passed false at 820df42 worktreeClean:false) and clean unit (issuer=cli, exitCode 0, worktreeClean at b2dbe02) authentic; re-ran node --test test/ci-provenance.test.mjs exit 0, 3 pass. Exact secretlint@13.0.7 + recommend preset; shared npx secretlint \"**/*\" local/CI; maskSecrets default; contiguous fixture absent from tree; secret-scan no continue-on-error. Prior distinct security ACCEPT by bc-303a83a1. Distinct from implementer bc-b658b85d. Per decision establish-factory-ci-and-provenance-2.1-unit-check, checks.json unit-only and evidence.security empty.",
+      "at": "2026-10-22T00:45:37.491Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-22T00:35:33.772Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-22T00:35:33.773Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-22T00:36:15.225Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-22T00:39:27.035Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T00:42:21.885Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T00:45:37.454Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T00:45:37.491Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-22T00:47:46.438Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-22T00:35:33.772Z",
+  "updatedAt": "2026-10-22T00:47:46.438Z"
+}

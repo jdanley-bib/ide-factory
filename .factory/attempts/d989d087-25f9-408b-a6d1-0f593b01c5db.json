@@ -1,0 +1,131 @@
+{
+  "id": "d989d087-25f9-408b-a6d1-0f593b01c5db",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-2f1a688c-749e-5c38-a804-97a84aec8aa6",
+  "reviewerId": "bc-dcc4fc52-3281-5295-bd50-06c453ab8ff2",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T20:21:06.652Z",
+      "finishedAt": "2026-10-21T20:22:07.319Z",
+      "logDigest": "sha256:8e89f4c520a887f53386614ed332719bf2bc19e00a2cd4d4a2f709436bf2c661",
+      "artifactDigests": [],
+      "attemptId": "d989d087-25f9-408b-a6d1-0f593b01c5db",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "3ec862d00cb1c45fc22a49caf4b48aa59fad630d"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:23:49.617Z",
+        "finishedAt": "2026-10-21T20:24:50.226Z",
+        "logDigest": "sha256:7f0bdd3d7f623179167ab090799bad74e4406bf5bcc5995263b8343e9d98f03f",
+        "artifactDigests": [],
+        "attemptId": "d989d087-25f9-408b-a6d1-0f593b01c5db",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "c91f23eb9f67aa91ddd582f0f497d44fc14908a1"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:27:53.115Z",
+        "finishedAt": "2026-10-21T20:28:53.722Z",
+        "logDigest": "sha256:5465c8a9b189b85e3aa633dc7ac9d35b66946eac9b4b145441338d351a3bb72f",
+        "artifactDigests": [],
+        "attemptId": "d989d087-25f9-408b-a6d1-0f593b01c5db",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "74229dda9690674162dbce195b63f1aa0eb3405d"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-dcc4fc52-3281-5295-bd50-06c453ab8ff2",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs exit 0, 12 pass. CLI red issuer cli exitCode 1 passed false at 3ec862d; clean-head unit pass at c91f23e. humanGate true / missing profile / non-boolean fail closed for run (human-gate, no request, session open) and complete (nonzero, item undone).",
+      "at": "2026-10-21T20:26:47.703Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T20:19:09.766Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T20:19:09.767Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T20:20:28.490Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T20:22:09.778Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T20:24:58.521Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T20:26:47.647Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:26:47.703Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T20:28:53.773Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T20:19:09.766Z",
+  "updatedAt": "2026-10-21T20:28:53.773Z"
+}

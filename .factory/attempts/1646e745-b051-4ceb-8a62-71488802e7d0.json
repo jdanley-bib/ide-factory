@@ -1,0 +1,74 @@
+{
+  "id": "1646e745-b051-4ceb-8a62-71488802e7d0",
+  "change": "reconcile-factory-specifications",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "lead",
+  "implementerId": "bc-f0f56f06-2b70-54d1-b330-8296926df0aa",
+  "reviewerId": "bc-2359800c-7c99-5b4f-b117-070684e32a89",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "npx openspec validate --all",
+      "passed": false,
+      "exitCode": 1,
+      "failure": "main ide-adapters No model launcher requirement has no scenario",
+      "summary": "6 items checked; 1 main-spec failure"
+    },
+    "verification": [
+      {
+        "kind": "docs",
+        "command": "npx openspec validate reconcile-factory-specifications --strict",
+        "passed": true
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-2359800c-7c99-5b4f-b117-070684e32a89",
+      "notes": "All deltas match observable behavior; strict validation passes; main-spec failure is honest and awaits sync.",
+      "at": "2026-10-21T15:47:24.153Z"
+    },
+    "changedFiles": [
+      "openspec/changes/reconcile-factory-specifications/specs/guided-build/spec.md",
+      "openspec/changes/reconcile-factory-specifications/specs/ide-adapters/spec.md"
+    ],
+    "baseRev": "7210a52"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T15:44:45.238Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T15:44:45.238Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T15:46:28.575Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T15:46:28.606Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T15:46:29.015Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T15:47:24.119Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T15:47:24.153Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T15:47:27.585Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T15:44:45.238Z",
+  "updatedAt": "2026-10-21T15:47:27.585Z"
+}

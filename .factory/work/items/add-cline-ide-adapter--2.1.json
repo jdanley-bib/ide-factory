@@ -1,0 +1,28 @@
+{
+  "id": "2.1",
+  "change": "add-cline-ide-adapter",
+  "title": "Add a failing test that `idefactory doctor` exits zero after init, and exits non-zero and reports `missing .cline/rules/factory.md` or `missing .cline/skills/factory-coordinator/SKILL.md` when that file is removed. Add those two paths to the doctor required list in `src/lib/govern.mjs`. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that `idefactory doctor` exits zero after init, and exits non-zero and reports `missing .cline/rules/factory.md` or `missing .cline/skills/factory-coordinator/SKILL.md` when that file is removed. Add those two paths to the doctor required list in `src/lib/govern.mjs`. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "0292fa6b-4229-4a3b-ad25-f2160bff8cff",
+  "updatedAt": "2026-10-22T15:15:44.461Z"
+}

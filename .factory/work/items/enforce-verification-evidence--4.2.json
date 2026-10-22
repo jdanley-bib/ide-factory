@@ -1,0 +1,32 @@
+{
+  "id": "4.2",
+  "change": "enforce-verification-evidence",
+  "title": "Add failing completion tests for a forged `passed: true`, an unknown check kind, a kind with no argv mapping, a non-zero or missing exit code, a command-digest mismatch, and a source revision other than the current clean HEAD. Each case must leave the work item unfinished. Implement the gate and verify with `node --test test/orchestration.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "4.1"
+  ],
+  "acceptanceCriteria": [
+    "Add failing completion tests for a forged `passed: true`, an unknown check kind, a kind with no argv mapping, a non-zero or missing exit code, a command-digest mismatch, and a source revision other than the current clean HEAD. Each case must leave the work item unfinished. Implement the gate and verify with `node --test test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "4.1"
+    ]
+  },
+  "attemptId": "1b6bdd69-d6b1-408e-aa05-c10d9ed94a7d",
+  "updatedAt": "2026-10-21T16:57:11.348Z"
+}

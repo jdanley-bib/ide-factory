@@ -1,5 +1,3 @@
 # Now
 
-Focus: IDE-native factory is installed in this repo
-Active work: (none) — change ide-native-factory is archived
-Blockers: (none)
+Last finalized: add-cline-ide-adapter/3.1 (2026-10-22)

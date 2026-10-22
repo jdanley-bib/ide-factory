@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "runId": "c4c2c746-2346-4048-bc98-f27f1064e3a3",
+  "change": "persist-bounded-run-sessions",
+  "status": "closed",
+  "startedAt": "2026-10-21T17:44:26.895Z",
+  "lastObservedAt": "2026-10-21T19:24:08.534Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 12,
+  "completedTasks": 14,
+  "failureCount": 5,
+  "baselineDoneIds": [],
+  "countedFailureIds": [
+    "143ad813-9542-4662-acfd-844349500751:2026-10-21T18:02:27.699Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+    "1fe9b9fc-4fa7-4721-8bed-1b85f057acd4:2026-10-21T18:32:23.480Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+    "98c38e90-8523-4cfa-a251-fe216a73532e:2026-10-21T19:19:50.877Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+    "c923e6ab-933a-44a2-a41e-4969af7b9380:2026-10-21T18:57:38.768Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+    "c923e6ab-933a-44a2-a41e-4969af7b9380:2026-10-21T19:03:17.363Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4"
+  ],
+  "lastRequestFingerprint": {
+    "action": "agent-step",
+    "role": "engineer",
+    "taskId": "4.2",
+    "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+    "attemptState": "assigned",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": "max-failures"
+}

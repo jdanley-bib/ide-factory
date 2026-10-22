@@ -21,11 +21,13 @@ Human-started bounded orchestration for one OpenSpec change.
 idefactory run --change <name> --until human-gate
 ```
 
-Optional: `--max-tasks N`.
+Each iteration resumes the persisted run session for the change. Do not reset budgets from this loop.
+
+Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human configured.
 
 3. Interpret the exit code:
-   - `0` — stopped cleanly (all done, max-tasks, or human-gate). Summarize and stop.
-   - `1` — error (lockout, blocked deps, rejection). Report and stop.
+   - `0` — stopped cleanly (all done, human-gate, or a persisted stop such as `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, or `unchanged-state`). Summarize and stop.
+   - `1` — error (lockout, blocked deps, rejection, invalid session or budget). Report and stop.
    - `2` — needs an agent step. Read the orchestration request JSON.
 
 4. For exit `2`:
@@ -39,7 +41,17 @@ Optional: `--max-tasks N`.
 
 ## Stop conditions
 
-Halt, lockout, rejected review, failed verification evidence, human-gate (release profile), max-tasks, or all work items done.
+Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, and `unchanged-state`. Other clean stops include all work items done or human-gate (true profile `humanGate`). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
+
+## New session (human only)
+
+After a sticky budget stop, the closed session stays in force until the **human** explicitly opens a new run, for example:
+
+```bash
+idefactory run --change <name> --new-run
+```
+
+Only the human may add that flag after a sticky stop; the factory-run loop never passes it.
 
 ## Never
 

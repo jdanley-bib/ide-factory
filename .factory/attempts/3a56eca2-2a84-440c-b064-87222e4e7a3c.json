@@ -1,0 +1,131 @@
+{
+  "id": "3a56eca2-2a84-440c-b064-87222e4e7a3c",
+  "change": "make-finalization-recoverable",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-00133855-88d8-53b4-9d4d-a6a578edb96b",
+  "reviewerId": "bc-c64a39ea-058f-5d73-a422-dd5aa28ee7f4",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T22:29:14.797Z",
+      "finishedAt": "2026-10-21T22:30:45.741Z",
+      "logDigest": "sha256:b5b6b7b1f602b75b0e5806041f16fd05c2a3f8846666af6026f42aec0fa70945",
+      "artifactDigests": [],
+      "attemptId": "3a56eca2-2a84-440c-b064-87222e4e7a3c",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "1b1f1eb0c10f867ebaee89b02f15d5b96c52fe54"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:31:58.989Z",
+        "finishedAt": "2026-10-21T22:33:29.873Z",
+        "logDigest": "sha256:6c18e46bdf839317f1dafe7b8b88e4acef5f7cb3b97030c3cf76bb386c2218a3",
+        "artifactDigests": [],
+        "attemptId": "3a56eca2-2a84-440c-b064-87222e4e7a3c",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "20f3c9b14753b465bfa2a5f2f8690bcb372ab573"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:35:05.785Z",
+        "finishedAt": "2026-10-21T22:36:36.674Z",
+        "logDigest": "sha256:48df92a3cd95d7e93a1e031dc69c1728ae1e513bbf1651323a877dcaf18871a4",
+        "artifactDigests": [],
+        "attemptId": "3a56eca2-2a84-440c-b064-87222e4e7a3c",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "54b4a1187f5a0b616c9988afb071ea4874a046d6"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-c64a39ea-058f-5d73-a422-dd5aa28ee7f4",
+      "notes": "Independent review of compare-and-apply recovery; focused unit re-run passed; CLI red/clean evidence valid; scope matches task 2.1.",
+      "at": "2026-10-21T22:34:43.191Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T22:27:05.079Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T22:27:05.080Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T22:27:44.872Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T22:30:48.464Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T22:33:33.073Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:34:43.156Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:34:43.191Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T22:36:36.725Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T22:27:05.079Z",
+  "updatedAt": "2026-10-21T22:36:36.725Z"
+}

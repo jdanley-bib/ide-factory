@@ -1,0 +1,32 @@
+{
+  "id": "2.2",
+  "change": "make-finalization-recoverable",
+  "title": "Add a library-only fault hook and table-driven failing tests before and after journal creation, every pre-commit target, the ready-journal write, and immediately before the commit point. At every boundary the failed call leaves the item not done and an uninjected retry reaches one byte-consistent final state. Add an orchestration regression that an unfinished finalized attempt with a matching journal emits `needs-complete`. Verify with `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "2.1"
+  ],
+  "acceptanceCriteria": [
+    "Add a library-only fault hook and table-driven failing tests before and after journal creation, every pre-commit target, the ready-journal write, and immediately before the commit point. At every boundary the failed call leaves the item not done and an uninjected retry reaches one byte-consistent final state. Add an orchestration regression that an unfinished finalized attempt with a matching journal emits `needs-complete`. Verify with `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "2.1"
+    ]
+  },
+  "attemptId": "53b91f30-220d-425e-8f86-e9b3dbbc18ab",
+  "updatedAt": "2026-10-21T22:47:56.167Z"
+}

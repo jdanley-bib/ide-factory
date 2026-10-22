@@ -1,0 +1,135 @@
+{
+  "id": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+  "change": "enforce-risk-gates-and-security-stage",
+  "taskId": "2.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-28a08772-dc3e-5db8-81b6-131c8bce22d8",
+  "reviewerId": "bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T20:32:50.449Z",
+      "finishedAt": "2026-10-21T20:34:07.181Z",
+      "logDigest": "sha256:6a5d407d751614ecc834e6ef97786c62547b93f8f0e4ada31529f8cf1770c696",
+      "artifactDigests": [],
+      "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "900fb7bc7400f8fb81ab38a7275ca16b3ae39711"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:36:03.914Z",
+        "finishedAt": "2026-10-21T20:37:20.225Z",
+        "logDigest": "sha256:6c0f5d5bb0b5a5d8da2f0888c74a293d673a26f0722e941ac524ba5caffeedce",
+        "artifactDigests": [],
+        "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "356d7ad1346ba417c749b00e763d6b6ba037098e"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T20:41:30.305Z",
+        "finishedAt": "2026-10-21T20:42:31.005Z",
+        "logDigest": "sha256:0bbac65594515b9efb4f978ae4d28f4f49b31a3864567c43f7721039d91c2072",
+        "artifactDigests": [],
+        "attemptId": "049a0a00-f6c2-4187-ab0f-7baadd95180a",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "1f0869b1332588b38cb0edd4e134053ace2588c8"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-d3d1fb33-7d1a-5a9c-89fc-d05e73638a33",
+      "notes": "Re-ran node --test test/risk-gates.test.mjs exit 0, 16 pass. CLI red issuer cli exitCode 1 passed false at 900fb7b; clean-head unit pass at 356d7ad. Matching accept/complete authorize; wrong action/task/stale rev/expired/policy mismatch fail closed; humanGate false non-sensitive reaches review. Post security-reviewer bc-aaea9636-54a3-5ec4-a6a4-e09c9e9ccd73.",
+      "at": "2026-10-21T20:40:41.597Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T20:28:53.848Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T20:28:53.849Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T20:31:11.998Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T20:34:09.560Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T20:37:41.171Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T20:39:13.738Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T20:40:41.546Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T20:40:41.597Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T20:42:31.057Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T20:28:53.848Z",
+  "updatedAt": "2026-10-21T20:42:31.057Z"
+}

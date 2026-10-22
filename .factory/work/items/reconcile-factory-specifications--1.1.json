@@ -1,0 +1,29 @@
+{
+  "id": "1.1",
+  "change": "reconcile-factory-specifications",
+  "title": "Add or refine queue contract tests for unchecked, checked, duplicate, and `.factory/work/`-only behavior; verify with `node --test test/queue.test.mjs`",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add or refine queue contract tests for unchecked, checked, duplicate, and `.factory/work/`-only behavior; verify with `node --test test/queue.test.mjs` works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "a1d5a6a9-ccaa-433e-bf7b-30014f1a05fe",
+  "updatedAt": "2026-10-21T15:24:35.937Z"
+}

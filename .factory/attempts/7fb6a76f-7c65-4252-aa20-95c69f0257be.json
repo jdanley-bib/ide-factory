@@ -1,0 +1,131 @@
+{
+  "id": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
+  "change": "make-finalization-recoverable",
+  "taskId": "3.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-aaa7940c-be3e-5ebc-8f9a-52dc1d4ee4e7",
+  "reviewerId": "bc-7a38b257-e8b5-59fe-80a1-9204356fb466",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T22:49:26.173Z",
+      "finishedAt": "2026-10-21T22:50:57.320Z",
+      "logDigest": "sha256:0f93a6d1d868aa2339a65d1500f945205897ef9ab8d76e43e5f167048bfced53",
+      "artifactDigests": [],
+      "attemptId": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "98974d1cc5fd3b676bcacc3bc6803b8f840641f4"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:54:46.545Z",
+        "finishedAt": "2026-10-21T22:56:17.625Z",
+        "logDigest": "sha256:555d7bc3e9cf9b2e5999aa4b4013c3d400d4035ebae0663e649196f47a0893ab",
+        "artifactDigests": [],
+        "attemptId": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "27ad7e42037ddb68897b06fa1b5445ca73652d2a"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:58:09.269Z",
+        "finishedAt": "2026-10-21T22:59:40.385Z",
+        "logDigest": "sha256:acbdd13632be6315f804131a144b208c070ed7068fb7bdd6ad6b1fabc9f6b7a1",
+        "artifactDigests": [],
+        "attemptId": "7fb6a76f-7c65-4252-aa20-95c69f0257be",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "77607ddd07079cc2f35eac69abb30635c11c2a6a"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-7a38b257-e8b5-59fe-80a1-9204356fb466",
+      "notes": "Independent review ACCEPT: schema v1 created/resolved lockouts; distinct resolver; idempotent/conflict; legacy basename+digest without mutation; five skill copies; focused tests 27 pass; CLI red/clean evidence valid.",
+      "at": "2026-10-21T22:57:33.037Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T22:47:59.004Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T22:47:59.005Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T22:48:51.467Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T22:50:59.528Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T22:56:25.879Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:57:33.004Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:57:33.037Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T22:59:40.436Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T22:47:59.004Z",
+  "updatedAt": "2026-10-21T22:59:40.436Z"
+}

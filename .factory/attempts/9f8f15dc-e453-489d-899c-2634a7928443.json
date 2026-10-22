@@ -1,0 +1,132 @@
+{
+  "id": "9f8f15dc-e453-489d-899c-2634a7928443",
+  "change": "add-cline-ide-adapter",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "cline-engineer-1.2",
+  "reviewerId": "cline-reviewer-1.2",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-22T14:43:58.962Z",
+      "finishedAt": "2026-10-22T14:45:30.239Z",
+      "logDigest": "sha256:1809b24294bef490ff2badf1fc819e01043c116675b1a9e1cf8e63808bff7f13",
+      "artifactDigests": [],
+      "attemptId": "9f8f15dc-e453-489d-899c-2634a7928443",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "62da29ced3d2c46f25e4777218bb62518f363f2b"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T14:46:09.638Z",
+        "finishedAt": "2026-10-22T14:47:40.951Z",
+        "logDigest": "sha256:a5ab40e8752518fbb65abc009cbb9f16c8349e69c8de92b68ef73a5706154e15",
+        "artifactDigests": [],
+        "attemptId": "9f8f15dc-e453-489d-899c-2634a7928443",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "ae3785d259bce167787412e81dc6ae8d4f9df37b"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T14:48:45.531Z",
+        "finishedAt": "2026-10-22T14:50:16.837Z",
+        "logDigest": "sha256:74dd6e44f2104312516fc82609717bbdf2e5ce1a65e1d38ac910223ed8df7807",
+        "artifactDigests": [],
+        "attemptId": "9f8f15dc-e453-489d-899c-2634a7928443",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "1259fd7311a8ea65879fb2c223602df680364def"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "cline-reviewer-1.2",
+      "notes": "task 1.2 preserves unrelated Cline files",
+      "at": "2026-10-22T14:50:27.070Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-22T14:42:22.827Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-22T14:42:22.829Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-22T14:43:30.527Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-22T14:45:49.726Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T14:47:45.579Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T14:50:27.035Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T14:50:27.070Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-22T14:50:49.800Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-22T14:42:22.827Z",
+  "updatedAt": "2026-10-22T14:50:49.800Z"
+}

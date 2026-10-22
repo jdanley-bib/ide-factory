@@ -1,0 +1,107 @@
+{
+  "id": "8152331d-3d0a-49ec-9726-4448883624c9",
+  "change": "enforce-verification-evidence",
+  "taskId": "5.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-c7302652-ec5f-552a-9db8-1d1448116c75",
+  "reviewerId": "bc-3897f2e7-ff02-5b9e-9735-d9dced3845f6",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T17:04:19.756Z",
+      "finishedAt": "2026-10-21T17:04:50.831Z",
+      "logDigest": "sha256:739c2c0f75c6d5aa795e1d2cf310a2960f0ffcceee6b385ed025017041b63a41",
+      "artifactDigests": [],
+      "attemptId": "8152331d-3d0a-49ec-9726-4448883624c9",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "7d4f97f72f06095af7d1ed067d9b3748f2e476d6"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T17:08:41.187Z",
+        "finishedAt": "2026-10-21T17:09:20.832Z",
+        "logDigest": "sha256:8f1d3b9a04daff1ff1c95018f22ecc4e569a6946418331de4d8d6d030aba5894",
+        "artifactDigests": [],
+        "attemptId": "8152331d-3d0a-49ec-9726-4448883624c9",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "8982bb192c7fa2ef3a28772ca261577f315704a7"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-3897f2e7-ff02-5b9e-9735-d9dced3845f6",
+      "notes": "Strict validation, doctor, and npm test match the notes.",
+      "at": "2026-10-21T17:08:34.975Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T17:03:02.304Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T17:03:02.305Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T17:08:34.847Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T17:08:34.878Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T17:08:34.912Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T17:08:34.943Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T17:08:34.975Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T17:09:20.887Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T17:03:02.304Z",
+  "updatedAt": "2026-10-21T17:09:20.887Z"
+}

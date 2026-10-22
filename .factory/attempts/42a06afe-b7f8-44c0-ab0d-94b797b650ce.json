@@ -1,0 +1,134 @@
+{
+  "id": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
+  "change": "make-finalization-recoverable",
+  "taskId": "4.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-a4e7d563-f44e-5b02-90bd-aae81e6abc87",
+  "reviewerId": "bc-6ddddde1-6bba-519d-8f14-b17c525be39f",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T23:02:17.363Z",
+      "finishedAt": "2026-10-21T23:03:48.487Z",
+      "logDigest": "sha256:3d545b810c2375b32266627534ec00e921ddb10dca24c6a5cba5273d69d6d291",
+      "artifactDigests": [],
+      "attemptId": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "087b4de72c0bdfc1bcc35714ee03e288ffa41502"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:04:21.535Z",
+        "finishedAt": "2026-10-21T23:05:52.638Z",
+        "logDigest": "sha256:7d1afda2c9450f10797739935e8f7c635cfe4759575cde0155179338c56c17d1",
+        "artifactDigests": [],
+        "attemptId": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "33e2181c180ac8e1f5bc65bba02af33a7d66a335"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T23:09:00.373Z",
+        "finishedAt": "2026-10-21T23:10:31.545Z",
+        "logDigest": "sha256:27dd86842bbd8c751a189e1bfd8e0566767b1f21f011441f205605949d1a44c1",
+        "artifactDigests": [],
+        "attemptId": "42a06afe-b7f8-44c0-ab0d-94b797b650ce",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "9335ac5a074b380a22a78a89d97a38070925e372"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-6ddddde1-6bba-519d-8f14-b17c525be39f",
+      "notes": "Independent review ACCEPT: schema v1 lease primitives; one-winner atomic acquire; LEASE_HELD without mutation; matching-id release on success/error; read-only wrapper; focused tests 7 pass; CLI red/clean evidence valid; prior security ACCEPT by bc-dbd9d8e9.",
+      "at": "2026-10-21T23:08:37.792Z"
+    },
+    "changedFiles": [
+      "src/lib/writer-lease.mjs",
+      "test/writer-lease.test.mjs"
+    ],
+    "baseRev": "087b4de72c0bdfc1bcc35714ee03e288ffa41502"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T22:59:43.725Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T22:59:43.726Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T23:01:57.839Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T23:03:50.605Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T23:05:55.194Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T23:08:34.671Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T23:08:37.792Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T23:10:31.622Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T22:59:43.725Z",
+  "updatedAt": "2026-10-21T23:10:31.622Z"
+}

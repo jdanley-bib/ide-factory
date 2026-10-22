@@ -19,12 +19,28 @@ test('parseCheckboxes treats an x mark as done', () => {
   ]);
 });
 
-test('sync-tasks creates unchecked work items once and skips checked boxes', async () => {
+function writeDemoTasks(dir, body) {
+  fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), body);
+}
+
+function assertNoFactoryBacklogTaskList(dir) {
+  const factoryDir = path.join(dir, '.factory');
+  const names = fs.readdirSync(factoryDir);
+  assert.equal(
+    names.some((name) => name.toLowerCase() === 'backlog.md'),
+    false,
+    `.factory/ must not contain a backlog.md task list; found: ${names.join(', ')}`,
+  );
+  assert.equal(fs.existsSync(path.join(dir, 'Backlog.md')), false);
+  assert.equal(fs.existsSync(path.join(dir, 'backlog.md')), false);
+}
+
+test('sync-tasks creates one work item per unchecked checkbox', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
-    fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
-    fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), [
+    writeDemoTasks(dir, [
       '# Tasks',
       '',
       '## 1. Work',
@@ -39,14 +55,72 @@ test('sync-tasks creates unchecked work items once and skips checked boxes', asy
     assert.match(first.out, /created 2/);
     const items = listWorkItems(dir, 'demo');
     assert.equal(items.length, 2);
-    assert.equal(items.some((item) => item.id === '1.2'), false);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/backlog.md')), false);
+    assert.deepEqual(items.map((item) => item.id).sort(), ['1.1', '1.3']);
     assert.match(items[0].acceptanceCriteria[0], /First unchecked task|works as specified/i);
     assert.doesNotMatch(items[0].acceptanceCriteria.join('\n'), /Checkbox .* is implemented/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('sync-tasks skips checked checkboxes', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, [
+      '- [x] 1.1 Already done task',
+      '- [ ] 1.2 Still open task',
+      '',
+    ].join('\n'));
+    const result = await idefactory(dir, ['sync-tasks', 'demo']);
+    assert.equal(result.code, 0, result.err);
+    assert.match(result.out, /created 1/);
+    const items = listWorkItems(dir, 'demo');
+    assert.equal(items.length, 1);
+    assert.equal(items[0].id, '1.2');
+    assert.equal(fs.existsSync(path.join(dir, '.factory/work/items/demo--1.1.json')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('sync-tasks does not duplicate already synced checkboxes', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, [
+      '- [ ] 1.1 First unchecked task',
+      '- [ ] 1.3 Second unchecked task',
+      '',
+    ].join('\n'));
+    const first = await idefactory(dir, ['sync-tasks', 'demo']);
+    assert.equal(first.code, 0, first.err);
+    assert.match(first.out, /created 2/);
     const second = await idefactory(dir, ['sync-tasks', 'demo']);
     assert.equal(second.code, 0, second.err);
     assert.match(second.out, /created 0/);
     assert.equal(listWorkItems(dir, 'demo').length, 2);
+    const itemFiles = fs.readdirSync(path.join(dir, '.factory/work/items'))
+      .filter((name) => name.endsWith('.json'));
+    assert.equal(itemFiles.length, 2);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('sync-tasks uses .factory/work as the only machine queue', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, '- [ ] 1.1 First unchecked task\n');
+    const result = await idefactory(dir, ['sync-tasks', 'demo']);
+    assert.equal(result.code, 0, result.err);
+    assert.ok(
+      fs.existsSync(path.join(dir, '.factory/work/items/demo--1.1.json')),
+      'work item must exist under .factory/work/items',
+    );
+    assert.equal(listWorkItems(dir, 'demo').length, 1);
+    assertNoFactoryBacklogTaskList(dir);
   } finally {
     cleanup(dir);
   }

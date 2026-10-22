@@ -3,13 +3,44 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { validateCheckRegistry } from '../src/lib/verification-evidence.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
+
+const ROLES = [
+  'lead',
+  'architect',
+  'engineer',
+  'test-engineer',
+  'security-reviewer',
+  'reviewer',
+  'scribe',
+];
+
+const SHARED_COMMANDS = ['status', 'plan', 'build', 'run', 'full', 'review'];
+
+/** Skill each shared command must direct the IDE to follow (by purpose, not bare name). */
+const COMMAND_SKILLS = {
+  status: [/factory-coordinator/i],
+  plan: [/factory-openspec/i],
+  build: [/factory-build/i],
+  run: [/factory-run/i],
+  full: [/factory-full/i],
+  review: [/factory-build/i, /factory-governance/i],
+};
 
 function read(dir, rel) {
   return fs.readFileSync(path.join(dir, rel), 'utf8');
 }
 
-test('init writes the default team and leaves an application file alone', async () => {
+function adapterPaths(command) {
+  return [
+    `.cursor/commands/factory-${command}.md`,
+    `.claude/commands/factory-${command}.md`,
+    `.github/prompts/factory-${command}.prompt.md`,
+  ];
+}
+
+test('init writes the seven-role roster, governance baseline, and machine work state', async () => {
   const dir = tempProject();
   try {
     fs.writeFileSync(path.join(dir, 'app.js'), 'keep-app\n');
@@ -21,19 +52,134 @@ test('init writes the default team and leaves an application file alone', async 
       assert.match(team, new RegExp(role));
     }
     assert.match(team, /does not implement product code/);
+    for (const role of ROLES) {
+      assert.equal(fs.existsSync(path.join(dir, `.factory/agents/${role}/charter.md`)), true, role);
+      assert.equal(fs.existsSync(path.join(dir, `.factory/agents/${role}/history.md`)), true, role);
+    }
     assert.equal(fs.existsSync(path.join(dir, '.factory/decisions.md')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/governance.md')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/profiles.json')), true);
     assert.equal(fs.existsSync(path.join(dir, '.factory/work/index.json')), true);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/attempts')), true);
+    const governance = read(dir, '.factory/governance.md');
+    assert.match(governance, /approve/i);
+    assert.match(governance, /verif/i);
+    assert.match(governance, /append-only|memor/i);
+    assert.match(governance, /HALT/);
+    assert.match(governance, /review/i);
+    assert.match(governance, /\.factory\/work|queue/i);
+    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
     const config = JSON.parse(read(dir, '.factory/config.json'));
     assert.equal(config.runtime, 'ide');
     assert.equal(config.ideation, false);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/engineer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/test-engineer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, '.factory/agents/security-reviewer/charter.md')), true);
-    assert.equal(fs.existsSync(path.join(dir, 'GOLDEN_RULES.md')), false);
-    assert.match(read(dir, '.factory/governance.md'), /IDE models only/i);
-    assert.match(read(dir, '.factory/governance.md'), /approve/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init writes a schema-valid check registry with only unit → npm test', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const registryPath = path.join(dir, '.factory/checks.json');
+    assert.equal(fs.existsSync(registryPath), true, '.factory/checks.json must exist after init');
+    const raw = fs.readFileSync(registryPath, 'utf8');
+    const registry = JSON.parse(raw);
+    assert.equal(registry.schemaVersion, 1);
+    assert.deepEqual(Object.keys(registry.checks).sort(), ['unit']);
+    const unit = registry.checks.unit;
+    assert.deepEqual(unit.argv, ['npm', 'test']);
+    assert.equal(unit.cwdPolicy, 'project');
+    assert.ok(Number.isInteger(unit.timeoutMs) && unit.timeoutMs > 0, 'timeoutMs must be positive');
+    assert.deepEqual(unit.artifacts, []);
+    const accepted = validateCheckRegistry(registry, { projectRoot: dir });
+    assert.equal(accepted.schemaVersion, 1);
+    assert.deepEqual(accepted.checks.unit.argv, ['npm', 'test']);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init writes positive run-budget defaults in config', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const run = JSON.parse(read(dir, '.factory/config.json')).run;
+    assert.ok(Number.isInteger(run.defaultMaxAgentSteps) && run.defaultMaxAgentSteps > 0);
+    assert.ok(Number.isInteger(run.defaultMaxTasks) && run.defaultMaxTasks > 0);
+    assert.ok(Number.isInteger(run.defaultMaxWallClockMs) && run.defaultMaxWallClockMs > 0);
+    assert.ok(Number.isInteger(run.defaultMaxFailures) && run.defaultMaxFailures > 0);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing config byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const configPath = path.join(dir, '.factory/config.json');
+    const custom = `${read(dir, '.factory/config.json').trimEnd()}\nCONFIG-SENTINEL\n`;
+    fs.writeFileSync(configPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(configPath, 'utf8'), custom);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing check registry byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const registryPath = path.join(dir, '.factory/checks.json');
+    const custom = `${JSON.stringify({
+      schemaVersion: 1,
+      checks: {
+        unit: {
+          argv: ['npm', 'test'],
+          cwdPolicy: 'project',
+          timeoutMs: 12_345,
+          artifacts: [],
+        },
+      },
+    }, null, 2)}\nCUSTOM-REGISTRY-SENTINEL\n`;
+    fs.writeFileSync(registryPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(registryPath, 'utf8'), custom);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init writes release and security-sensitive humanGate true', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const profiles = JSON.parse(read(dir, '.factory/profiles.json'));
+    assert.equal(profiles.release.humanGate, true);
+    assert.equal(profiles['security-sensitive'].humanGate, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('re-init leaves an existing profiles.json byte-for-byte unchanged', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const profilesPath = path.join(dir, '.factory/profiles.json');
+    const custom = `${JSON.stringify({
+      docs: { checks: ['docs'], humanGate: false },
+      'security-sensitive': {
+        checks: ['unit', 'threat-review'],
+        humanGate: false,
+      },
+      release: { checks: ['unit'], humanGate: true },
+    }, null, 2)}\nPROFILES-SENTINEL\n`;
+    fs.writeFileSync(profilesPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(profilesPath, 'utf8'), custom);
   } finally {
     cleanup(dir);
   }
@@ -65,39 +211,114 @@ test('re-init preserves decisions, history, squad, and AGENTS.md', async () => {
   }
 });
 
-test('installs factory build/run/full commands, a narrow rule, and skills with no model launcher', async () => {
+test('installs the full shared adapter command set for Cursor, Copilot, and Claude', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
-    for (const rel of [
-      '.cursor/commands/factory-build.md',
-      '.cursor/commands/factory-run.md',
-      '.cursor/commands/factory-full.md',
-      '.github/prompts/factory-build.prompt.md',
-      '.github/prompts/factory-run.prompt.md',
-      '.github/prompts/factory-full.prompt.md',
-      '.claude/commands/factory-build.md',
-      '.claude/commands/factory-run.md',
-      '.claude/commands/factory-full.md',
-      '.cursor/commands/factory-status.md',
-      '.cursor/commands/factory-plan.md',
-      '.cursor/commands/factory-review.md',
-      '.github/agents/factory.agent.md',
-      '.claude/skills/factory-coordinator/SKILL.md',
-      '.cursor/skills/factory-run/SKILL.md',
-      '.cursor/skills/factory-full/SKILL.md',
-    ]) {
-      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+    for (const command of SHARED_COMMANDS) {
+      for (const rel of adapterPaths(command)) {
+        assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+        const body = read(dir, rel);
+        for (const skill of COMMAND_SKILLS[command]) {
+          assert.match(
+            body,
+            skill,
+            `${rel} must direct the IDE to the corresponding factory skill (${skill})`,
+          );
+        }
+      }
     }
     assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /openspec-explore/);
     assert.match(read(dir, '.cursor/skills/factory-full/SKILL.md'), /factory-run/);
-    assert.match(read(dir, '.cursor/commands/factory-full.md'), /factory-full skill/);
     assert.match(read(dir, '.cursor/rules/factory.mdc'), /Unrelated requests are left alone/);
     const build = read(dir, '.cursor/skills/factory-build/SKILL.md');
     assert.match(build, /failing test/i);
     assert.match(build, /verification/i);
     assert.match(build, /different role/i);
     assert.match(build, /idefactory complete/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init writes Cline rule, skills, and workflows under .cline only', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const clineRule = read(dir, '.cline/rules/factory.md');
+    assert.match(clineRule, /Unrelated requests are left alone/);
+    assert.doesNotMatch(clineRule, /^---/m);
+    assert.match(clineRule, /<!-- idefactory:owned -->/);
+
+    const clineSkills = [
+      'factory-coordinator',
+      'factory-openspec',
+      'factory-build',
+      'factory-run',
+      'factory-full',
+      'factory-governance',
+      'factory-tdd',
+      'factory-verify',
+      'factory-debug',
+    ];
+    for (const name of clineSkills) {
+      const rel = `.cline/skills/${name}/SKILL.md`;
+      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+    }
+
+    for (const command of SHARED_COMMANDS) {
+      const rel = `.cline/workflows/factory-${command}.md`;
+      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+      const body = read(dir, rel);
+      for (const skill of COMMAND_SKILLS[command]) {
+        assert.match(
+          body,
+          skill,
+          `${rel} must direct Cline to the same factory skill as the Cursor command (${skill})`,
+        );
+      }
+      assert.doesNotMatch(body, /^description:/m);
+      assert.doesNotMatch(body, /^agent:\s*factory/m);
+      assert.match(body, /<!-- idefactory:owned -->/);
+    }
+
+    assert.equal(fs.existsSync(path.join(dir, '.cline/work')), false);
+    assert.equal(fs.existsSync(path.join(dir, '.clinerules')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('installed factory skills state the IDE session model and do not launch a model', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const launchPattern = /idefactory\b[\s\S]{0,80}\b(launch|start)\b[\s\S]{0,40}\bmodel\b|\bcursor-agent\b/i;
+    for (const root of ['.cursor/skills', '.claude/skills', '.github/skills', '.cline/skills']) {
+      const skillRoot = path.join(dir, root);
+      for (const name of fs.readdirSync(skillRoot).sort()) {
+        const rel = path.join(root, name, 'SKILL.md');
+        const body = read(dir, rel);
+        assert.match(
+          body,
+          /IDE session model does the work/i,
+          `${rel} must state that the IDE session model does the work`,
+        );
+        assert.doesNotMatch(body, launchPattern, `${rel} must not direct the CLI to launch a model`);
+      }
+    }
+    for (const command of SHARED_COMMANDS) {
+      for (const rel of [
+        ...adapterPaths(command),
+        `.cline/workflows/factory-${command}.md`,
+      ]) {
+        assert.doesNotMatch(
+          read(dir, rel),
+          launchPattern,
+          `${rel} must not direct the CLI to launch a model`,
+        );
+      }
+    }
   } finally {
     cleanup(dir);
   }
@@ -122,6 +343,60 @@ test('upgrade refreshes an owned skill and keeps a custom decision', async () =>
   }
 });
 
+test('init and upgrade preserve unrelated Cline files and refresh owned Cline skills', async () => {
+  const dir = tempProject();
+  try {
+    const appBytes = 'keep-app-cline\n';
+    const teamStyleBytes = '# Team style\nTEAM-STYLE-BYTES\n';
+    const otherClineBytes = 'OTHER-CLINE-KEEP\n';
+    fs.writeFileSync(path.join(dir, 'app.js'), appBytes);
+    fs.mkdirSync(path.join(dir, '.cline/rules'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.cline/rules/team-style.md'), teamStyleBytes);
+    fs.mkdirSync(path.join(dir, '.cline/notes'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.cline/notes/keep.md'), otherClineBytes);
+
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(path.join(dir, 'app.js'), 'utf8'), appBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/rules/team-style.md'), 'utf8'), teamStyleBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/notes/keep.md'), 'utf8'), otherClineBytes);
+
+    fs.appendFileSync(path.join(dir, '.factory/decisions.md'), '\nCUSTOM-DECISION-KEEP\n');
+    fs.writeFileSync(
+      path.join(dir, '.cline/skills/factory-coordinator/SKILL.md'),
+      '---\nname: factory-coordinator\n---\nOLD-CLINE-SKILL-BODY\n<!-- idefactory:owned -->\n',
+    );
+
+    assert.equal((await idefactory(dir, ['upgrade'])).code, 0);
+    assert.match(read(dir, '.factory/decisions.md'), /CUSTOM-DECISION-KEEP/);
+    const clineSkill = read(dir, '.cline/skills/factory-coordinator/SKILL.md');
+    assert.doesNotMatch(clineSkill, /OLD-CLINE-SKILL-BODY/);
+    assert.match(clineSkill, /You route work/);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/rules/team-style.md'), 'utf8'), teamStyleBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/notes/keep.md'), 'utf8'), otherClineBytes);
+    assert.equal(fs.existsSync(path.join(dir, 'app.js')), true);
+    assert.equal(fs.readFileSync(path.join(dir, 'app.js'), 'utf8'), appBytes);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('AGENTS.md factory section names the Cline factory rule', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const agents = read(dir, 'AGENTS.md');
+    const start = agents.indexOf('<!-- idefactory:start -->');
+    const end = agents.indexOf('<!-- idefactory:end -->');
+    assert.notEqual(start, -1, 'AGENTS.md must contain the marked factory section start');
+    assert.notEqual(end, -1, 'AGENTS.md must contain the marked factory section end');
+    assert.ok(end > start, 'factory section end must follow start');
+    const section = agents.slice(start, end + '<!-- idefactory:end -->'.length);
+    assert.match(section, /\.cline\/rules\/factory\.md/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('doctor fails in an empty directory and passes after init without backlog', async () => {
   const dir = tempProject();
   try {
@@ -129,6 +404,32 @@ test('doctor fails in an empty directory and passes after init without backlog',
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     assert.equal(fs.existsSync(path.join(dir, 'backlog')), false);
     assert.equal((await idefactory(dir, ['doctor'])).code, 0);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('doctor requires Cline factory rule and coordinator skill', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal((await idefactory(dir, ['doctor'])).code, 0);
+
+    const rulePath = path.join(dir, '.cline/rules/factory.md');
+    const skillPath = path.join(dir, '.cline/skills/factory-coordinator/SKILL.md');
+    const ruleBody = fs.readFileSync(rulePath);
+    const skillBody = fs.readFileSync(skillPath);
+
+    fs.unlinkSync(rulePath);
+    const missingRule = await idefactory(dir, ['doctor']);
+    assert.notEqual(missingRule.code, 0);
+    assert.match(missingRule.out, /missing \.cline\/rules\/factory\.md/);
+
+    fs.writeFileSync(rulePath, ruleBody);
+    fs.unlinkSync(skillPath);
+    const missingSkill = await idefactory(dir, ['doctor']);
+    assert.notEqual(missingSkill.code, 0);
+    assert.match(missingSkill.out, /missing \.cline\/skills\/factory-coordinator\/SKILL\.md/);
   } finally {
     cleanup(dir);
   }
@@ -167,5 +468,31 @@ test('the CLI process does not execute a model binary on next', async () => {
     assert.doesNotMatch(result.stdout, /Work packet/);
   } finally {
     cleanup(dir);
+  }
+});
+
+test('implementation notes record add-cline-ide-adapter verification commands', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/add-cline-ide-adapter/implementation-notes.md',
+  );
+  assert.ok(fs.existsSync(notesPath), `missing implementation notes: ${notesPath}`);
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  const commands = [
+    'npx openspec validate add-cline-ide-adapter --strict',
+    'npx openspec validate --all',
+    'node --test test/install.test.mjs',
+  ];
+  let cursor = 0;
+  for (const command of commands) {
+    const idx = notes.indexOf(command, cursor);
+    assert.ok(idx !== -1, `notes must contain \`${command}\` in order`);
+    const after = notes.slice(idx + command.length);
+    assert.match(
+      after,
+      /Exit code:\s*`?\d+`?/,
+      `notes must record an exit code for \`${command}\``,
+    );
+    cursor = idx + command.length;
   }
 });

@@ -2,6 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ledger, writeText } from './layout.mjs';
+import {
+  assertPassingCliSecurityEvidence,
+  requiresSecurityStage,
+} from './risk-gates.mjs';
 import { getWorkItem, updateWorkItem } from './work.mjs';
 
 export const ATTEMPT_STATES = [
@@ -89,7 +93,9 @@ export function transitionAttempt(project, attemptId, nextState, { evidence = {}
   if (!allowed.includes(nextState)) {
     throw new Error(`Illegal transition ${attempt.state} → ${nextState}`);
   }
-  validateEvidence(attempt, nextState, evidence);
+  // Reject check-result payloads before any mutation so the attempt file stays unchanged.
+  rejectCallerSuppliedCheckResults(evidence);
+  validateEvidence(project, attempt, nextState, evidence);
 
   if (nextState === 'implementing' && actorId) attempt.implementerId = actorId;
   if (nextState === 'accepted' || nextState === 'rejected') {
@@ -110,14 +116,37 @@ export function transitionAttempt(project, attemptId, nextState, { evidence = {}
   return attempt;
 }
 
-function validateEvidence(attempt, nextState, evidence) {
+function rejectCallerSuppliedCheckResults(evidence) {
+  if (!evidence || typeof evidence !== 'object') return;
+  for (const key of ['red', 'verification', 'security']) {
+    if (Object.prototype.hasOwnProperty.call(evidence, key)) {
+      throw new Error(
+        `attempt transition rejects caller-supplied ${key} check results; use idefactory verify run`,
+      );
+    }
+  }
+}
+
+function validateEvidence(project, attempt, nextState, evidence) {
   if (nextState === 'red-confirmed') {
-    if (!evidence?.red?.command || evidence.red.passed !== false) {
-      throw new Error('red-confirmed requires evidence.red with command and passed:false');
+    const storedRed = attempt.evidence?.red;
+    if (!storedRed || storedRed.passed !== false) {
+      throw new Error(
+        'red-confirmed requires stored evidence.red from verify run (passed:false); do not supply red in the transition payload',
+      );
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'verifying') {
-    // security-checking may be skipped when no security checks required
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    if (requiresSecurityStage(item)) {
+      throw new Error(
+        'security-sensitive work cannot transition verifying → awaiting-review; remain in verifying and use security-checking',
+      );
+    }
+  }
+  if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    assertPassingCliSecurityEvidence(project, attempt, item);
   }
   if (nextState === 'accepted') {
     if (!evidence.reviewerId && !attempt.reviewerId) {
@@ -133,17 +162,7 @@ function validateEvidence(attempt, nextState, evidence) {
 }
 
 function mergeEvidence(attempt, nextState, evidence) {
-  if (evidence.red) attempt.evidence.red = evidence.red;
-  if (Array.isArray(evidence.verification)) {
-    attempt.evidence.verification = evidence.verification;
-  } else if (evidence.verification) {
-    attempt.evidence.verification = [...(attempt.evidence.verification || []), evidence.verification];
-  }
-  if (Array.isArray(evidence.security)) {
-    attempt.evidence.security = evidence.security;
-  } else if (evidence.security) {
-    attempt.evidence.security = [...(attempt.evidence.security || []), evidence.security];
-  }
+  // red / verification / security are never written here; verify run owns those fields.
   if (evidence.changedFiles) attempt.evidence.changedFiles = evidence.changedFiles;
   if (evidence.baseRev) attempt.evidence.baseRev = evidence.baseRev;
   if (evidence.implementerId) attempt.implementerId = evidence.implementerId;

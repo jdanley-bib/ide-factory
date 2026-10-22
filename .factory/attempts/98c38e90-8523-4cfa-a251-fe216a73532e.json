@@ -1,0 +1,187 @@
+{
+  "id": "98c38e90-8523-4cfa-a251-fe216a73532e",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "4.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-2ed30185-e5cb-59d0-8dc8-c48b94715190",
+  "reviewerId": "bc-e1e6f7ab-79fb-50dc-9494-f0c2f28f5c69",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T19:17:36.718Z",
+      "finishedAt": "2026-10-21T19:18:36.391Z",
+      "logDigest": "sha256:cbad5b1ae6ed16e903d65e835104dbad0939d4cbc64ae8ce4dd0d04356691a74",
+      "artifactDigests": [],
+      "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "045b1db52aca4f0786349f993c29402572217329"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:19:50.877Z",
+        "finishedAt": "2026-10-21T19:20:25.010Z",
+        "logDigest": "sha256:aa4887c562d944ce126c0bc69d67b9f12a634fa59b3c0a8b03dd13d9fe2729d4",
+        "artifactDigests": [],
+        "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+        "passed": false,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": false,
+        "sourceRevision": "045b1db52aca4f0786349f993c29402572217329"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:20:51.929Z",
+        "finishedAt": "2026-10-21T19:21:51.630Z",
+        "logDigest": "sha256:0134771722c2e70978ead0d2ab366232181b3a94c9abcc9563b9e275cd637c86",
+        "artifactDigests": [],
+        "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "006525dcbbaadfe321faf1f1b5cb23583abd6381"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:22:15.834Z",
+        "finishedAt": "2026-10-21T19:22:48.323Z",
+        "logDigest": "sha256:949f7a9cea587c37714c45fc242891d88035bf515aa93169264817dcc2d127ce",
+        "artifactDigests": [],
+        "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "006525dcbbaadfe321faf1f1b5cb23583abd6381"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:23:36.028Z",
+        "finishedAt": "2026-10-21T19:24:07.259Z",
+        "logDigest": "sha256:b5165bf40ba4d4d737053748ec11bfa55bd6304dfd044c252789e6cf6cfd0214",
+        "artifactDigests": [],
+        "attemptId": "98c38e90-8523-4cfa-a251-fe216a73532e",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "b863d5f612c17c7c573b683504fb69b4121620ba"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-e1e6f7ab-79fb-50dc-9494-f0c2f28f5c69",
+      "notes": "",
+      "at": "2026-10-21T19:22:53.265Z"
+    },
+    "changedFiles": [
+      "test/run-session.test.mjs",
+      ".cursor/skills/factory-run/SKILL.md",
+      ".github/skills/factory-run/SKILL.md",
+      ".agents/skills/factory-run/SKILL.md",
+      ".claude/skills/factory-run/SKILL.md",
+      "templates/skills/factory-run/SKILL.md",
+      ".factory/agents/engineer/history.md"
+    ],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T19:16:46.406Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T19:16:46.407Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T19:17:28.456Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T19:18:43.076Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T19:20:25.051Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T19:22:53.231Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T19:22:53.265Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T19:24:07.314Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T19:16:46.406Z",
+  "updatedAt": "2026-10-21T19:24:07.314Z"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "1.4",
+  "change": "add-cline-ide-adapter",
+  "title": "Add a failing test that the marked factory section merged into `AGENTS.md` names `.cline/rules/factory.md`. Add that line to `templates/fragments/instructions.md`. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "1.3"
+  ],
+  "acceptanceCriteria": [
+    "Add a failing test that the marked factory section merged into `AGENTS.md` names `.cline/rules/factory.md`. Add that line to `templates/fragments/instructions.md`. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.3"
+    ]
+  },
+  "attemptId": "ab8b238f-b2fb-4c54-a363-a3a6161b6248",
+  "updatedAt": "2026-10-22T15:07:37.026Z"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "3.2",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Add a failing test that provenance uses `actions/attest-build-provenance` with the final SBOM as `subject-path`, requests identity-token write only for attestation, and does not claim SLSA Build L2 or L3. Implement that attestation step and verify with `node --test test/ci-provenance.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "3.1"
+  ],
+  "acceptanceCriteria": [
+    "Add a failing test that provenance uses `actions/attest-build-provenance` with the final SBOM as `subject-path`, requests identity-token write only for attestation, and does not claim SLSA Build L2 or L3. Implement that attestation step and verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "3.1"
+    ]
+  },
+  "attemptId": "82557439-e1d2-4207-b490-1460c136a444",
+  "updatedAt": "2026-10-22T01:54:59.946Z"
+}

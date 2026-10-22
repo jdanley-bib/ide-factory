@@ -36,10 +36,18 @@ Do not run those commands yourself in order to approve your own request.
 When the reviewer rejects an implementation, run:
 
 ```bash
-idefactory lockout --agent <implementer-id> --reviewer reviewer --reason "what failed"
+idefactory lockout create --agent <implementer-id> --reviewer reviewer --reason "what failed"
 ```
 
-The note records the rejection. It does not delete product files. The lead assigns a later attempt; the same session does not quietly continue as if the review passed.
+`idefactory lockout --agent ...` remains a create alias. Creation prints a lockout id and writes immutable event data; it does not delete product files.
+
+Resolve an active lockout (or a legacy `*lockout*.md` basename) with a distinct resolver:
+
+```bash
+idefactory lockout resolve <id> --resolver <id> --reason "what changed"
+```
+
+The lead assigns a later attempt; the same session does not quietly continue as if the review passed.
 
 ## Halt
 

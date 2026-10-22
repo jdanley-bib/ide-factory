@@ -1,0 +1,131 @@
+{
+  "id": "7b2f2844-928e-4eb7-8461-674bc47ed750",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "2.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-c00819ae-5928-5ff4-a321-77696732de1f",
+  "reviewerId": "bc-573b4a1c-04a3-5fb7-acfa-9b11d80786b9",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T17:50:30.630Z",
+      "finishedAt": "2026-10-21T17:51:01.734Z",
+      "logDigest": "sha256:752ab7e3212ac94e1e70bab98362a89c9543af20113b4743b2bc37c80a2a40bd",
+      "artifactDigests": [],
+      "attemptId": "7b2f2844-928e-4eb7-8461-674bc47ed750",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "909557966c1b525e7b1f8c86fdd3a38dbde745ed"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T17:52:33.934Z",
+        "finishedAt": "2026-10-21T17:53:33.928Z",
+        "logDigest": "sha256:0e627101afd2568e3231f9802e272e566b9aa740c1cc403972746f22d55c624e",
+        "artifactDigests": [],
+        "attemptId": "7b2f2844-928e-4eb7-8461-674bc47ed750",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "760a29aa1447142358c684f7c34df3ba6882e337"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T17:55:55.883Z",
+        "finishedAt": "2026-10-21T17:56:26.922Z",
+        "logDigest": "sha256:dfb2bae1560d9a023c851ac9607e8e21f8653f583f89aadfe8f3d78c36eb7369",
+        "artifactDigests": [],
+        "attemptId": "7b2f2844-928e-4eb7-8461-674bc47ed750",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "6976d6146b56a11737b0b7adf2b6c39eda4fc254"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-573b4a1c-04a3-5fb7-acfa-9b11d80786b9",
+      "notes": "ACCEPT: CLI red (issuer=cli, exit 1, dirty wt) at 9095579; clean-head unit pass at 760a29a. Cross-process --max-agent-steps N emits N agent-step requests then N+1 exits 0 with stopReason max-agent-steps and no request; agentSteps persisted before emit; --max-tasks 1 first request still exit 2. Re-ran node --test test/run-session.test.mjs test/orchestration.test.mjs exit 0 (24 pass). Reconstructed red: test-only overlay on 9095579 fails (budget stays 20; resume count 3!==4).",
+      "at": "2026-10-21T17:55:13.357Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T17:48:57.619Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T17:48:57.620Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T17:49:55.353Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T17:51:03.807Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T17:53:33.967Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T17:55:13.311Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T17:55:13.357Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T17:56:26.973Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T17:48:57.619Z",
+  "updatedAt": "2026-10-21T17:56:26.973Z"
+}

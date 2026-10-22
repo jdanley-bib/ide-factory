@@ -1,0 +1,131 @@
+{
+  "id": "46a2aac4-ca25-4b93-a9db-ee047d77be5c",
+  "change": "make-finalization-recoverable",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-e0b69195-d4e8-574f-a362-216d96aaf86f",
+  "reviewerId": "bc-dba650a2-57bd-5c76-92cf-caf951a80b4d",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T22:20:03.287Z",
+      "finishedAt": "2026-10-21T22:21:34.185Z",
+      "logDigest": "sha256:e5c0b609c549019138f96282e7cad459345c6d4ac4854f3befd01ed0570e1082",
+      "artifactDigests": [],
+      "attemptId": "46a2aac4-ca25-4b93-a9db-ee047d77be5c",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "16bb79ddfb981f19439e61d8d0a38eafe56347ba"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:22:25.464Z",
+        "finishedAt": "2026-10-21T22:23:56.341Z",
+        "logDigest": "sha256:94ef73b923df095b06c45940bed454bdf373ad403fa21c33aa33757f53c72e6a",
+        "artifactDigests": [],
+        "attemptId": "46a2aac4-ca25-4b93-a9db-ee047d77be5c",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "cdb73d25bbe9ae7b5ec533fa268884c525e87943"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T22:25:31.281Z",
+        "finishedAt": "2026-10-21T22:27:02.156Z",
+        "logDigest": "sha256:4aa3735bf54fa1ef5014cfe778fed4c49b74b103ab2e8bfffc40d3d46711ed10",
+        "artifactDigests": [],
+        "attemptId": "46a2aac4-ca25-4b93-a9db-ee047d77be5c",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "cd506c7c17faf796ff107f82fb09b14c30bb7b15"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-dba650a2-57bd-5c76-92cf-caf951a80b4d",
+      "notes": "ACCEPT: buildFinalizationPlan deterministic targets; red+clean unit evidence; focused re-run 10 pass",
+      "at": "2026-10-21T22:25:04.495Z"
+    },
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-21T22:14:49.788Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T22:14:49.789Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T22:16:03.078Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T22:21:39.592Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T22:24:01.058Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T22:25:04.462Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T22:25:04.495Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T22:27:02.208Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T22:14:49.788Z",
+  "updatedAt": "2026-10-21T22:27:02.208Z"
+}

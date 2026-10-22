@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Add a failing test that the baseline job runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`, and that a non-zero command fails the job. Implement `.github/workflows/ci.yml` with job name `baseline` on pull request and push, using Node 22. Verify with `node --test test/ci-provenance.test.mjs`.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that the baseline job runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`, and that a non-zero command fails the job. Implement `.github/workflows/ci.yml` with job name `baseline` on pull request and push, using Node 22. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "b494d2f8-f24e-49c5-81de-125461fbccd4",
+  "updatedAt": "2026-10-22T00:26:14.700Z"
+}

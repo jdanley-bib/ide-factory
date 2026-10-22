@@ -1,0 +1,186 @@
+{
+  "id": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+  "change": "persist-bounded-run-sessions",
+  "taskId": "3.4",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-71e04e8a-ab36-5609-b0b5-5a71762974c2",
+  "reviewerId": "bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef",
+  "modelProfile": "security-strong",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-21T19:00:46.354Z",
+      "finishedAt": "2026-10-21T19:01:47.123Z",
+      "logDigest": "sha256:300575144b9fbd16c2771ba6b43c52032b4f7a5166cf867de36271bdf3720896",
+      "artifactDigests": [],
+      "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T18:57:38.768Z",
+        "finishedAt": "2026-10-21T18:58:36.455Z",
+        "logDigest": "sha256:d63cb701b98b13f0d893ad3f370ad1d0fa13ebae0a745c460e0570a85805cae6",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": false,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": false,
+        "sourceRevision": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:03:17.363Z",
+        "finishedAt": "2026-10-21T19:03:50.266Z",
+        "logDigest": "sha256:9d73e16a914038e1654b712546622909568c4109fddb4c7c1eb4ac6d43e09b50",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": false,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": false,
+        "sourceRevision": "358012ff86cdad2db69790d2962a9ffe5df137d8"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:04:17.841Z",
+        "finishedAt": "2026-10-21T19:04:50.557Z",
+        "logDigest": "sha256:8eb0197af2d9c8af5a6df897533be69cc504d84cfe3cd9c56b54bc27ffa7e811",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "039d45634f54ef4228a08be810da99893b2af8ad"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-21T19:08:53.491Z",
+        "finishedAt": "2026-10-21T19:09:25.720Z",
+        "logDigest": "sha256:2e5e01ea5822df4783f02a6ce41b31647dc8e0b9d12ba2153515eddaa66615d0",
+        "artifactDigests": [],
+        "attemptId": "c923e6ab-933a-44a2-a41e-4969af7b9380",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "d028d8ef976105318b53ad6691aeda69b689836b"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-f8a841fa-5c4d-57de-94a6-bad73914b7ef",
+      "notes": "Independent review after security-checking: orchestration+run-session tests green; simulated auto-reopen red reproduces 3.4 failure; sticky unchanged-state and --new-run security route match spec.",
+      "at": "2026-10-21T19:08:22.106Z"
+    },
+    "changedFiles": [
+      "test/orchestration.test.mjs",
+      ".factory/agents/engineer/history.md"
+    ],
+    "baseRev": "5e02d3833b1aec351fb010bde25aedcdd0d4567c"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T18:52:11.391Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T18:52:11.392Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T18:56:22.458Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T18:57:09.165Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T19:03:50.312Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T19:05:40.015Z",
+      "state": "security-checking"
+    },
+    {
+      "at": "2026-10-21T19:08:22.074Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T19:08:22.106Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T19:09:25.772Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T18:52:11.391Z",
+  "updatedAt": "2026-10-21T19:09:25.772Z"
+}

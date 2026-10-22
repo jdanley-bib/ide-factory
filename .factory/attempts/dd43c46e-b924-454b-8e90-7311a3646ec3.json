@@ -1,0 +1,132 @@
+{
+  "id": "dd43c46e-b924-454b-8e90-7311a3646ec3",
+  "change": "establish-factory-ci-and-provenance",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "bc-33d9fdda-7d9d-5e59-b875-2d211ac741eb",
+  "reviewerId": "bc-d083ee18-0f90-5d61-818d-3dc36ffe9faa",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-22T00:27:08.116Z",
+      "finishedAt": "2026-10-22T00:28:39.350Z",
+      "logDigest": "sha256:1a9dbc1bfc81fc5fd4cf98a9fec17efcc0d58964f521da467d1b6d85103ae4dc",
+      "artifactDigests": [],
+      "attemptId": "dd43c46e-b924-454b-8e90-7311a3646ec3",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": false,
+      "sourceRevision": "64ae49093b49b3b6bbec842e618322d1f33ab421"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:29:30.020Z",
+        "finishedAt": "2026-10-22T00:31:01.265Z",
+        "logDigest": "sha256:2b284e8b4f0213e9b24442f78d663a8e37f07ef28f23808b401a2c1d8ce2d3c3",
+        "artifactDigests": [],
+        "attemptId": "dd43c46e-b924-454b-8e90-7311a3646ec3",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "cfbe42b50711b0ad94cf544127b25f1be42cf27c"
+      },
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:33:57.467Z",
+        "finishedAt": "2026-10-22T00:35:28.747Z",
+        "logDigest": "sha256:b824e75d5700453881f7eb848c4a460986b6699fa4361f88de1e69878b83e094",
+        "artifactDigests": [],
+        "attemptId": "dd43c46e-b924-454b-8e90-7311a3646ec3",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "ade8e0ff0ba3b824dbf07bf3597b02d70d4a6fa2"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-d083ee18-0f90-5d61-818d-3dc36ffe9faa",
+      "notes": "Independent review: CLI red (issuer=cli, exitCode 1, passed false at 64ae490 worktreeClean:false) and clean unit (issuer=cli, exitCode 0, worktreeClean at cfbe42b) authentic; re-ran node --test test/ci-provenance.test.mjs exit 0, 2 pass. Pins match official actions/checkout@v4.4.0 and actions/setup-node@v4.4.0; contents:read; no pull_request_target/continue-on-error. Distinct from implementer.",
+      "at": "2026-10-22T00:32:46.983Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-22T00:26:18.661Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-22T00:26:18.662Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-22T00:26:49.104Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-22T00:28:42.141Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T00:31:05.633Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T00:32:46.947Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T00:32:46.983Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-22T00:35:28.793Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-22T00:26:18.661Z",
+  "updatedAt": "2026-10-22T00:35:28.793Z"
+}

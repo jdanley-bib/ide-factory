@@ -1,0 +1,83 @@
+{
+  "id": "a683a14c-a70b-4b1f-b0da-0e23f57e1ce0",
+  "change": "reconcile-factory-specifications",
+  "taskId": "2.2",
+  "state": "finalized",
+  "implementerRole": "lead",
+  "implementerId": "bc-cf02fe7c-8c14-53ff-b8ab-572642804539",
+  "reviewerId": "bc-c209d1f2-7c92-57e0-a683-d536bea4a030",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "command": "npx openspec validate --all",
+      "passed": false,
+      "exitCode": 1,
+      "failure": "pre-sync main ide-adapters No model launcher requirement had no scenario"
+    },
+    "verification": [
+      {
+        "kind": "unit",
+        "command": "npm test",
+        "passed": true,
+        "summary": "38 passed, 0 failed"
+      },
+      {
+        "kind": "docs",
+        "command": "node src/cli.mjs doctor && npx openspec validate --all && npx openspec validate reconcile-factory-specifications --strict",
+        "passed": true,
+        "summary": "doctor ok; 7/7 OpenSpec items valid; strict change valid"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-c209d1f2-7c92-57e0-a683-d536bea4a030",
+      "notes": "Five deltas fully synchronized; stale purposes corrected; 38 tests, doctor, 7/7 specs, and strict change validation pass independently.",
+      "at": "2026-10-21T15:50:26.700Z"
+    },
+    "changedFiles": [
+      "openspec/specs/guided-build/spec.md",
+      "openspec/specs/human-governance/spec.md",
+      "openspec/specs/ide-adapters/spec.md",
+      "openspec/specs/shared-team-state/spec.md",
+      "openspec/specs/spec-to-backlog/spec.md"
+    ],
+    "baseRev": "7210a52"
+  },
+  "history": [
+    {
+      "at": "2026-10-21T15:47:27.622Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-21T15:47:27.622Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-21T15:48:41.134Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-21T15:48:41.165Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-21T15:48:42.425Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-21T15:50:26.663Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-21T15:50:26.700Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-21T15:50:30.017Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-21T15:47:27.622Z",
+  "updatedAt": "2026-10-21T15:50:30.017Z"
+}
