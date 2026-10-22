@@ -440,3 +440,11 @@ Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `openspec/changes
 Green: integration command batch (strict validate, validate --all, npm test ×2, npm ci, npm audit --audit-level=high) all exit 0 with honest notes; `node --test test/ci-provenance.test.mjs` exit 0, 8 pass; `npm test` exit 0 (200 pass); `node src/cli.mjs verify run f615a850-ec61-4c7a-8793-b80f4820f46a --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, logDigest sha256:0dd6f0375ba1585cf9e07c93609aa407d0bebd6bd4293212a5d283408ca76f84, sourceRevision 9ca04f6690ea71f3d8fc969156ba613ed995e706).
 Notes: `openspec/changes/establish-factory-ci-and-provenance/implementation-notes.md` records seven command sections in task order (duplicate `npm test` and `npx openspec validate --all` executions).
 Scope: integration verification only — no model start, gate/evidence policy change, GitHub admin API, observability, archive, review, accept, complete, or push.
+
+## 2026-10-22 add-cline-ide-adapter/1.1
+
+Attempt: 25d7c140-147c-4c27-bd15-39a69a7d4eb5
+Implementer: cline-engineer-1.1
+Red: `node src/cli.mjs verify run 25d7c140-147c-4c27-bd15-39a69a7d4eb5 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit); new test failed ENOENT for `.cline/rules/factory.md`.
+Green: `node --test test/install.test.mjs` exit 0, 15 pass (pending full `verify run --check unit` after commit).
+Scope: Cline adapter install only — `templates/cline/rules/factory.md`, `.cline/skills` destination, `.cline/workflows/factory-*.md` (shared command body + owned marker), install test; no `.clinerules/`, doctor, AGENTS.md, team-style, no-model scan, review, complete, or push.

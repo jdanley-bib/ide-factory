@@ -241,6 +241,54 @@ test('installs the full shared adapter command set for Cursor, Copilot, and Clau
   }
 });
 
+test('init writes Cline rule, skills, and workflows under .cline only', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const clineRule = read(dir, '.cline/rules/factory.md');
+    assert.match(clineRule, /Unrelated requests are left alone/);
+    assert.doesNotMatch(clineRule, /^---/m);
+    assert.match(clineRule, /<!-- idefactory:owned -->/);
+
+    const clineSkills = [
+      'factory-coordinator',
+      'factory-openspec',
+      'factory-build',
+      'factory-run',
+      'factory-full',
+      'factory-governance',
+      'factory-tdd',
+      'factory-verify',
+      'factory-debug',
+    ];
+    for (const name of clineSkills) {
+      const rel = `.cline/skills/${name}/SKILL.md`;
+      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+    }
+
+    for (const command of SHARED_COMMANDS) {
+      const rel = `.cline/workflows/factory-${command}.md`;
+      assert.equal(fs.existsSync(path.join(dir, rel)), true, rel);
+      const body = read(dir, rel);
+      for (const skill of COMMAND_SKILLS[command]) {
+        assert.match(
+          body,
+          skill,
+          `${rel} must direct Cline to the same factory skill as the Cursor command (${skill})`,
+        );
+      }
+      assert.doesNotMatch(body, /^description:/m);
+      assert.doesNotMatch(body, /^agent:\s*factory/m);
+      assert.match(body, /<!-- idefactory:owned -->/);
+    }
+
+    assert.equal(fs.existsSync(path.join(dir, '.cline/work')), false);
+    assert.equal(fs.existsSync(path.join(dir, '.clinerules')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('installed factory skills state the IDE session model and do not launch a model', async () => {
   const dir = tempProject();
   try {
