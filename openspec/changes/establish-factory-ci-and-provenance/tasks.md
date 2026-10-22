@@ -21,7 +21,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npx openspec validate establish-factory-ci-and-provenance --strict`, `npx openspec validate --all`, `npm test`, and the four baseline commands `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`. Record the commands and results in this change's implementation notes. Do not start a model, change factory gate or evidence policy, call the GitHub admin API, add observability, or archive.
+- [x] 5.1 Run `npx openspec validate establish-factory-ci-and-provenance --strict`, `npx openspec validate --all`, `npm test`, and the four baseline commands `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`. Record the commands and results in this change's implementation notes. Do not start a model, change factory gate or evidence policy, call the GitHub admin API, add observability, or archive.
 
 ## Workflow follow-up
 
