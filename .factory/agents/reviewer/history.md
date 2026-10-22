@@ -422,3 +422,11 @@ Reviewer: cline-reviewer-1.4
 Implementer: cline-engineer-1.4
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 17 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at fbb9cf97 worktreeClean:false); unit pass at 018744f worktreeClean. Product 018744f: instruction fragment + install test — `templates/fragments/instructions.md` names `.cline/rules/factory.md`; AGENTS.md factory-section test requires that path; no new instruction-file target; no CI, doctor, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
+
+## 2026-10-22 add-cline-ide-adapter/2.1
+
+Attempt: 0292fa6b-4229-4a3b-ad25-f2160bff8cff
+Reviewer: cline-reviewer-2.1
+Implementer: cline-engineer-2.1
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 18 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 201aa5d3 worktreeClean:false). Product c092e041: doctor REQUIRED adds `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md` only (not every workflow); install test asserts doctor exit 0 after init and non-zero `missing <path>` when either file is removed; no CI, Semgrep, Node, Python, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
