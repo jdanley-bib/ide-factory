@@ -21,7 +21,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npx openspec validate make-finalization-recoverable --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add CI or provenance, add observability, change gate/evidence policy, or archive.
+- [x] 5.1 Run `npx openspec validate make-finalization-recoverable --strict`, `npm test`, and `node src/cli.mjs doctor`. Record the commands and results in this change's implementation notes. Do not start a model, add CI or provenance, add observability, change gate/evidence policy, or archive.
 
 ## Workflow follow-up
 
