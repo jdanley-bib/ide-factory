@@ -13,7 +13,7 @@
 
 ## 3. Integration
 
-- [ ] 3.1 Run `npx openspec validate add-cline-ide-adapter --strict`, `npx openspec validate --all`, and `node --test test/install.test.mjs`. Confirm the diff adds no second queue and does not change gate, evidence, or lockout behavior. Record the commands and results in this change's implementation notes. Do not launch a model and do not archive.
+- [x] 3.1 Run `npx openspec validate add-cline-ide-adapter --strict`, `npx openspec validate --all`, and `node --test test/install.test.mjs`. Confirm the diff adds no second queue and does not change gate, evidence, or lockout behavior. Record the commands and results in this change's implementation notes. Do not launch a model and do not archive.
 
 ## Workflow follow-up
 

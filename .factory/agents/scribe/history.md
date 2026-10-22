@@ -247,3 +247,7 @@ Attempt: ab8b238f-b2fb-4c54-a363-a3a6161b6248
 ## 2026-10-22 finalized add-cline-ide-adapter/2.1
 
 Attempt: 0292fa6b-4229-4a3b-ad25-f2160bff8cff
+
+## 2026-10-22 finalized add-cline-ide-adapter/3.1
+
+Attempt: 27e6311a-e7fa-4b6a-b780-424369c3e88e

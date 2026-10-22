@@ -1,0 +1,28 @@
+{
+  "id": "3.1",
+  "change": "add-cline-ide-adapter",
+  "title": "Run `npx openspec validate add-cline-ide-adapter --strict`, `npx openspec validate --all`, and `node --test test/install.test.mjs`. Confirm the diff adds no second queue and does not change gate, evidence, or lockout behavior. Record the commands and results in this change's implementation notes. Do not launch a model and do not archive.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Run `npx openspec validate add-cline-ide-adapter --strict`, `npx openspec validate --all`, and `node --test test/install.test.mjs`. Confirm the diff adds no second queue and does not change gate, evidence, or lockout behavior. Record the commands and results in this change's implementation notes. Do not launch a model and do not archive. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "27e6311a-e7fa-4b6a-b780-424369c3e88e",
+  "updatedAt": "2026-10-22T15:24:50.771Z"
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-22T15:15:44.461Z",
+  "updatedAt": "2026-10-22T15:24:50.771Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -30,7 +30,7 @@
     {
       "change": "add-cline-ide-adapter",
       "id": "3.1",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "enforce-risk-gates-and-security-stage",
