@@ -1,0 +1,28 @@
+{
+  "id": "5.1",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Run `npx openspec validate establish-factory-ci-and-provenance --strict`, `npx openspec validate --all`, `npm test`, and the four baseline commands `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`. Record the commands and results in this change's implementation notes. Do not start a model, change factory gate or evidence policy, call the GitHub admin API, add observability, or archive.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Run `npx openspec validate establish-factory-ci-and-provenance --strict`, `npx openspec validate --all`, `npm test`, and the four baseline commands `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all`. Record the commands and results in this change's implementation notes. Do not start a model, change factory gate or evidence policy, call the GitHub admin API, add observability, or archive. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "backend",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "backend-api",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-22T00:16:46.040Z"
+}

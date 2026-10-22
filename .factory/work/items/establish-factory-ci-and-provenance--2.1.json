@@ -1,0 +1,30 @@
+{
+  "id": "2.1",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Add a failing test that the shared secretlint command exits non-zero on a seeded high-confidence secret, exits zero on a clean tree, and does not print the secret. Add the exact devDependencies, configuration, and the same CI step. Verify with `node --test test/ci-provenance.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that the shared secretlint command exits non-zero on a seeded high-confidence secret, exits zero on a clean tree, and does not print the secret. Add the exact devDependencies, configuration, and the same CI step. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "security",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "security-sensitive",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-22T00:16:46.037Z"
+}

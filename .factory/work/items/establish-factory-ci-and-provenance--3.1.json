@@ -1,0 +1,30 @@
+{
+  "id": "3.1",
+  "change": "establish-factory-ci-and-provenance",
+  "title": "Add a failing test that a version-tag workflow generates a CycloneDX SBOM containing locked production and development dependencies, including `@fission-ai/openspec`, plus lockfile and source-revision metadata. Implement `.github/workflows/release.yml` with the pinned `@cyclonedx/cyclonedx-npm` command. Verify with `node --test test/ci-provenance.test.mjs`.",
+  "status": "todo",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Add a failing test that a version-tag workflow generates a CycloneDX SBOM containing locked production and development dependencies, including `@fission-ai/openspec`, plus lockfile and source-revision metadata. Implement `.github/workflows/release.yml` with the pinned `@cyclonedx/cyclonedx-npm` command. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "high",
+    "roles": [
+      "engineer",
+      "test-engineer",
+      "security-reviewer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "security-strong",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "security-sensitive",
+    "dependencies": []
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-22T00:16:46.039Z"
+}

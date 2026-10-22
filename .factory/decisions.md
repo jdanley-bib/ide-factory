@@ -109,3 +109,39 @@ Authorized-by: factory lead aligning the machine queue to the approved task
 Work-item: make-finalization-recoverable/4.1
 Attempt: 42a06afe-b7f8-44c0-ab0d-94b797b650ce
 Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task implements writer exclusion. The approved task verifies only `node --test test/writer-lease.test.mjs`; the shipped registry maps only unit to `npm test`; and the approved design explicitly excludes new security tooling and gate/evidence policy changes. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security reviewer before the distinct reviewer accepts; do not invent scanner argv or forge security evidence.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-2.1-unit-check
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-2.1-unit-check
+Authorized-at: 2026-10-22T00:17:00Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: establish-factory-ci-and-provenance/2.1
+Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task implements secret scanning. The approved task verifies the repository workflow and scanner behavior with `node --test test/ci-provenance.test.mjs`; the factory check registry maps only unit to `npm test`; and this change does not modify factory gate/evidence policy. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security reviewer before the distinct reviewer accepts; do not forge CI scanner output as factory security evidence.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-3.1-unit-check
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-3.1-unit-check
+Authorized-at: 2026-10-22T00:17:00Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: establish-factory-ci-and-provenance/3.1
+Note: The classifier inferred unit, build, dependency-audit, and threat-review because the task creates release SBOM content. The approved task verifies release workflow behavior with `node --test test/ci-provenance.test.mjs`; the factory check registry maps only unit to `npm test`; and CI provenance is not factory attempt security evidence. Set completion checks to unit and machine securityProfile to dependency-basic. Require a distinct manual security reviewer before the distinct reviewer accepts; do not invent registry mappings or forge evidence.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-4.1-unit-check
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-4.1-unit-check
+Authorized-at: 2026-10-22T00:17:00Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: establish-factory-ci-and-provenance/4.1
+Note: The classifier inferred an integration check because the task names a branch review declaration. The task is repository-file behavior verified by `node --test test/ci-provenance.test.mjs`, and the registry has no integration mapping. Set completion checks to unit. The implementation must remain a local declaration and must not call a forge admin API.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-5.1-unit-check
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-5.1-unit-check
+Authorized-at: 2026-10-22T00:17:00Z
+Authorized-by: factory lead aligning the machine queue to the approved task
+Work-item: establish-factory-ci-and-provenance/5.1
+Note: The classifier inferred an integration check because the task executes the baseline command set. The approved integration task runs strict OpenSpec validation, all specs, `npm ci`, `npm test`, and `npm audit --audit-level=high`; the registry maps only unit to `npm test`. Set completion checks to unit and record every additional command honestly in implementation notes; do not forge an integration attestation.

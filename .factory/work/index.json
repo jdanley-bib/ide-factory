@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-22T00:03:25.997Z",
+  "updatedAt": "2026-10-22T00:16:46.041Z",
   "items": [
     {
       "change": "enforce-risk-gates-and-security-stage",
@@ -101,6 +101,46 @@
       "change": "enforce-verification-evidence",
       "id": "5.1",
       "status": "done"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "1.1",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "1.2",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "2.1",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "2.2",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "3.1",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "3.2",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "4.1",
+      "status": "todo"
+    },
+    {
+      "change": "establish-factory-ci-and-provenance",
+      "id": "5.1",
+      "status": "todo"
     },
     {
       "change": "make-finalization-recoverable",
