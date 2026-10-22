@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "add-cline-ide-adapter",
+  "title": "Add a failing test that init leaves an existing application file and `.cline/rules/team-style.md` byte-for-byte unchanged, and that upgrade restores an edited `.cline/skills/factory-coordinator/SKILL.md` while keeping a custom `.factory/decisions.md` entry and the same team-style file. Confirm the existing upgrade overwrite covers those factory-owned Cline paths and does not delete other `.cline/` files. Verify with `node --test test/install.test.mjs`.",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "Add a failing test that init leaves an existing application file and `.cline/rules/team-style.md` byte-for-byte unchanged, and that upgrade restores an edited `.cline/skills/factory-coordinator/SKILL.md` while keeping a custom `.factory/decisions.md` entry and the same team-style file. Confirm the existing upgrade overwrite covers those factory-owned Cline paths and does not delete other `.cline/` files. Verify with `node --test test/install.test.mjs`. works as specified and is covered by the verification profile checks."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "9f8f15dc-e453-489d-899c-2634a7928443",
+  "updatedAt": "2026-10-22T14:50:49.800Z"
+}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-22T14:41:43.772Z",
+  "updatedAt": "2026-10-22T14:50:49.800Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -10,7 +10,7 @@
     {
       "change": "add-cline-ide-adapter",
       "id": "1.2",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "add-cline-ide-adapter",
