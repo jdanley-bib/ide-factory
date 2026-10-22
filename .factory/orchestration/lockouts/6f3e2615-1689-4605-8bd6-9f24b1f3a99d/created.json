@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "6f3e2615-1689-4605-8bd6-9f24b1f3a99d",
+  "agent": "bc-e4a15f0c-7617-5bab-887e-59de470e1774",
+  "reviewer": "bc-40036235-d0e3-5aff-950f-49a65f1031c6",
+  "reason": "Rejected task 2.2: tests auto-install Semgrep from PyPI instead of failing closed or using a hermetic pinned artifact",
+  "createdAt": "2026-10-22T00:56:51.203Z"
+}

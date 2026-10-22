@@ -2,10 +2,10 @@
   "id": "983f8451-bce2-4aa9-bbe7-fb139d2bf2b1",
   "change": "establish-factory-ci-and-provenance",
   "taskId": "2.2",
-  "state": "red-confirmed",
+  "state": "rejected",
   "implementerRole": "engineer",
   "implementerId": "bc-e4a15f0c-7617-5bab-887e-59de470e1774",
-  "reviewerId": null,
+  "reviewerId": "bc-40036235-d0e3-5aff-950f-49a65f1031c6",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,11 +32,45 @@
       "worktreeClean": false,
       "sourceRevision": "d85f3c7d54e15bf778b1465bdee45966c2f826ed"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:53:09.973Z",
+        "finishedAt": "2026-10-22T00:54:41.205Z",
+        "logDigest": "sha256:978d4ed5d86fd91b613d89dd986d65b57634ee947c0249305e649d282bbf01e8",
+        "artifactDigests": [],
+        "attemptId": "983f8451-bce2-4aa9-bbe7-fb139d2bf2b1",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "f7e4013f75521540fe551074fc073c3d60d693fe"
+      }
+    ],
     "security": [],
-    "review": null,
-    "changedFiles": [],
-    "baseRev": null
+    "review": {
+      "verdict": "REJECT",
+      "reviewerId": "bc-40036235-d0e3-5aff-950f-49a65f1031c6",
+      "notes": "Unit tests auto-install Semgrep from PyPI, making npm test and baseline CI network-dependent and non-reproducible; fail closed when pinned Semgrep is unavailable or use a hermetic integrity-pinned artifact.",
+      "at": "2026-10-22T00:56:51.166Z"
+    },
+    "changedFiles": [
+      ".github/workflows/ci.yml",
+      "test/ci-provenance.test.mjs",
+      ".factory/agents/engineer/history.md"
+    ],
+    "baseRev": "d85f3c7d54e15bf778b1465bdee45966c2f826ed"
   },
   "history": [
     {
@@ -54,8 +88,20 @@
     {
       "at": "2026-10-22T00:50:58.818Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T00:54:44.454Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T00:56:51.128Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T00:56:51.166Z",
+      "state": "rejected"
     }
   ],
   "createdAt": "2026-10-22T00:47:52.412Z",
-  "updatedAt": "2026-10-22T00:50:58.818Z"
+  "updatedAt": "2026-10-22T00:56:51.166Z"
 }
