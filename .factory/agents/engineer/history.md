@@ -364,3 +364,12 @@ Implementer: bc-a02322a9-e6eb-588f-bb2f-47944a1a24f6
 Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/workflows/ci.yml`); `node src/cli.mjs verify run b494d2f8-f24e-49c5-81de-125461fbccd4 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/ci-provenance.test.mjs` exit 0, 1 pass.
 Scope: baseline CI job only — `.github/workflows/ci.yml` job `baseline` on pull_request/push, Node 22, four fail-closed commands (`npm ci`, `npm test`, `npm audit --audit-level=high`, `npx openspec validate --all`). No pin/permission enforcement (1.2), scanners, release provenance, branch controls, review, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/1.2
+
+Attempt: dd43c46e-b924-454b-8e90-7311a3646ec3
+Implementer: bc-33d9fdda-7d9d-5e59-b875-2d211ac741eb
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `permissions.contents: read`; tag-pinned actions); `node src/cli.mjs verify run dd43c46e-b924-454b-8e90-7311a3646ec3 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 2 pass.
+Pins: `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` # v4.4.0; `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020` # v4.4.0 (from api.github.com commits/v4 + git ls-remote tags).
+Scope: `contents: read`, full-SHA action pins with version comments, no `pull_request_target` / `continue-on-error`. No scanners, release, branch controls, review, complete, or push.

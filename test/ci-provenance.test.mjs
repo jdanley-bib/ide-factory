@@ -71,3 +71,56 @@ test('baseline CI job runs the four Phase 0 commands on pull_request and push wi
     );
   }
 });
+
+const FULL_SHA = /^[0-9a-f]{40}$/;
+
+function thirdPartyUses(yaml) {
+  const refs = [];
+  for (const line of yaml.split('\n')) {
+    const match = line.match(/^\s*-\s*uses\s*:\s*(.+?)\s*$/);
+    if (!match) continue;
+    const raw = match[1].replace(/\s+#.*$/, '').trim();
+    // Local or reusable workflow refs are not third-party marketplace actions.
+    if (raw.startsWith('./') || raw.startsWith('.github/') || raw.startsWith('docker://')) continue;
+    refs.push(raw);
+  }
+  return refs;
+}
+
+test('baseline workflow uses contents:read, full-SHA action pins, and forbids pull_request_target and continue-on-error', () => {
+  const yaml = readWorkflow();
+
+  assert.match(
+    yaml,
+    /^\s*permissions\s*:\s*\n(?:\s+.+\n)*?\s+contents\s*:\s*read\s*$/m,
+    'workflow must set permissions.contents to read',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /^\s*contents\s*:\s*write\b/m,
+    'workflow must not request contents: write',
+  );
+
+  assert.doesNotMatch(
+    yaml,
+    /\bpull_request_target\b/,
+    'workflow must not use pull_request_target',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /^\s*continue-on-error\s*:\s*true\s*$/m,
+    'workflow must not set continue-on-error: true',
+  );
+
+  const uses = thirdPartyUses(yaml);
+  assert.ok(uses.length > 0, 'baseline workflow must use at least one third-party action');
+  for (const ref of uses) {
+    const at = ref.lastIndexOf('@');
+    assert.ok(at > 0, `action ref must include @pin: ${ref}`);
+    const pin = ref.slice(at + 1);
+    assert.ok(
+      FULL_SHA.test(pin),
+      `third-party action must be pinned to a full 40-char commit SHA (not a tag/branch): ${ref}`,
+    );
+  }
+});
