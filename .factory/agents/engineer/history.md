@@ -356,3 +356,11 @@ Context: audit found `completeWorkItem` still used legacy done-first writes and 
 Red: `node --test test/finalization-recovery.test.mjs` exit 1 — 20 pass / 4 fail (missing journal.commit; completeWorkItem ignored faultHook / did not journal).
 Green: `node --test test/finalization-recovery.test.mjs` exit 0, 24 pass; `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 44 pass; `npm test` exit 0, 192 pass.
 Scope: persist `finalizedAt`+`commit` on journal; resume from journal without rebuilding plan; wire `completeWorkItem` to journaled finalization with library-only faultHook; allow accepted/finalize-failed/finalized+journal retries; dirty-worktree resume only with matching journal HEAD; ledger after commit only. No review, complete, push, archive, or branch change.
+
+## 2026-10-22 establish-factory-ci-and-provenance/1.1
+
+Attempt: b494d2f8-f24e-49c5-81de-125461fbccd4
+Implementer: bc-a02322a9-e6eb-588f-bb2f-47944a1a24f6
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/workflows/ci.yml`); `node src/cli.mjs verify run b494d2f8-f24e-49c5-81de-125461fbccd4 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 1 pass.
+Scope: baseline CI job only — `.github/workflows/ci.yml` job `baseline` on pull_request/push, Node 22, four fail-closed commands (`npm ci`, `npm test`, `npm audit --audit-level=high`, `npx openspec validate --all`). No pin/permission enforcement (1.2), scanners, release provenance, branch controls, review, complete, or push.
