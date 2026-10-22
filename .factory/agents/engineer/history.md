@@ -403,3 +403,13 @@ Green: `node --test test/ci-provenance.test.mjs` exit 0, 4 pass.
 Tooling: `scripts/run-semgrep.mjs` fail-closed wrapper (no download/install; `--skip-semgrep` escape hatch not used in baseline or `sast` CI).
 Shared command: `node scripts/run-semgrep.mjs` invokes `semgrep --error --metrics=off --config p/javascript` when the binary is on PATH (CI job `sast`, no `continue-on-error`, no pip installer).
 Scope: Semgrep fail-closed SAST — absent binary exits non-zero; `--skip-semgrep` warns and records `SEMGREP_SKIP`; stub proves required argv; installer traps untouched. No release, branch controls, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/3.1
+
+Attempt: ad20dce0-6681-4507-a396-26b6a50c2b9b
+Implementer: bc-cb82001b-f989-548b-b689-88467eccb27c
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/workflows/release.yml`); `node src/cli.mjs verify run ad20dce0-6681-4507-a396-26b6a50c2b9b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:960495617e13d309b1c037d088a47ceafee218cad6950c73c4af7ce25c098ed7).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 5 pass; `npm test` exit 0, 197 pass.
+Tooling: `@cyclonedx/cyclonedx-npm@6.0.1` exact devDependency; shared commands `npx @cyclonedx/cyclonedx-npm@6.0.1 --package-lock-only --output-file release/sbom.cdx.json` and `node scripts/annotate-release-sbom.mjs release/sbom.cdx.json` (lockfile `sha256:` digest + `source-revision` metadata properties).
+Release workflow: `.github/workflows/release.yml` job `release` on tag `v[0-9]+.[0-9]+.[0-9]+`, `contents: read` only (no `id-token: write`), full-SHA action pins, `npm ci` + CycloneDX + annotate + SBOM artifact upload; no npm publish.
+Scope: release SBOM only — no SLSA attestation (3.2), branch controls, review, accept, complete, or push.

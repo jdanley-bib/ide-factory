@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -9,7 +10,22 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = path.join(repoRoot, '.github', 'workflows', 'ci.yml');
+const releaseWorkflowPath = path.join(repoRoot, '.github', 'workflows', 'release.yml');
+const lockfilePath = path.join(repoRoot, 'package-lock.json');
 const secretlintRcPath = path.join(repoRoot, '.secretlintrc.json');
+
+/** Pinned @cyclonedx/cyclonedx-npm version recorded in release CI. */
+const CYCLONEDX_NPM_VERSION = '6.0.1';
+
+/** Shared release SBOM generator (exact string must appear as a CI run step). */
+const CYCLONEDX_COMMAND =
+  `npx @cyclonedx/cyclonedx-npm@${CYCLONEDX_NPM_VERSION} --package-lock-only --output-file release/sbom.cdx.json`;
+
+/** Post-step that records lockfile digest and source revision in SBOM metadata. */
+const ANNOTATE_SBOM_COMMAND = 'node scripts/annotate-release-sbom.mjs release/sbom.cdx.json';
+
+const SBOM_LOCKFILE_PROPERTY = 'lockfile-sha256';
+const SBOM_SOURCE_REVISION_PROPERTY = 'source-revision';
 
 const BASELINE_COMMANDS = [
   'npm ci',
@@ -385,4 +401,226 @@ test('Semgrep command fails closed when absent, --skip-semgrep warns and records
     if (trapDir) rmSync(trapDir, { recursive: true, force: true });
     if (stubDir) rmSync(stubDir, { recursive: true, force: true });
   }
+});
+
+function readReleaseWorkflow() {
+  assert.ok(fs.existsSync(releaseWorkflowPath), `missing ${releaseWorkflowPath}`);
+  return fs.readFileSync(releaseWorkflowPath, 'utf8');
+}
+
+function releaseJobBlock(yaml) {
+  const match = yaml.match(/(?:^|\n)(\s*)release\s*:\s*\n([\s\S]*?)(?=\n\1[A-Za-z0-9_-]+\s*:\s*\n|\n*$)/);
+  assert.ok(match, 'release workflow must define a job named release');
+  return match[2];
+}
+
+function packageNameFromLockPath(depPath) {
+  if (!depPath.startsWith('node_modules/')) return null;
+  const withoutPrefix = depPath.slice('node_modules/'.length);
+  const nested = withoutPrefix.split('/node_modules/');
+  return nested[nested.length - 1];
+}
+
+function lockedDependencyIds(lock) {
+  const ids = new Set();
+  for (const [depPath, meta] of Object.entries(lock.packages ?? {})) {
+    if (!meta?.version) continue;
+    if (meta.optional) continue;
+    const name = meta.name ?? packageNameFromLockPath(depPath);
+    if (!name || name === 'ide-factory') continue;
+    ids.add(`${name}@${meta.version}`);
+  }
+  return ids;
+}
+
+function componentPackageId(component) {
+  if (component.group) {
+    return `${component.group}/${component.name}@${component.version}`;
+  }
+  return `${component.name}@${component.version}`;
+}
+
+function sbomProperty(sbom, propertyName) {
+  const props = sbom.metadata?.properties ?? [];
+  const hit = props.find((entry) => entry.name === propertyName);
+  return hit?.value ?? null;
+}
+
+function sha256FileHex(filePath) {
+  const digest = createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  return `sha256:${digest}`;
+}
+
+function gitHeadRevision(cwd = repoRoot) {
+  const result = spawnSync('git', ['rev-parse', 'HEAD'], { cwd, encoding: 'utf8' });
+  assert.equal(result.status, 0, `git rev-parse HEAD failed: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
+
+function runReleaseSbomPipeline({ sourceRevision = gitHeadRevision() } = {}) {
+  const releaseDir = path.join(repoRoot, 'release');
+  const sbomPath = path.join(releaseDir, 'sbom.cdx.json');
+  const binDir = path.join(repoRoot, 'node_modules', '.bin');
+  const env = {
+    ...process.env,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+    SOURCE_REVISION: sourceRevision,
+  };
+  fs.mkdirSync(releaseDir, { recursive: true });
+  try {
+    const cyclonedx = spawnSync(CYCLONEDX_COMMAND, {
+      cwd: repoRoot,
+      env,
+      encoding: 'utf8',
+      shell: true,
+    });
+    const cyclonedxOutput = `${cyclonedx.stdout || ''}${cyclonedx.stderr || ''}`;
+    assert.equal(
+      cyclonedx.status,
+      0,
+      `release SBOM generator must exit zero; output:\n${cyclonedxOutput}`,
+    );
+
+    const annotate = spawnSync(ANNOTATE_SBOM_COMMAND, {
+      cwd: repoRoot,
+      env,
+      encoding: 'utf8',
+      shell: true,
+    });
+    const annotateOutput = `${annotate.stdout || ''}${annotate.stderr || ''}`;
+    assert.equal(
+      annotate.status,
+      0,
+      `SBOM metadata annotation must exit zero; output:\n${annotateOutput}`,
+    );
+
+    assert.ok(fs.existsSync(sbomPath), `missing generated SBOM at ${sbomPath}`);
+    return JSON.parse(fs.readFileSync(sbomPath, 'utf8'));
+  } finally {
+    rmSync(releaseDir, { recursive: true, force: true });
+  }
+}
+
+test('version-tag release workflow generates CycloneDX SBOM with locked deps and metadata; baseline does not publish', () => {
+  const baselineYaml = readWorkflow();
+  assert.doesNotMatch(
+    baselineYaml,
+    /\bnpm\s+publish\b/,
+    'baseline CI must not publish an npm package',
+  );
+  assert.doesNotMatch(
+    baselineYaml,
+    /\bactions\/(upload-release-asset|create-release|softprops\/action-gh-release)\b/,
+    'baseline CI must not publish a GitHub release',
+  );
+
+  const yaml = readReleaseWorkflow();
+
+  assert.match(
+    yaml,
+    /^\s*on\s*:/m,
+    'release workflow must declare on triggers',
+  );
+  assert.match(
+    yaml,
+    /\btags\s*:\s*\n(?:\s+-\s+['"]?v\[0-9\]\+\.\[0-9\]\+\.\[0-9\]\+['"]?|\s+-\s+['"]?v\*\.\*\.\*['"]?)/m,
+    'release workflow must trigger only on semantic version tags (v<major>.<minor>.<patch>)',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /\bpull_request\b/,
+    'release workflow must not trigger on pull_request',
+  );
+
+  assert.match(
+    yaml,
+    /^\s*permissions\s*:\s*\n(?:\s+.+\n)*?\s+contents\s*:\s*read\s*$/m,
+    'release workflow must set permissions.contents to read',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /^\s*id-token\s*:\s*write\b/m,
+    'release workflow must not request id-token: write (attestation is task 3.2)',
+  );
+  assert.doesNotMatch(
+    yaml,
+    /\bnpm\s+publish\b/,
+    'release workflow must not publish an npm package',
+  );
+
+  const uses = thirdPartyUses(yaml);
+  assert.ok(uses.length > 0, 'release workflow must use at least one third-party action');
+  for (const ref of uses) {
+    const at = ref.lastIndexOf('@');
+    assert.ok(at > 0, `action ref must include @pin: ${ref}`);
+    const pin = ref.slice(at + 1);
+    assert.ok(
+      FULL_SHA.test(pin),
+      `third-party action must be pinned to a full 40-char commit SHA: ${ref}`,
+    );
+  }
+
+  assert.match(
+    yaml,
+    new RegExp(`@cyclonedx/cyclonedx-npm@${CYCLONEDX_NPM_VERSION.replace(/\./g, '\\.')}\\b`),
+    `release workflow must pin @cyclonedx/cyclonedx-npm@${CYCLONEDX_NPM_VERSION}`,
+  );
+
+  const job = releaseJobBlock(yaml);
+  const steps = runSteps(job);
+  const commands = steps.map((step) => step.command);
+  assert.ok(
+    commands.includes(CYCLONEDX_COMMAND),
+    `release job must run \`${CYCLONEDX_COMMAND}\`; found: ${JSON.stringify(commands)}`,
+  );
+  assert.ok(
+    commands.includes(ANNOTATE_SBOM_COMMAND),
+    `release job must run \`${ANNOTATE_SBOM_COMMAND}\`; found: ${JSON.stringify(commands)}`,
+  );
+  assert.ok(
+    commands.includes('npm ci'),
+    `release job must run npm ci before SBOM generation; found: ${JSON.stringify(commands)}`,
+  );
+
+  const lock = JSON.parse(fs.readFileSync(lockfilePath, 'utf8'));
+  const expectedIds = lockedDependencyIds(lock);
+  assert.ok(expectedIds.size > 0, 'package-lock.json must list locked dependencies');
+  assert.ok(
+    expectedIds.has('@fission-ai/openspec@1.14.3') || [...expectedIds].some((id) => id.startsWith('@fission-ai/openspec@')),
+    'lockfile must include @fission-ai/openspec',
+  );
+
+  const sbom = runReleaseSbomPipeline();
+  const components = sbom.components ?? [];
+  const componentIds = new Set(components.map((component) => componentPackageId(component)));
+  const componentNames = new Set(
+    components.map((component) => (component.group ? `${component.group}/${component.name}` : component.name)),
+  );
+  for (const id of expectedIds) {
+    const at = id.lastIndexOf('@');
+    const packageName = id.slice(0, at);
+    const listed = componentIds.has(id)
+      || componentNames.has(packageName);
+    assert.ok(
+      listed,
+      `SBOM must list locked dependency ${id}`,
+    );
+  }
+
+  const openspec = (sbom.components ?? []).find(
+    (component) => component.group === '@fission-ai' && component.name === 'openspec',
+  );
+  assert.ok(openspec, 'SBOM must include @fission-ai/openspec as a component');
+
+  const lockDigest = sha256FileHex(lockfilePath);
+  assert.equal(
+    sbomProperty(sbom, SBOM_LOCKFILE_PROPERTY),
+    lockDigest,
+    'SBOM metadata must include the lockfile SHA-256 digest',
+  );
+  assert.equal(
+    sbomProperty(sbom, SBOM_SOURCE_REVISION_PROPERTY),
+    gitHeadRevision(),
+    'SBOM metadata must include the source revision',
+  );
 });

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-22T01:29:20.963Z",
+  "updatedAt": "2026-10-22T01:29:27.365Z",
   "items": [
     {
       "change": "enforce-risk-gates-and-security-stage",
@@ -125,7 +125,7 @@
     {
       "change": "establish-factory-ci-and-provenance",
       "id": "3.1",
-      "status": "todo"
+      "status": "in_progress"
     },
     {
       "change": "establish-factory-ci-and-provenance",
