@@ -227,3 +227,7 @@ Attempt: c6790978-0806-44b4-b659-eac3c9ccba3d
 ## 2026-10-22 finalized establish-factory-ci-and-provenance/5.1
 
 Attempt: f615a850-ec61-4c7a-8793-b80f4820f46a
+
+## 2026-10-22 finalized add-cline-ide-adapter/1.1
+
+Attempt: 25d7c140-147c-4c27-bd15-39a69a7d4eb5

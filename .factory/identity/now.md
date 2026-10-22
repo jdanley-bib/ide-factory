@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: establish-factory-ci-and-provenance/5.1 (2026-10-22)
+Last finalized: add-cline-ide-adapter/1.1 (2026-10-22)
