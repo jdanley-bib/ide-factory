@@ -398,3 +398,11 @@ Attempt: 25d7c140-147c-4c27-bd15-39a69a7d4eb5
 Reviewer: cline-reviewer-1.1
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 15 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at ca4ce5f); unit pass at 718578f worktreeClean. Product: `.cline/rules/factory.md` (no paths frontmatter), nine `.cline/skills/`, six `.cline/workflows/factory-*.md` (shared body + owned marker); no `.clinerules/`, `.cline/work/`, doctor, CI, Semgrep, instruction fragment, queue/gate/evidence/lockout. Transitions verifying → awaiting-review → accepted. No verify/complete/push until history commit + rebind.
+
+## 2026-10-22 add-cline-ide-adapter/1.2
+
+Attempt: 9f8f15dc-e453-489d-899c-2634a7928443
+Reviewer: cline-reviewer-1.2
+Implementer: cline-engineer-1.2
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 62da29c worktreeClean:false); unit pass at ae3785d worktreeClean. Product ae3785d: install test only — init leaves app.js and `.cline/rules/team-style.md` byte-for-byte unchanged; upgrade restores edited `.cline/skills/factory-coordinator/SKILL.md`, keeps CUSTOM-DECISION-KEEP and team-style, does not delete other `.cline/` files; `.cline/skills` still in writeAdapters; no CI, doctor, instructions, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
