@@ -29,6 +29,13 @@ Phase 0 SHALL be met only when the baseline job has passed its four commands on 
 - **WHEN** the baseline job passes for a revision
 - **THEN** Phase 0 is met for that revision
 
+### Requirement: Node runtime
+CI workflows in this change SHALL set every `node-version` to 24.
+
+#### Scenario: Pinned Node
+- **WHEN** `ci.yml` and `release.yml` are read
+- **THEN** every `node-version` is 24
+
 ### Requirement: Baseline permissions
 The baseline job SHALL use read-only contents permission. It SHALL NOT use `pull_request_target`, `continue-on-error`, or a floating third-party action reference.
 

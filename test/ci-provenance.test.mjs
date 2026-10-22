@@ -72,6 +72,14 @@ function readWorkflow() {
   return fs.readFileSync(workflowPath, 'utf8');
 }
 
+function assertNodeVersion24(yaml, label) {
+  const versions = [...yaml.matchAll(/\bnode-version\s*:\s*['"]?(\d+)['"]?/g)].map((match) => match[1]);
+  assert.ok(versions.length > 0, `${label} must set node-version`);
+  for (const version of versions) {
+    assert.equal(version, '24', `${label} must pin node-version 24, found ${version}`);
+  }
+}
+
 function baselineJobBlock(yaml) {
   const match = yaml.match(/(?:^|\n)(\s*)baseline\s*:\s*\n([\s\S]*?)(?=\n\1[A-Za-z0-9_-]+\s*:\s*\n|\n*$)/);
   assert.ok(match, 'workflow must define a job named baseline');
@@ -93,7 +101,7 @@ function runSteps(jobBody) {
   return steps;
 }
 
-test('baseline CI job runs the four Phase 0 commands on pull_request and push with Node 22', () => {
+test('baseline CI job runs the four Phase 0 commands on pull_request and push with Node 24', () => {
   const yaml = readWorkflow();
 
   assert.match(yaml, /^\s*on\s*:/m, 'workflow must declare on triggers');
@@ -101,7 +109,9 @@ test('baseline CI job runs the four Phase 0 commands on pull_request and push wi
   assert.match(yaml, /\bpush\b/, 'workflow must trigger on push');
 
   const job = baselineJobBlock(yaml);
-  assert.match(job, /\bnode-version\s*:\s*['"]?22['"]?\b/, 'baseline job must use Node 22');
+  assert.match(job, /\bnode-version\s*:\s*['"]?24['"]?\b/, 'baseline job must use Node 24');
+  assertNodeVersion24(yaml, 'ci.yml');
+  assertNodeVersion24(readReleaseWorkflow(), 'release.yml');
 
   const steps = runSteps(job);
   const commands = steps.map((step) => step.command);
@@ -320,6 +330,11 @@ test('Semgrep command fails closed when absent, --skip-semgrep warns and records
     job,
     new RegExp(`actions/setup-python@${SETUP_PYTHON_SHA}\\b`),
     'sast job must pin actions/setup-python to a full commit SHA',
+  );
+  assert.match(
+    job,
+    /python-version\s*:\s*['"]3\.14['"]/,
+    'sast job must use Python 3.14',
   );
   assert.match(job, new RegExp(`\\bsemgrep==${SEMGREP_VERSION.replace(/\./g, '\\.')}\\b`));
   assert.match(job, new RegExp(`\\b${SEMGREP_GIT_SHA}\\b`), 'sast install must pin the Semgrep release commit');

@@ -32,11 +32,12 @@ The shared SAST command SHALL invoke Semgrep with `--error`, `--metrics=off`, an
 - **AND** it does not set `continue-on-error`
 
 ### Requirement: Runner Semgrep install
-The ide-factory sast job SHALL install Semgrep on the GitHub Actions runner immediately before the scan. The install SHALL pin Semgrep release commit `240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4` (v1.182.0) and wheel sha256 `19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f`. A failed install or scan SHALL fail the job. `idefactory init` SHALL NOT copy this workflow or installer.
+The ide-factory sast job SHALL install Semgrep on the GitHub Actions runner immediately before the scan, using Python 3.14. The install SHALL pin Semgrep release commit `240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4` (v1.182.0) and wheel sha256 `19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f`. A failed install or scan SHALL fail the job. `idefactory init` SHALL NOT copy this workflow or installer.
 
 #### Scenario: Pinned runner install
 - **WHEN** the sast job is read from the ide-factory workflow
 - **THEN** it installs that pinned Semgrep immediately before the scan
+- **AND** `python-version` is 3.14
 - **AND** the install step does not set `continue-on-error`
 
 #### Scenario: Init does not copy the workflow
