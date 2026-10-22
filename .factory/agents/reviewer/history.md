@@ -359,3 +359,11 @@ Reviewer: bc-09ffd1d2-7fa7-5237-b026-c3f055ecac74
 Implementer: bc-4ba8835d-2693-569c-a077-834313f33abd
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 4 pass; `npm test` exit 0, 196 pass (no `semgrep` on PATH). CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at 93ad67f); clean-head unit pass at 63ede06 worktreeClean true (matches HEAD). Product 63ede06: `scripts/run-semgrep.mjs` probes PATH then invokes `semgrep` with `--error`, `--metrics=off`, `--config p/javascript`; absent binary exit 1 with no pip/npm/curl download path; `--skip-semgrep` warns and prints `SEMGREP_SKIP`. CI `sast` runs `node scripts/run-semgrep.mjs` only (no installer, no `--skip-semgrep`, no `continue-on-error`); baseline job omits skip flag. Focused test uses PATH trap stubs and shell `semgrep` stub; no Semgrep in `package.json`. Prior distinct security ACCEPT by bc-38c29cb3 (evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push/lockout.
+
+## 2026-10-22 establish-factory-ci-and-provenance/3.1
+
+Attempt: ad20dce0-6681-4507-a396-26b6a50c2b9b
+Reviewer: bc-700a93d1-c1ed-57e1-b6cb-b8307fce700d
+Implementer: bc-cb82001b-f989-548b-b689-88467eccb27c
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 5 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at dff5fdd); clean-head unit pass at 81a0e27 worktreeClean true. Product 81a0e27: `.github/workflows/release.yml` tag-only `v[0-9]+.[0-9]+.[0-9]+`, `permissions.contents: read` (no `id-token: write`), full-SHA pins on checkout/setup-node/upload-artifact; `npm ci` then pinned `npx @cyclonedx/cyclonedx-npm@6.0.1 --package-lock-only` + `scripts/annotate-release-sbom.mjs` (`lockfile-sha256`, `source-revision`); SBOM pipeline lists all locked deps including `@fission-ai/openspec@1.14.3`; no npm publish. Prior distinct security ACCEPT by bc-199f75bf-8bca-51ee-983a-9c968b384c33 (decision establish-factory-ci-and-provenance-3.1-unit-check; evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
