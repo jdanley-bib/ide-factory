@@ -1342,7 +1342,7 @@ test('resume flag higher than stored max-agent-steps budget does not raise the s
 test('implementation notes record strict validate, npm test, and doctor', () => {
   const notesPath = path.join(
     repoRoot,
-    'openspec/changes/persist-bounded-run-sessions/implementation-notes.md',
+    'openspec/changes/archive/2026-10-22-persist-bounded-run-sessions/implementation-notes.md',
   );
   assert.ok(
     fs.existsSync(notesPath),

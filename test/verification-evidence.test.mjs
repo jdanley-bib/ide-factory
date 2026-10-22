@@ -985,7 +985,7 @@ test('verify import refuses when HALT is present and writes no evidence', async 
 test('implementation notes record strict validate, npm test, and doctor', () => {
   const notesPath = path.join(
     path.dirname(fileURLToPath(import.meta.url)),
-    '../openspec/changes/enforce-verification-evidence/implementation-notes.md',
+    '../openspec/changes/archive/2026-10-22-enforce-verification-evidence/implementation-notes.md',
   );
   assert.ok(
     fs.existsSync(notesPath),

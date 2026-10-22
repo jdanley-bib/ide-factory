@@ -1086,7 +1086,7 @@ test('recoverFinalization without in-memory plan applies durable journal commit'
 test('implementation notes record strict validate, npm test, and doctor', () => {
   const notesPath = path.join(
     repoRoot,
-    'openspec/changes/make-finalization-recoverable/implementation-notes.md',
+    'openspec/changes/archive/2026-10-22-make-finalization-recoverable/implementation-notes.md',
   );
   assert.ok(
     fs.existsSync(notesPath),

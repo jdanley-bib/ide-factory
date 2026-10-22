@@ -480,7 +480,7 @@ test('the CLI process does not execute a model binary on next', async () => {
 test('implementation notes record add-cline-ide-adapter verification commands', () => {
   const notesPath = path.join(
     repoRoot,
-    'openspec/changes/add-cline-ide-adapter/implementation-notes.md',
+    'openspec/changes/archive/2026-10-22-add-cline-ide-adapter/implementation-notes.md',
   );
   assert.ok(fs.existsSync(notesPath), `missing implementation notes: ${notesPath}`);
   const notes = fs.readFileSync(notesPath, 'utf8');

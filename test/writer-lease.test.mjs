@@ -3,7 +3,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { test } from 'node:test';
 import * as writerLease from '../src/lib/writer-lease.mjs';
 import {
@@ -30,7 +30,7 @@ const {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, '..');
-const leaseModule = path.join(repoRoot, 'src/lib/writer-lease.mjs');
+const leaseModule = pathToFileURL(path.join(repoRoot, 'src/lib/writer-lease.mjs')).href;
 
 function seedFactory(dir) {
   fs.mkdirSync(path.join(dir, '.factory', 'orchestration'), { recursive: true });

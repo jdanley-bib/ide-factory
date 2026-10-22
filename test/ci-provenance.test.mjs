@@ -208,6 +208,11 @@ function runSharedSecretlint(cwd) {
   });
 }
 
+/** Live secretlint and Semgrep binaries are exercised on Linux, matching CI. */
+const linuxToolRun = {
+  skip: process.platform === 'linux' ? false : 'Linux tool invocation',
+};
+
 function prepareSecretlintFixture(contentsByRelativePath) {
   assert.ok(fs.existsSync(secretlintRcPath), `missing ${secretlintRcPath}`);
   const dir = mkdtempSync(path.join(tmpdir(), 'secretlint-fixture-'));
@@ -222,7 +227,7 @@ function prepareSecretlintFixture(contentsByRelativePath) {
   return dir;
 }
 
-test('shared secretlint command fails on seeded secret, passes clean tree, masks secret, and matches CI', () => {
+test('secret-scan job runs the shared secretlint command without continue-on-error', () => {
   const yaml = readWorkflow();
   const job = secretScanJobBlock(yaml);
   const steps = runSteps(job);
@@ -237,7 +242,9 @@ test('shared secretlint command fails on seeded secret, passes clean tree, masks
     false,
     `\`${SECRETLINT_COMMAND}\` must fail the job on non-zero exit (no continue-on-error)`,
   );
+});
 
+test('shared secretlint command fails on seeded secret, passes clean tree, and masks the secret', linuxToolRun, () => {
   let dirtyDir;
   let cleanDir;
   try {
@@ -305,7 +312,7 @@ function writeExecutable(filePath, body) {
   fs.writeFileSync(filePath, body, { mode: 0o755 });
 }
 
-test('Semgrep command fails closed when absent, --skip-semgrep warns and records, and the sast job installs a pinned release', () => {
+test('sast job installs a pinned Semgrep release and does not skip or continue on error', () => {
   const yaml = readWorkflow();
 
   const baseline = baselineJobBlock(yaml);
@@ -372,7 +379,9 @@ test('Semgrep command fails closed when absent, --skip-semgrep warns and records
     false,
     `\`${SEMGREP_COMMAND}\` must fail the job on non-zero exit (no continue-on-error)`,
   );
+});
 
+test('Semgrep command fails closed when absent, and --skip-semgrep warns and records the skip', linuxToolRun, () => {
   let trapDir;
   let stubDir;
   let argvPath;
@@ -869,7 +878,7 @@ const TASK_5_1_COMMAND_RUNS = [
 
 function parseImplementationNoteSections(notes) {
   const sections = [];
-  const lines = notes.split('\n');
+  const lines = notes.split(/\r?\n/);
   let i = 0;
   while (i < lines.length) {
     const header = lines[i].match(/^### `(.+)`$/);
@@ -918,7 +927,7 @@ function observedExitCode(command) {
 test('implementation notes record task 5.1 integration commands with honest exit codes', () => {
   const notesPath = path.join(
     repoRoot,
-    'openspec/changes/establish-factory-ci-and-provenance/implementation-notes.md',
+    'openspec/changes/archive/2026-10-22-establish-factory-ci-and-provenance/implementation-notes.md',
   );
   assert.ok(fs.existsSync(notesPath), `missing implementation notes: ${notesPath}`);
   const notes = fs.readFileSync(notesPath, 'utf8');

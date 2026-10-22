@@ -1095,7 +1095,7 @@ test('shipped factory-run skill copies describe human-gate as profile humanGate 
 test('implementation notes record strict validate, npm test, and doctor', () => {
   const notesPath = path.join(
     repoRoot,
-    'openspec/changes/enforce-risk-gates-and-security-stage/implementation-notes.md',
+    'openspec/changes/archive/2026-10-22-enforce-risk-gates-and-security-stage/implementation-notes.md',
   );
   assert.ok(
     fs.existsSync(notesPath),
