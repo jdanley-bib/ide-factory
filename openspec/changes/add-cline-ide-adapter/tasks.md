@@ -9,7 +9,7 @@
 
 ## 2. Doctor
 
-- [ ] 2.1 Add a failing test that `idefactory doctor` exits zero after init, and exits non-zero and reports `missing .cline/rules/factory.md` or `missing .cline/skills/factory-coordinator/SKILL.md` when that file is removed. Add those two paths to the doctor required list in `src/lib/govern.mjs`. Verify with `node --test test/install.test.mjs`.
+- [x] 2.1 Add a failing test that `idefactory doctor` exits zero after init, and exits non-zero and reports `missing .cline/rules/factory.md` or `missing .cline/skills/factory-coordinator/SKILL.md` when that file is removed. Add those two paths to the doctor required list in `src/lib/govern.mjs`. Verify with `node --test test/install.test.mjs`.
 
 ## 3. Integration
 
