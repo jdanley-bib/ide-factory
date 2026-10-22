@@ -327,3 +327,11 @@ Implementer: bc-ce055288-021d-5690-a0f0-6825d222923c
 Reviewer: bc-c07cd477-9db7-5c65-bd8a-1832bee9833b
 Verdict: ACCEPT
 Inspected end-to-end: journal before target writes; schema v1 + planDigest include durable `commit`/`finalizedAt`; process-restart `recoverFinalization` applies frozen commit bytes without in-memory plan; accepted/finalize-failed/finalized+journal retries; dirty worktree only with matching source-bound journal; work-item `done` last atomic correctness write; ledger post-commit only; byte-stable repeat; library-only `faultHook` (no CLI/env fault control); HALT/lockout/humanGate/reviewer-differ/check+security evidence preserved. Three design tensions are necessary for crash-true recovery — recommend narrow artifact clarification (persist commit on journal; finalize-failed only pre-journal; dirty resume with matching journal HEAD), not product rollback. Re-ran `node --test test/finalization-recovery.test.mjs test/orchestration.test.mjs` exit 0, 44 pass; `npm test` exit 0, 192 pass. No attempt mutation, complete, push, archive, or branch change.
+
+## 2026-10-22 establish-factory-ci-and-provenance/1.1
+
+Attempt: b494d2f8-f24e-49c5-81de-125461fbccd4
+Reviewer: bc-c93441f3-240b-5937-878d-0d671bf55e48
+Implementer: bc-a02322a9-e6eb-588f-bb2f-47944a1a24f6
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 1 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at c2d6222 worktreeClean:false; engineer notes missing `.github/workflows/ci.yml`); clean-head unit pass at 7ce63ec worktreeClean. Product 7ce63ec: `.github/workflows/ci.yml` job `baseline` on pull_request/push, Node 22, four fail-closed commands (`npm ci`, `npm test`, `npm audit --audit-level=high`, `npx openspec validate --all`) with no continue-on-error on those steps; focused test locks that behavior. Scope exclusions held (SHA pins/contents:read/pull_request_target are 1.2; no scanners, release, branch controls, complete, or push). Transitions verifying → awaiting-review → accepted. No verify/complete/push.

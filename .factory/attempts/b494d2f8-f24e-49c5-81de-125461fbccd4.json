@@ -2,10 +2,10 @@
   "id": "b494d2f8-f24e-49c5-81de-125461fbccd4",
   "change": "establish-factory-ci-and-provenance",
   "taskId": "1.1",
-  "state": "red-confirmed",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-a02322a9-e6eb-588f-bb2f-47944a1a24f6",
-  "reviewerId": null,
+  "reviewerId": "bc-c93441f3-240b-5937-878d-0d671bf55e48",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -32,9 +32,39 @@
       "worktreeClean": false,
       "sourceRevision": "c2d6222a0dd38e26075d1ed88729effffde06198"
     },
-    "verification": [],
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-22T00:21:07.070Z",
+        "finishedAt": "2026-10-22T00:22:38.349Z",
+        "logDigest": "sha256:18ae200fa11096fe60cbd8dbcc0be95e77e77c9b363c61248bd561e8fb28b62c",
+        "artifactDigests": [],
+        "attemptId": "b494d2f8-f24e-49c5-81de-125461fbccd4",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "7ce63ecfc8f6d2631edee6f9c9babc9618f15ca6"
+      }
+    ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-c93441f3-240b-5937-878d-0d671bf55e48",
+      "notes": "Independent review: CLI red (issuer=cli, exitCode 1, passed false at c2d6222) and clean unit (issuer=cli, exitCode 0, worktreeClean at 7ce63ec) authentic; re-ran node --test test/ci-provenance.test.mjs exit 0, 1 pass. Task 1.1 scope met: baseline job on pull_request/push, Node 22, four fail-closed commands. Pins/permissions deferred to 1.2. Distinct from implementer.",
+      "at": "2026-10-22T00:24:21.416Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -54,8 +84,20 @@
     {
       "at": "2026-10-22T00:20:09.925Z",
       "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-22T00:22:41.745Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T00:24:17.164Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T00:24:21.416Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-22T00:17:18.748Z",
-  "updatedAt": "2026-10-22T00:20:09.925Z"
+  "updatedAt": "2026-10-22T00:24:21.416Z"
 }
