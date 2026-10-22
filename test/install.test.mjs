@@ -470,3 +470,29 @@ test('the CLI process does not execute a model binary on next', async () => {
     cleanup(dir);
   }
 });
+
+test('implementation notes record add-cline-ide-adapter verification commands', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/add-cline-ide-adapter/implementation-notes.md',
+  );
+  assert.ok(fs.existsSync(notesPath), `missing implementation notes: ${notesPath}`);
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  const commands = [
+    'npx openspec validate add-cline-ide-adapter --strict',
+    'npx openspec validate --all',
+    'node --test test/install.test.mjs',
+  ];
+  let cursor = 0;
+  for (const command of commands) {
+    const idx = notes.indexOf(command, cursor);
+    assert.ok(idx !== -1, `notes must contain \`${command}\` in order`);
+    const after = notes.slice(idx + command.length);
+    assert.match(
+      after,
+      /Exit code:\s*`?\d+`?/,
+      `notes must record an exit code for \`${command}\``,
+    );
+    cursor = idx + command.length;
+  }
+});

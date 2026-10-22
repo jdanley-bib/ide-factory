@@ -480,3 +480,14 @@ Implementer: cline-engineer-2.1
 Red: `node --test test/install.test.mjs` exit 1 (doctor still exited 0 after removing `.cline/rules/factory.md`); `node src/cli.mjs verify run 0292fa6b-4229-4a3b-ad25-f2160bff8cff --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:d105b58b4521e8878dc5f20626d502aa2042519b67a87bbefc27a37e05f08daa).
 Green: `node --test test/install.test.mjs` exit 0, 18 pass (pending full `verify run --check unit` after commit).
 Scope: doctor REQUIRED only — `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md`; install test asserts healthy doctor after init and `missing <path>` on stdout when either file is removed; no every-workflow/every-skill requirement; no CI, Semgrep, Node, Python, queue, gates, lockout, review, complete, or push.
+
+## 2026-10-22 add-cline-ide-adapter/3.1
+
+Attempt: 27e6311a-e7fa-4b6a-b780-424369c3e88e
+Implementer: cline-engineer-3.1
+Red: missing `openspec/changes/add-cline-ide-adapter/implementation-notes.md`; `node --test test/install.test.mjs` exit 1 (18 pass / 1 fail); `node src/cli.mjs verify run 27e6311a-e7fa-4b6a-b780-424369c3e88e --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green commands (recorded in notes):
+1. `npx openspec validate add-cline-ide-adapter --strict` exit 0
+2. `npx openspec validate --all` exit 0
+3. `node --test test/install.test.mjs` exit 0
+Scope: integration notes only — no second queue; no gate, evidence, or lockout change; no model launch; no archive; no review, complete, or push.
