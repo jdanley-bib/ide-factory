@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "establish-factory-ci-and-provenance",
   "title": "Add a failing test that the baseline workflow uses `contents: read`, pins every third-party action to a full commit SHA, and does not use `pull_request_target` or `continue-on-error`. Update the workflow to match. Verify with `node --test test/ci-provenance.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "1.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "dd43c46e-b924-454b-8e90-7311a3646ec3",
-  "updatedAt": "2026-10-22T00:26:18.661Z"
+  "updatedAt": "2026-10-22T00:35:28.793Z"
 }
