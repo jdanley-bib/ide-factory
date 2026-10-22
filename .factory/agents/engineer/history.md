@@ -431,3 +431,12 @@ Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/branch-r
 Green: `node --test test/ci-provenance.test.mjs` exit 0, 7 pass; `npm test` exit 0 (199 pass); `node src/cli.mjs verify run c6790978-0806-44b4-b659-eac3c9ccba3d --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, logDigest sha256:f5ac87a4622315afda8fcde799d3915483a7614f8fcdaf5c9cfb1a7a897fe843, sourceRevision d8761720b2577511668e936e60ce4caf7762dab7).
 Declaration: `.github/branch-review-controls.json` schemaVersion 1, `requiredStatusCheckName` baseline, `requiredApprovingReviewCount` 1, `allowForcePushes` false, `protectedBranch` main, `enforcedByForge` false; `.github/CODEOWNERS` `* @jdanley-bib`; tests scan `.github`, `scripts`, and `src` for forbidden forge admin API patterns.
 Scope: branch review declaration only — no forge admin API, npm publish, observability, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/5.1
+
+Attempt: f615a850-ec61-4c7a-8793-b80f4820f46a
+Implementer: bc-533c85e2-3880-5491-b79f-a2eae6b1bd36
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `openspec/changes/establish-factory-ci-and-provenance/implementation-notes.md`); pre-notes `npm test` exit 1 (199 pass / 1 fail); `node src/cli.mjs verify run f615a850-ec61-4c7a-8793-b80f4820f46a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:66a28df3171a7049831c9d08afaab5d17befc054d6df4be460e86f2b254ae4ce).
+Green: integration command batch (strict validate, validate --all, npm test ×2, npm ci, npm audit --audit-level=high) all exit 0 with honest notes; `node --test test/ci-provenance.test.mjs` exit 0, 8 pass; `node src/cli.mjs verify run f615a850-ec61-4c7a-8793-b80f4820f46a --check unit` pending clean HEAD.
+Notes: `openspec/changes/establish-factory-ci-and-provenance/implementation-notes.md` records seven command sections in task order (duplicate `npm test` and `npx openspec validate --all` executions).
+Scope: integration verification only — no model start, gate/evidence policy change, GitHub admin API, observability, archive, review, accept, complete, or push.

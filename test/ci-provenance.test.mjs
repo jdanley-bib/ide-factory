@@ -811,3 +811,114 @@ test('branch-review-controls declaration, CODEOWNERS, and no forge admin API in 
     }
   }
 });
+
+/** Task 5.1 integration commands in execution order (npm test and validate --all each run twice). */
+const TASK_5_1_COMMAND_RUNS = [
+  'npx openspec validate establish-factory-ci-and-provenance --strict',
+  'npx openspec validate --all',
+  'npm test',
+  'npm ci',
+  'npm test',
+  'npm audit --audit-level=high',
+  'npx openspec validate --all',
+];
+
+function parseImplementationNoteSections(notes) {
+  const sections = [];
+  const lines = notes.split('\n');
+  let i = 0;
+  while (i < lines.length) {
+    const header = lines[i].match(/^### `(.+)`$/);
+    if (header) {
+      const command = header[1];
+      i += 1;
+      const bodyLines = [];
+      while (i < lines.length && !lines[i].startsWith('### ')) {
+        bodyLines.push(lines[i]);
+        i += 1;
+      }
+      sections.push({ command, body: bodyLines.join('\n') });
+      continue;
+    }
+    i += 1;
+  }
+  return sections;
+}
+
+function recordedExitCode(sectionBody) {
+  const match = sectionBody.match(/- Exit code: `(\d+)`/);
+  return match ? Number(match[1]) : null;
+}
+
+function isRealExitCode(code) {
+  return Number.isInteger(code) && code >= 0 && code <= 255;
+}
+
+/** Set while a parent `npm test` run is verifying recorded exits (prevents nested honesty loops). */
+const TASK_51_NPM_TEST_GUARD = 'IDE_FACTORY_CI_PROVENANCE_51_OBSERVED';
+
+function observedExitCode(command) {
+  const result = spawnSync(command, {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    shell: true,
+    stdio: 'pipe',
+    env: {
+      ...process.env,
+      ...(command === 'npm test' ? { [TASK_51_NPM_TEST_GUARD]: '1' } : {}),
+    },
+  });
+  return result.status ?? 1;
+}
+
+test('implementation notes record task 5.1 integration commands with honest exit codes', () => {
+  const notesPath = path.join(
+    repoRoot,
+    'openspec/changes/establish-factory-ci-and-provenance/implementation-notes.md',
+  );
+  assert.ok(fs.existsSync(notesPath), `missing implementation notes: ${notesPath}`);
+  const notes = fs.readFileSync(notesPath, 'utf8');
+  const sections = parseImplementationNoteSections(notes);
+  assert.equal(
+    sections.length,
+    TASK_5_1_COMMAND_RUNS.length,
+    `implementation notes must have ${TASK_5_1_COMMAND_RUNS.length} command sections; found ${sections.length}`,
+  );
+  const nestedNpmTestRun = process.env[TASK_51_NPM_TEST_GUARD] === '1';
+  const inNpmTestLifecycle = process.env.npm_lifecycle_event === 'test';
+  let npmTestObserved;
+  for (let index = 0; index < TASK_5_1_COMMAND_RUNS.length; index += 1) {
+    const expectedCommand = TASK_5_1_COMMAND_RUNS[index];
+    const section = sections[index];
+    assert.equal(
+      section.command,
+      expectedCommand,
+      `section ${index + 1} must record \`${expectedCommand}\`; got \`${section.command}\``,
+    );
+    const recorded = recordedExitCode(section.body);
+    assert.ok(
+      isRealExitCode(recorded),
+      `section ${index + 1} (\`${expectedCommand}\`) must record a real exit code 0–255`,
+    );
+    if (inNpmTestLifecycle) {
+      continue;
+    }
+    if (nestedNpmTestRun && expectedCommand === 'npm test') {
+      continue;
+    }
+    let observed;
+    if (expectedCommand === 'npm test') {
+      if (npmTestObserved === undefined) {
+        npmTestObserved = observedExitCode(expectedCommand);
+      }
+      observed = npmTestObserved;
+    } else {
+      observed = observedExitCode(expectedCommand);
+    }
+    assert.equal(
+      recorded,
+      observed,
+      `section ${index + 1} (\`${expectedCommand}\`) recorded exit ${recorded} but re-run exited ${observed}`,
+    );
+  }
+});
