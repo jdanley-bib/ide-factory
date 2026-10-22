@@ -373,3 +373,13 @@ Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `permissions.cont
 Green: `node --test test/ci-provenance.test.mjs` exit 0, 2 pass.
 Pins: `actions/checkout@11d5960a326750d5838078e36cf38b85af677262` # v4.4.0; `actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020` # v4.4.0 (from api.github.com commits/v4 + git ls-remote tags).
 Scope: `contents: read`, full-SHA action pins with version comments, no `pull_request_target` / `continue-on-error`. No scanners, release, branch controls, review, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.1
+
+Attempt: e44e3bae-3ba6-4d98-a64f-7471ce36f9be
+Implementer: bc-b658b85d-4eed-58e3-a1f3-bba903e07794
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `secret-scan` job); `node src/cli.mjs verify run e44e3bae-3ba6-4d98-a64f-7471ce36f9be --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:654955fabac68fa3649be60713bb721c74b62f020a8159bd28787277491b39dd).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 3 pass.
+Deps: `secretlint@13.0.7`, `@secretlint/secretlint-rule-preset-recommend@13.0.7` (exact; npm --save-exact).
+Shared command: `npx secretlint "**/*"` (package script `secretlint`, `.secretlintrc.json` recommend preset, CI job `secret-scan`).
+Scope: secretlint only — temp seeded Slack-bot fixture exits non-zero with masked output; clean temp tree exits zero; no contiguous secret in committed sources. No Semgrep (2.2), release, branch controls, review, accept, complete, or push.

@@ -1,11 +1,15 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const workflowPath = path.join(repoRoot, '.github', 'workflows', 'ci.yml');
+const secretlintRcPath = path.join(repoRoot, '.secretlintrc.json');
 
 const BASELINE_COMMANDS = [
   'npm ci',
@@ -13,6 +17,18 @@ const BASELINE_COMMANDS = [
   'npm audit --audit-level=high',
   'npx openspec validate --all',
 ];
+
+/** Shared local/CI secretlint invocation (exact string must appear as a CI run step). */
+const SECRETLINT_COMMAND = 'npx secretlint "**/*"';
+
+/**
+ * Deterministic high-confidence Slack bot token fixture — not a live credential.
+ * Built at runtime so the contiguous token never appears in the committed tree.
+ */
+const SEEDED_SLACK_BOT_TOKEN = Buffer.from(
+  'eG94Yi0xMjM0NTY3ODkwMTItMTIzNDU2Nzg5MDEyMy1BYkNkRWZHaElqS2xNbk9wUXJTdFV2V3g=',
+  'base64',
+).toString('utf8');
 
 function readWorkflow() {
   assert.ok(fs.existsSync(workflowPath), `missing ${workflowPath}`);
@@ -122,5 +138,89 @@ test('baseline workflow uses contents:read, full-SHA action pins, and forbids pu
       FULL_SHA.test(pin),
       `third-party action must be pinned to a full 40-char commit SHA (not a tag/branch): ${ref}`,
     );
+  }
+});
+
+function secretScanJobBlock(yaml) {
+  const match = yaml.match(/(?:^|\n)(\s*)secret-scan\s*:\s*\n([\s\S]*?)(?=\n\1[A-Za-z0-9_-]+\s*:\s*\n|\n*$)/);
+  assert.ok(match, 'workflow must define a job named secret-scan');
+  return match[2];
+}
+
+function runSharedSecretlint(cwd) {
+  const binDir = path.join(repoRoot, 'node_modules', '.bin');
+  const env = {
+    ...process.env,
+    PATH: `${binDir}${path.delimiter}${process.env.PATH || ''}`,
+  };
+  return spawnSync(SECRETLINT_COMMAND, {
+    cwd,
+    env,
+    encoding: 'utf8',
+    shell: true,
+  });
+}
+
+function prepareSecretlintFixture(contentsByRelativePath) {
+  assert.ok(fs.existsSync(secretlintRcPath), `missing ${secretlintRcPath}`);
+  const dir = mkdtempSync(path.join(tmpdir(), 'secretlint-fixture-'));
+  fs.copyFileSync(secretlintRcPath, path.join(dir, '.secretlintrc.json'));
+  // Same command as CI resolves rules from cwd; link the repo install into the temp tree.
+  fs.symlinkSync(path.join(repoRoot, 'node_modules'), path.join(dir, 'node_modules'), 'dir');
+  for (const [relative, body] of Object.entries(contentsByRelativePath)) {
+    const target = path.join(dir, relative);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, body, 'utf8');
+  }
+  return dir;
+}
+
+test('shared secretlint command fails on seeded secret, passes clean tree, masks secret, and matches CI', () => {
+  const yaml = readWorkflow();
+  const job = secretScanJobBlock(yaml);
+  const steps = runSteps(job);
+  const commands = steps.map((step) => step.command);
+  assert.ok(
+    commands.includes(SECRETLINT_COMMAND),
+    `secret-scan job must run \`${SECRETLINT_COMMAND}\`; found: ${JSON.stringify(commands)}`,
+  );
+  const secretStep = steps.find((step) => step.command === SECRETLINT_COMMAND);
+  assert.equal(
+    secretStep.continueOnError,
+    false,
+    `\`${SECRETLINT_COMMAND}\` must fail the job on non-zero exit (no continue-on-error)`,
+  );
+
+  let dirtyDir;
+  let cleanDir;
+  try {
+    dirtyDir = prepareSecretlintFixture({
+      'seed.env': `SLACK_TOKEN=${SEEDED_SLACK_BOT_TOKEN}\n`,
+    });
+    const dirty = runSharedSecretlint(dirtyDir);
+    const dirtyOutput = `${dirty.stdout || ''}${dirty.stderr || ''}`;
+    assert.notEqual(
+      dirty.status,
+      0,
+      `seeded secret must make secretlint exit non-zero; output:\n${dirtyOutput}`,
+    );
+    assert.ok(
+      !dirtyOutput.includes(SEEDED_SLACK_BOT_TOKEN),
+      'secretlint output must not contain the seeded secret value',
+    );
+
+    cleanDir = prepareSecretlintFixture({
+      'notes.txt': 'no credentials here\n',
+    });
+    const clean = runSharedSecretlint(cleanDir);
+    const cleanOutput = `${clean.stdout || ''}${clean.stderr || ''}`;
+    assert.equal(
+      clean.status,
+      0,
+      `clean tree must make secretlint exit zero; output:\n${cleanOutput}`,
+    );
+  } finally {
+    if (dirtyDir) rmSync(dirtyDir, { recursive: true, force: true });
+    if (cleanDir) rmSync(cleanDir, { recursive: true, force: true });
   }
 });

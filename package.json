@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "test": "node --test",
+    "secretlint": "secretlint \"**/*\"",
     "start": "node src/cli.mjs"
   },
   "license": "MIT",
@@ -17,6 +18,8 @@
   },
   "devDependencies": {
     "@fission-ai/openspec": "^1.14.3",
-    "backlog.md": "^1.55.0"
+    "@secretlint/secretlint-rule-preset-recommend": "13.0.7",
+    "backlog.md": "^1.55.0",
+    "secretlint": "13.0.7"
   }
 }
