@@ -7,7 +7,7 @@
 
 ## 2. Security scanning
 
-- [ ] 2.1 Add a failing test that the shared secretlint command exits non-zero on a seeded high-confidence secret, exits zero on a clean tree, and does not print the secret. Add the exact devDependencies, configuration, and the same CI step. Verify with `node --test test/ci-provenance.test.mjs`.
+- [x] 2.1 Add a failing test that the shared secretlint command exits non-zero on a seeded high-confidence secret, exits zero on a clean tree, and does not print the secret. Add the exact devDependencies, configuration, and the same CI step. Verify with `node --test test/ci-provenance.test.mjs`.
 - [ ] 2.2 Add a failing test that the pinned Semgrep command exits non-zero on a seeded JavaScript finding and that its workflow job does not set `continue-on-error`. Add that CI step with `--error`, `--metrics=off`, and `p/javascript`. Verify with `node --test test/ci-provenance.test.mjs`.
 
 ## 3. Release provenance
