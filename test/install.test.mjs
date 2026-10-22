@@ -380,6 +380,23 @@ test('init and upgrade preserve unrelated Cline files and refresh owned Cline sk
   }
 });
 
+test('AGENTS.md factory section names the Cline factory rule', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const agents = read(dir, 'AGENTS.md');
+    const start = agents.indexOf('<!-- idefactory:start -->');
+    const end = agents.indexOf('<!-- idefactory:end -->');
+    assert.notEqual(start, -1, 'AGENTS.md must contain the marked factory section start');
+    assert.notEqual(end, -1, 'AGENTS.md must contain the marked factory section end');
+    assert.ok(end > start, 'factory section end must follow start');
+    const section = agents.slice(start, end + '<!-- idefactory:end -->'.length);
+    assert.match(section, /\.cline\/rules\/factory\.md/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('doctor fails in an empty directory and passes after init without backlog', async () => {
   const dir = tempProject();
   try {

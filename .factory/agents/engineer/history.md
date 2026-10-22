@@ -464,3 +464,11 @@ Implementer: cline-engineer-1.3
 Red: temporarily removed `The IDE session model does the work.` from `templates/skills/factory-coordinator/SKILL.md`; `node src/cli.mjs verify run a7444fda-e693-4524-8958-4450ddbebfd8 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit); sentence restored before commit.
 Green: `node --test test/install.test.mjs` exit 0, 16 pass (pending full `verify run --check unit` after commit).
 Scope: install test only — extend no-model scan to `.cline/skills` and `.cline/workflows`; launchPattern unchanged; no CI, doctor, instruction fragment, queue, gates, lockout, review, complete, or push.
+
+## 2026-10-22 add-cline-ide-adapter/1.4
+
+Attempt: ab8b238f-b2fb-4c54-a363-a3a6161b6248
+Implementer: cline-engineer-1.4
+Red: `node --test test/install.test.mjs` exit 1 (1 failure: AGENTS.md factory section lacked `.cline/rules/factory.md`); `node src/cli.mjs verify run ab8b238f-b2fb-4c54-a363-a3a6161b6248 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
+Green: `node --test test/install.test.mjs` exit 0, 17 pass (pending full `verify run --check unit` after commit).
+Scope: instruction fragment + install test only — one line naming `.cline/rules/factory.md` in `templates/fragments/instructions.md`; no new instruction-file target; no CI, doctor, queue, gates, lockout, Semgrep, review, complete, or push.
