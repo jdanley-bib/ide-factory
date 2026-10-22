@@ -409,6 +409,32 @@ test('doctor fails in an empty directory and passes after init without backlog',
   }
 });
 
+test('doctor requires Cline factory rule and coordinator skill', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal((await idefactory(dir, ['doctor'])).code, 0);
+
+    const rulePath = path.join(dir, '.cline/rules/factory.md');
+    const skillPath = path.join(dir, '.cline/skills/factory-coordinator/SKILL.md');
+    const ruleBody = fs.readFileSync(rulePath);
+    const skillBody = fs.readFileSync(skillPath);
+
+    fs.unlinkSync(rulePath);
+    const missingRule = await idefactory(dir, ['doctor']);
+    assert.notEqual(missingRule.code, 0);
+    assert.match(missingRule.out, /missing \.cline\/rules\/factory\.md/);
+
+    fs.writeFileSync(rulePath, ruleBody);
+    fs.unlinkSync(skillPath);
+    const missingSkill = await idefactory(dir, ['doctor']);
+    assert.notEqual(missingSkill.code, 0);
+    assert.match(missingSkill.out, /missing \.cline\/skills\/factory-coordinator\/SKILL\.md/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('README tells a project how to install and who does the work', () => {
   const readme = fs.readFileSync(path.join(repoRoot, 'README.md'), 'utf8');
   assert.match(readme, /idefactory init/);

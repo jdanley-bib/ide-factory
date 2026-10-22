@@ -22,6 +22,8 @@ const REQUIRED = [
   '.github/agents/factory.agent.md',
   '.github/skills/factory-coordinator/SKILL.md',
   '.claude/skills/factory-coordinator/SKILL.md',
+  '.cline/rules/factory.md',
+  '.cline/skills/factory-coordinator/SKILL.md',
   ...ROLES.flatMap((role) => [
     `.factory/agents/${role}/charter.md`,
     `.factory/agents/${role}/history.md`,

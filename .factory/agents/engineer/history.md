@@ -472,3 +472,11 @@ Implementer: cline-engineer-1.4
 Red: `node --test test/install.test.mjs` exit 1 (1 failure: AGENTS.md factory section lacked `.cline/rules/factory.md`); `node src/cli.mjs verify run ab8b238f-b2fb-4c54-a363-a3a6161b6248 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit).
 Green: `node --test test/install.test.mjs` exit 0, 17 pass (pending full `verify run --check unit` after commit).
 Scope: instruction fragment + install test only — one line naming `.cline/rules/factory.md` in `templates/fragments/instructions.md`; no new instruction-file target; no CI, doctor, queue, gates, lockout, Semgrep, review, complete, or push.
+
+## 2026-10-22 add-cline-ide-adapter/2.1
+
+Attempt: 0292fa6b-4229-4a3b-ad25-f2160bff8cff
+Implementer: cline-engineer-2.1
+Red: `node --test test/install.test.mjs` exit 1 (doctor still exited 0 after removing `.cline/rules/factory.md`); `node src/cli.mjs verify run 0292fa6b-4229-4a3b-ad25-f2160bff8cff --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:d105b58b4521e8878dc5f20626d502aa2042519b67a87bbefc27a37e05f08daa).
+Green: `node --test test/install.test.mjs` exit 0, 18 pass (pending full `verify run --check unit` after commit).
+Scope: doctor REQUIRED only — `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md`; install test asserts healthy doctor after init and `missing <path>` on stdout when either file is removed; no every-workflow/every-skill requirement; no CI, Semgrep, Node, Python, queue, gates, lockout, review, complete, or push.
