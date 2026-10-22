@@ -18,6 +18,14 @@ Before changing finalization targets, complete SHALL atomically persist a schema
 - **THEN** complete exits with an error
 - **AND** the work item is not marked done
 
+### Requirement: Durable commit target on journal
+The schema version 1 journal SHALL durably include the work-item commit target (exact after bytes and digests) and the frozen `finalizedAt` timestamp so process-restart recovery can apply the commit without rebuilding plan bytes. That commit target SHALL NOT be a pre-commit target and SHALL remain the atomic last write.
+
+#### Scenario: Journal carries commit bytes
+- **WHEN** a prepared journal exists
+- **THEN** it includes the durable work-item commit target and frozen `finalizedAt`
+- **AND** those fields are used unchanged on process-restart recovery
+
 ### Requirement: Last-write commit point
 Complete SHALL make the atomic work-item status update to `done` the last correctness-critical finalization write. Before that write, the journal SHALL be ready to commit, the OpenSpec checkbox SHALL be checked, the scribe and identity records SHALL contain the finalization, the attempt SHALL be finalized, and the work index SHALL contain the intended result.
 
@@ -38,10 +46,36 @@ When a journal exists and the work item is not done, rerunning complete for the 
 - **WHEN** a prior complete stopped after one or more pre-commit writes
 - **THEN** rerunning the same complete reaches one finalized state
 - **AND** it does not duplicate a scribe entry, attempt history event, or checkbox edit
+- **AND** the commit uses the journaled commit-target bytes and frozen `finalizedAt`
 
 #### Scenario: External conflict
 - **WHEN** a journal target differs from both its expected before and after content
 - **THEN** recovery exits with a conflict error
+- **AND** the work item remains not done
+
+### Requirement: Finalize-failed only before journal durability
+Complete MAY write attempt status `finalize-failed` only when failure occurs before journal durability. After the journal is durable, recovery SHALL replay frozen attempt bytes and SHALL NOT rewrite the attempt to `finalize-failed`.
+
+#### Scenario: Failure before journal durability
+- **WHEN** completion fails before the journal is durable
+- **THEN** complete MAY record attempt status `finalize-failed`
+- **AND** the work item is not done
+
+#### Scenario: Failure after journal durability
+- **WHEN** completion fails after the journal is durable and the work item is not done
+- **THEN** complete does not rewrite the attempt to `finalize-failed`
+- **AND** a later retry resumes from the frozen journal bytes
+
+### Requirement: Dirty worktree only for partial finalization
+A retry MAY proceed with a dirty worktree only when that dirt is exactly partial finalization state from journaled targets and a valid journal remains bound to an unchanged clean source HEAD. Unrelated dirt, a changed HEAD, a missing or unbound journal, or a target conflict SHALL fail closed.
+
+#### Scenario: Dirty worktree from partial finalization
+- **WHEN** a valid journal remains bound to the current clean source HEAD and the only worktree dirt is partial application of that journal's targets
+- **THEN** rerunning complete may proceed and resume those targets
+
+#### Scenario: Unrelated dirty worktree or HEAD drift
+- **WHEN** the worktree has dirt unrelated to journaled finalization targets, or HEAD no longer equals the journaled source revision, or a target conflicts
+- **THEN** recovery fails closed
 - **AND** the work item remains not done
 
 ### Requirement: Repeat after commit

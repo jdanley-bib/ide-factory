@@ -43,7 +43,7 @@ The planned pre-commit targets are:
 5. `.factory/work/index.json`;
 6. the same journal rewritten atomically as `ready-to-commit`.
 
-The work-item JSON with `status: done` is the atomic commit point and is not applied until every prior target matches its after digest. It is written with temp-plus-rename. No correctness-critical finalization write follows it. Lease release and best-effort ledger append are outside the finalization transaction.
+The schema version 1 journal also durably records the work-item commit target (exact after bytes and digests) and the frozen `finalizedAt` timestamp so a process-restart recovery can apply the commit without rebuilding plan bytes. That commit target is not a pre-commit target: it remains the atomic last write and is applied only after every prior target matches its after digest. It is written with temp-plus-rename. No correctness-critical finalization write follows it. Lease release and best-effort ledger append are outside the finalization transaction.
 
 A journal in `ready-to-commit` plus a done work item is committed; no journal rewrite is needed afterward. This avoids a window where the item is done but a later journal-status write can fail.
 
@@ -57,7 +57,11 @@ On retry, each target has three outcomes:
 - current digest equals before digest: atomically write exact after bytes;
 - otherwise: stop with a conflict and keep the item not done.
 
-The completion date, timestamps, history entry, and scribe marker are frozen in the first journal, so replay does not create new bytes. A retry is permitted when the attempt is `accepted`, `finalize-failed`, or already `finalized` with this matching journal and an unfinished item. The orchestrator treats that last state as `needs-complete` so the skill loop can recover without manual JSON edits.
+The completion date, timestamps (including frozen `finalizedAt`), history entry, scribe marker, and commit-target bytes are frozen in the first durable journal, so replay does not create new bytes. Because those attempt bytes are frozen once the journal exists, complete MAY write attempt status `finalize-failed` only when failure happens before journal durability. After the journal is durable, recovery replays frozen bytes and MUST NOT rewrite the attempt into `finalize-failed`.
+
+A retry is permitted when the attempt is `accepted`, `finalize-failed` (pre-journal failure), or already `finalized` with this matching journal and an unfinished item. The orchestrator treats that last state as `needs-complete` so the skill loop can recover without manual JSON edits.
+
+Evidence and journal binding still use the clean `sourceRevision` captured at journal creation. A retry MAY proceed with a dirty worktree only when that dirt is exactly partial finalization state from applying journaled targets and a valid journal remains bound to an unchanged clean source HEAD (`sourceRevision` equals current HEAD). Unrelated dirt, an unbound or missing journal, a changed HEAD, or a target conflict fails closed.
 
 If the item and matching ready journal are already committed, `complete` returns the existing finalized result without writes. An item that says done without a matching ready journal is an inconsistency and fails closed.
 
