@@ -351,3 +351,11 @@ Reviewer: bc-7449c915-1397-5e10-94d0-439d8cfe4fe4
 Implementer: bc-b658b85d-4eed-58e3-a1f3-bba903e07794
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 3 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 820df42 worktreeClean:false; engineer notes missing `secret-scan` job); clean-head unit pass at b2dbe02 worktreeClean. Product b2dbe02: exact `secretlint@13.0.7` + `@secretlint/secretlint-rule-preset-recommend@13.0.7` (dev only); `.secretlintrc.json` recommend preset; shared `npx secretlint "**/*"` in CI `secret-scan` and focused test (no `continue-on-error`); CLI `maskSecrets` default (no `--no-maskSecrets`); seeded Slack-shaped fixture assembled from base64 at runtime (contiguous value absent from tree). Scope exclusions held (no Semgrep/2.2, release, branch controls, checks.json scanner argv, complete, or push). Prior distinct security ACCEPT by bc-303a83a1 (decision establish-factory-ci-and-provenance-2.1-unit-check; evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.2
+
+Attempt: d1db173b-f29e-407b-ab70-9674892ba8ce
+Reviewer: bc-09ffd1d2-7fa7-5237-b026-c3f055ecac74
+Implementer: bc-4ba8835d-2693-569c-a077-834313f33abd
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 4 pass; `npm test` exit 0, 196 pass (no `semgrep` on PATH). CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at 93ad67f); clean-head unit pass at 63ede06 worktreeClean true (matches HEAD). Product 63ede06: `scripts/run-semgrep.mjs` probes PATH then invokes `semgrep` with `--error`, `--metrics=off`, `--config p/javascript`; absent binary exit 1 with no pip/npm/curl download path; `--skip-semgrep` warns and prints `SEMGREP_SKIP`. CI `sast` runs `node scripts/run-semgrep.mjs` only (no installer, no `--skip-semgrep`, no `continue-on-error`); baseline job omits skip flag. Focused test uses PATH trap stubs and shell `semgrep` stub; no Semgrep in `package.json`. Prior distinct security ACCEPT by bc-38c29cb3 (evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push/lockout.
