@@ -2,7 +2,7 @@
   "id": "2.2",
   "change": "establish-factory-ci-and-provenance",
   "title": "Add a failing test that the pinned Semgrep command exits non-zero on a seeded JavaScript finding and that its workflow job does not set `continue-on-error`. Add that CI step with `--error`, `--metrics=off`, and `p/javascript`. Verify with `node --test test/ci-provenance.test.mjs`.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "2.1"
   ],
@@ -27,6 +27,6 @@
       "2.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-22T00:16:46.038Z"
+  "attemptId": "983f8451-bce2-4aa9-bbe7-fb139d2bf2b1",
+  "updatedAt": "2026-10-22T00:47:52.412Z"
 }

@@ -383,3 +383,13 @@ Green: `node --test test/ci-provenance.test.mjs` exit 0, 3 pass.
 Deps: `secretlint@13.0.7`, `@secretlint/secretlint-rule-preset-recommend@13.0.7` (exact; npm --save-exact).
 Shared command: `npx secretlint "**/*"` (package script `secretlint`, `.secretlintrc.json` recommend preset, CI job `secret-scan`).
 Scope: secretlint only — temp seeded Slack-bot fixture exits non-zero with masked output; clean temp tree exits zero; no contiguous secret in committed sources. No Semgrep (2.2), release, branch controls, review, accept, complete, or push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.2
+
+Attempt: 983f8451-bce2-4aa9-bbe7-fb139d2bf2b1
+Implementer: bc-e4a15f0c-7617-5bab-887e-59de470e1774
+Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `sast` job); `node src/cli.mjs verify run 983f8451-bce2-4aa9-bbe7-fb139d2bf2b1 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:9e65b70660ceec7b84a764d8c7de7a063096eab6acb14d61f8c857ea73e94006).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 4 pass.
+Tooling: Semgrep `1.182.0` via `python3 -m pip install --user` (exact pin; not an npm/runtime dependency); CI adds `$HOME/.local/bin` to `GITHUB_PATH`.
+Shared command: `semgrep --error --metrics=off --config p/javascript` (CI job `sast`, no `continue-on-error`).
+Scope: Semgrep SAST only — temp seeded express XSS fixture exits non-zero; no insecure fixture committed. No release, branch controls, review, accept, complete, or push.
