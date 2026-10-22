@@ -17,7 +17,7 @@
 
 ## 4. Branch and review controls
 
-- [ ] 4.1 Add a failing test that `.github/branch-review-controls.json` names required check `baseline`, one approving review, force-push disabled, protected branch `main`, and `enforcedByForge` false, and that implementation contains no forge admin API call. Add that declaration and `.github/CODEOWNERS` for `@jdanley-bib`. Verify with `node --test test/ci-provenance.test.mjs`.
+- [x] 4.1 Add a failing test that `.github/branch-review-controls.json` names required check `baseline`, one approving review, force-push disabled, protected branch `main`, and `enforcedByForge` false, and that implementation contains no forge admin API call. Add that declaration and `.github/CODEOWNERS` for `@jdanley-bib`. Verify with `node --test test/ci-provenance.test.mjs`.
 
 ## 5. Integration
 
