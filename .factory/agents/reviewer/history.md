@@ -430,3 +430,11 @@ Reviewer: cline-reviewer-2.1
 Implementer: cline-engineer-2.1
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 18 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 201aa5d3 worktreeClean:false). Product c092e041: doctor REQUIRED adds `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md` only (not every workflow); install test asserts doctor exit 0 after init and non-zero `missing <path>` when either file is removed; no CI, Semgrep, Node, Python, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
+
+## 2026-10-22 add-cline-ide-adapter/3.1
+
+Attempt: 27e6311a-e7fa-4b6a-b780-424369c3e88e
+Reviewer: cline-reviewer-3.1
+Implementer: cline-engineer-3.1
+Verdict: ACCEPT
+Re-ran in order: `npx openspec validate add-cline-ide-adapter --strict` exit 0; `npx openspec validate --all` exit 0 (13 passed, 0 failed); `node --test test/install.test.mjs` exit 0, 19 pass. Recorded notes exit codes match (0/0/0). CLI red present (issuer cli, kind unit, exitCode 1, passed false at 938138ba worktreeClean:false); unit pass at 91192817 worktreeClean true. Product 91192817: `implementation-notes.md` + install honesty test + engineer history only; no second queue; no gate, evidence, or lockout change; no archive; no CI, Semgrep, Node, or Python. Transitions verifying → awaiting-review → accepted. No complete/push.
