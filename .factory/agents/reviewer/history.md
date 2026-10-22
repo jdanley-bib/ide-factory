@@ -391,3 +391,10 @@ Reviewer: bc-81e77c7c-7533-53be-a679-db93fdbc8927
 Implementer: bc-533c85e2-3880-5491-b79f-a2eae6b1bd36
 Verdict: ACCEPT
 Re-ran `node --test --test-name-pattern 'implementation notes record' test/ci-provenance.test.mjs` exit 0, 1 pass (full file run once hit transient `npm audit --audit-level=high` exit 1 during honesty re-run; spot-check `npm audit --audit-level=high` exit 0 matches notes). CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at 3fc4835); clean-head unit pass at 9ca04f6 worktreeClean true. Product 9ca04f6/a471cd3: `implementation-notes.md` records seven integration commands (strict validate, validate --all, npm test ×2, npm ci, audit, validate --all) with exit 0 summaries; `ci-provenance.test.mjs` honesty section locks order and re-run exits. Scope exclusions held (verification-only task 5.1; no factory gate or evidence policy change, forge admin API, observability, model start, or archive). Decision establish-factory-ci-and-provenance-5.1-unit-check (unit-only completion; extra commands in notes only). evidence.security empty. Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 add-cline-ide-adapter/1.1
+
+Attempt: 25d7c140-147c-4c27-bd15-39a69a7d4eb5
+Reviewer: cline-reviewer-1.1
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 15 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at ca4ce5f); unit pass at 718578f worktreeClean. Product: `.cline/rules/factory.md` (no paths frontmatter), nine `.cline/skills/`, six `.cline/workflows/factory-*.md` (shared body + owned marker); no `.clinerules/`, `.cline/work/`, doctor, CI, Semgrep, instruction fragment, queue/gate/evidence/lockout. Transitions verifying → awaiting-review → accepted. No verify/complete/push until history commit + rebind.
