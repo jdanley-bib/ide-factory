@@ -2,10 +2,10 @@
   "id": "f615a850-ec61-4c7a-8793-b80f4820f46a",
   "change": "establish-factory-ci-and-provenance",
   "taskId": "5.1",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-533c85e2-3880-5491-b79f-a2eae6b1bd36",
-  "reviewerId": null,
+  "reviewerId": "bc-81e77c7c-7533-53be-a679-db93fdbc8927",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-81e77c7c-7533-53be-a679-db93fdbc8927",
+      "notes": "Task 5.1 integration notes list all seven commands with exit 0 summaries; honesty test re-run passed after spot-check npm audit.",
+      "at": "2026-10-22T03:24:58.533Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -83,8 +88,16 @@
     {
       "at": "2026-10-22T03:07:13.656Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T03:24:56.170Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T03:24:58.533Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-22T02:08:08.163Z",
-  "updatedAt": "2026-10-22T03:07:13.656Z"
+  "updatedAt": "2026-10-22T03:24:58.533Z"
 }

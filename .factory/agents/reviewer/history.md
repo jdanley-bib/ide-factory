@@ -383,3 +383,11 @@ Reviewer: bc-fb807635-a425-547a-9e5f-14f743aa9b97
 Implementer: bc-48a1b099-8bf4-58c4-82d7-6d9ba303bd5d
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 7 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at 0964f970); clean-head unit pass at d876172 worktreeClean true. Product d876172: `.github/branch-review-controls.json` schemaVersion 1 with `requiredStatusCheckName` baseline, `requiredApprovingReviewCount` 1, `allowForcePushes` false, `protectedBranch` main, `enforcedByForge` false; `.github/CODEOWNERS` `* @jdanley-bib`; focused test scans `.github`, `scripts`, and `src` for forbidden forge admin API patterns. Scope exclusions held (no live ruleset enablement, npm publish, observability, complete, or push). Prior distinct security ACCEPT by bc-fef7462a-ddc4-5601-8819-20fc9071bb76 (evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/5.1
+
+Attempt: f615a850-ec61-4c7a-8793-b80f4820f46a
+Reviewer: bc-81e77c7c-7533-53be-a679-db93fdbc8927
+Implementer: bc-533c85e2-3880-5491-b79f-a2eae6b1bd36
+Verdict: ACCEPT
+Re-ran `node --test --test-name-pattern 'implementation notes record' test/ci-provenance.test.mjs` exit 0, 1 pass (full file run once hit transient `npm audit --audit-level=high` exit 1 during honesty re-run; spot-check `npm audit --audit-level=high` exit 0 matches notes). CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at 3fc4835); clean-head unit pass at 9ca04f6 worktreeClean true. Product 9ca04f6/a471cd3: `implementation-notes.md` records seven integration commands (strict validate, validate --all, npm test ×2, npm ci, audit, validate --all) with exit 0 summaries; `ci-provenance.test.mjs` honesty section locks order and re-run exits. Scope exclusions held (verification-only task 5.1; no factory gate or evidence policy change, forge admin API, observability, model start, or archive). Decision establish-factory-ci-and-provenance-5.1-unit-check (unit-only completion; extra commands in notes only). evidence.security empty. Transitions verifying → awaiting-review → accepted. No verify/complete/push.
