@@ -428,6 +428,6 @@ Scope: release SBOM provenance attestation only — no branch controls, npm publ
 Attempt: c6790978-0806-44b4-b659-eac3c9ccba3d
 Implementer: bc-48a1b099-8bf4-58c4-82d7-6d9ba303bd5d
 Red: `node --test test/ci-provenance.test.mjs` exit 1 (missing `.github/branch-review-controls.json` and `.github/CODEOWNERS`); `node src/cli.mjs verify run c6790978-0806-44b4-b659-eac3c9ccba3d --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, logDigest sha256:32d84c1d405936ba970fc8916c8893322ad99a0b578f3e61bcb0b13ad2eb8ff6).
-Green: (pending clean-HEAD `npm test` verify run).
+Green: `node --test test/ci-provenance.test.mjs` exit 0, 7 pass; `npm test` exit 0 (199 pass); `node src/cli.mjs verify run c6790978-0806-44b4-b659-eac3c9ccba3d --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, logDigest sha256:f5ac87a4622315afda8fcde799d3915483a7614f8fcdaf5c9cfb1a7a897fe843, sourceRevision d8761720b2577511668e936e60ce4caf7762dab7).
 Declaration: `.github/branch-review-controls.json` schemaVersion 1, `requiredStatusCheckName` baseline, `requiredApprovingReviewCount` 1, `allowForcePushes` false, `protectedBranch` main, `enforcedByForge` false; `.github/CODEOWNERS` `* @jdanley-bib`; tests scan `.github`, `scripts`, and `src` for forbidden forge admin API patterns.
 Scope: branch review declaration only — no forge admin API, npm publish, observability, review, accept, complete, or push.
