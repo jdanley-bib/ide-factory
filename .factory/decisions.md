@@ -145,3 +145,13 @@ Authorized-at: 2026-10-22T00:17:00Z
 Authorized-by: factory lead aligning the machine queue to the approved task
 Work-item: establish-factory-ci-and-provenance/5.1
 Note: The classifier inferred an integration check because the task executes the baseline command set. The approved integration task runs strict OpenSpec validation, all specs, `npm ci`, `npm test`, and `npm audit --audit-level=high`; the registry maps only unit to `npm test`. Set completion checks to unit and record every additional command honestly in implementation notes; do not forge an integration attestation.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-2.2-semgrep-retry
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-2.2-semgrep-retry
+Authorized-at: 2026-10-22T01:05:00Z
+Authorized-by: human review of the rejected Semgrep attempt
+Work-item: establish-factory-ci-and-provenance/2.2
+Attempt: 983f8451-bce2-4aa9-bbe7-fb139d2bf2b1
+Note: The human resolved the rejection by keeping Semgrep as the SAST scanner and replacing the PyPI installer. `npm test` must not download Semgrep or any other tool and must pass without Semgrep installed. The scan command and CI fail closed when the binary is missing. `--skip-semgrep` skips the scan, prints a warning, and records the skip; baseline CI must not pass it. Unit tests use a stub or absent binary. Preserve the rejected attempt, discard commit `f7e4013` product behavior, and assign a new attempt to a different implementer. Require a distinct security review before product acceptance. Do not forge security evidence or call a forge admin API.

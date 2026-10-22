@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "resolver": "bc-2ecb2a92-5ebd-5487-9ef0-1ce87dc4b20f",
+  "reason": "Human approved a fresh task 2.2 attempt: Semgrep stays the scanner, tests must not download it, a missing binary fails closed, and --skip-semgrep is an explicit escape that baseline CI does not use.",
+  "resolvedAt": "2026-10-22T01:08:31.193Z"
+}

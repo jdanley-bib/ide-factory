@@ -21,12 +21,6 @@ const BASELINE_COMMANDS = [
 /** Shared local/CI secretlint invocation (exact string must appear as a CI run step). */
 const SECRETLINT_COMMAND = 'npx secretlint "**/*"';
 
-/** Exact Semgrep CLI pin (PyPI); not a product/runtime npm dependency. */
-const SEMGREP_VERSION = '1.182.0';
-
-/** Shared local/CI Semgrep invocation (exact string must appear as a CI run step). */
-const SEMGREP_COMMAND = 'semgrep --error --metrics=off --config p/javascript';
-
 /**
  * Deterministic high-confidence Slack bot token fixture — not a live credential.
  * Built at runtime so the contiguous token never appears in the committed tree.
@@ -35,22 +29,6 @@ const SEEDED_SLACK_BOT_TOKEN = Buffer.from(
   'eG94Yi0xMjM0NTY3ODkwMTItMTIzNDU2Nzg5MDEyMy1BYkNkRWZHaElqS2xNbk9wUXJTdFV2V3g=',
   'base64',
 ).toString('utf8');
-
-/**
- * Seeded JS finding for p/javascript (express XSS direct-response-write).
- * Assembled at runtime so no insecure fixture file is committed (keeps
- * secret-scan clean and avoids landing vulnerable samples in the tree).
- */
-function seededJavascriptFindingSource() {
-  return [
-    "const express = require('express');",
-    'const app = express();',
-    "app.get('/user', (req, res) => {",
-    '  res.send(req.query.name);',
-    '});',
-    '',
-  ].join('\n');
-}
 
 function readWorkflow() {
   assert.ok(fs.existsSync(workflowPath), `missing ${workflowPath}`);
@@ -244,92 +222,5 @@ test('shared secretlint command fails on seeded secret, passes clean tree, masks
   } finally {
     if (dirtyDir) rmSync(dirtyDir, { recursive: true, force: true });
     if (cleanDir) rmSync(cleanDir, { recursive: true, force: true });
-  }
-});
-
-function sastJobBlock(yaml) {
-  const match = yaml.match(/(?:^|\n)(\s*)sast\s*:\s*\n([\s\S]*?)(?=\n\1[A-Za-z0-9_-]+\s*:\s*\n|\n*$)/);
-  assert.ok(match, 'workflow must define a job named sast');
-  return match[2];
-}
-
-function ensurePinnedSemgrep() {
-  const versionCheck = spawnSync('semgrep', ['--version'], { encoding: 'utf8' });
-  const versionText = `${versionCheck.stdout || ''}${versionCheck.stderr || ''}`;
-  if (versionCheck.status === 0 && versionText.includes(SEMGREP_VERSION)) {
-    return;
-  }
-  const install = spawnSync(
-    'python3',
-    ['-m', 'pip', 'install', '--user', `semgrep==${SEMGREP_VERSION}`],
-    { encoding: 'utf8' },
-  );
-  assert.equal(
-    install.status,
-    0,
-    `failed to install semgrep==${SEMGREP_VERSION}:\n${install.stdout || ''}${install.stderr || ''}`,
-  );
-}
-
-function runSharedSemgrep(cwd) {
-  const userBin = path.join(process.env.HOME || '', '.local', 'bin');
-  const env = {
-    ...process.env,
-    PATH: `${userBin}${path.delimiter}${process.env.PATH || ''}`,
-  };
-  return spawnSync(SEMGREP_COMMAND, {
-    cwd,
-    env,
-    encoding: 'utf8',
-    shell: true,
-  });
-}
-
-test('pinned Semgrep fails on seeded JS finding and sast job has no continue-on-error', () => {
-  const yaml = readWorkflow();
-  const job = sastJobBlock(yaml);
-  assert.doesNotMatch(
-    job,
-    /^\s*continue-on-error\s*:\s*true\s*$/m,
-    'sast job must not set continue-on-error: true',
-  );
-  const steps = runSteps(job);
-  const commands = steps.map((step) => step.command);
-  assert.ok(
-    commands.includes(SEMGREP_COMMAND),
-    `sast job must run \`${SEMGREP_COMMAND}\`; found: ${JSON.stringify(commands)}`,
-  );
-  const semgrepStep = steps.find((step) => step.command === SEMGREP_COMMAND);
-  assert.equal(
-    semgrepStep.continueOnError,
-    false,
-    `\`${SEMGREP_COMMAND}\` must fail the job on non-zero exit (no continue-on-error)`,
-  );
-  assert.ok(
-    commands.some((command) => command === `pip install semgrep==${SEMGREP_VERSION}`
-      || command === `python3 -m pip install semgrep==${SEMGREP_VERSION}`
-      || command === `python3 -m pip install --user semgrep==${SEMGREP_VERSION}`),
-    `sast job must install exact semgrep==${SEMGREP_VERSION}; found: ${JSON.stringify(commands)}`,
-  );
-
-  ensurePinnedSemgrep();
-
-  let fixtureDir;
-  try {
-    fixtureDir = mkdtempSync(path.join(tmpdir(), 'semgrep-fixture-'));
-    fs.writeFileSync(
-      path.join(fixtureDir, 'seed.js'),
-      seededJavascriptFindingSource(),
-      'utf8',
-    );
-    const result = runSharedSemgrep(fixtureDir);
-    const output = `${result.stdout || ''}${result.stderr || ''}`;
-    assert.notEqual(
-      result.status,
-      0,
-      `seeded JS finding must make Semgrep exit non-zero; output:\n${output}`,
-    );
-  } finally {
-    if (fixtureDir) rmSync(fixtureDir, { recursive: true, force: true });
   }
 });

@@ -36,9 +36,9 @@ Alternative considered: a matrix of Node 20 and 22. Rejected because platform ma
 
 Secret detection uses `@secretlint/secretlint` with `@secretlint/secretlint-rule-preset-recommend`, added as exact devDependencies when this change is applied. The CI step and the test run the same `secretlint` command. Output is configured not to echo the matched secret. A temp fixture containing a high-confidence sample key must exit non-zero, and a clean tree must exit zero.
 
-SAST uses the official Semgrep CLI pinned to an exact version in the workflow and invoked with `--error`, `--metrics=off`, and the maintained `p/javascript` ruleset. The test runs that same command against a seeded fixture that the ruleset detects and asserts the workflow has no `continue-on-error`. Semgrep is not added as a product runtime dependency.
+SAST stays on the official Semgrep CLI, invoked with `--error`, `--metrics=off`, and `p/javascript`. The human rejected the attempt that installed Semgrep from PyPI during `npm test`. The replacement command fails closed when the `semgrep` binary is absent and does not download it. `--skip-semgrep` is the only escape: it skips the scan, prints a warning, and writes a `SEMGREP_SKIP` record to stdout. Baseline CI and the SAST job call the command without that flag and without an installer. `npm test` uses an absent binary or a stub, passes without Semgrep, and does not download Semgrep or any other tool.
 
-Alternative considered: `gitleaks-action` and CodeQL only. Rejected for the secret scan because an action-only command would not be the command the local test runs. CodeQL was rejected for SAST because its analysis job can succeed while findings remain, which does not meet the fail-closed scenario.
+Alternative considered: install Semgrep inside the test or CI job. Rejected by the human review of attempt `983f8451-bce2-4aa9-bbe7-fb139d2bf2b1`. CodeQL remains rejected because its analysis job can succeed while findings remain.
 
 ### Release bytes are generated, then attested
 
@@ -73,7 +73,8 @@ Alternative considered: a workflow script that calls the GitHub ruleset API. Rej
 - **`npm install` accepts a different tree than the lockfile.** The baseline job uses `npm ci` only.
 - **The audit gate is quietly lowered.** The workflow and its test require `--audit-level=high`.
 - **A secret scanner prints the secret.** Configure redaction and assert the fixture secret is absent from scanner output.
-- **SAST findings do not fail the job.** Use Semgrep `--error` and forbid `continue-on-error`.
+- **SAST findings do not fail the job.** Use Semgrep `--error`, forbid `continue-on-error`, and do not pass `--skip-semgrep` from CI.
+- **A test downloads Semgrep.** `npm test` uses an absent binary or stub and fails if the implementation installs a tool.
 - **Provenance describes a different artifact.** Attest only the final SBOM path after metadata is added.
 - **The SBOM omits build tooling.** Include locked development dependencies and assert `@fission-ai/openspec` is present.
 - **The declaration is mistaken for live branch protection.** Keep `enforcedByForge` false until a human changes it.

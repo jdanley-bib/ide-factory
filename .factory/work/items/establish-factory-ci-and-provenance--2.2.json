@@ -1,13 +1,13 @@
 {
   "id": "2.2",
   "change": "establish-factory-ci-and-provenance",
-  "title": "Add a failing test that the pinned Semgrep command exits non-zero on a seeded JavaScript finding and that its workflow job does not set `continue-on-error`. Add that CI step with `--error`, `--metrics=off`, and `p/javascript`. Verify with `node --test test/ci-provenance.test.mjs`.",
+  "title": "Add failing tests that the Semgrep command exits non-zero when its binary is absent, that `--skip-semgrep` prints a warning and records the skip, and that baseline CI does not pass that flag. Use a stub or absent binary, do not download Semgrep, and keep `npm test` passing without Semgrep installed. Add the fail-closed CI command with `--error`, `--metrics=off`, and `p/javascript`, without an installer or `--skip-semgrep`. Verify with `node --test test/ci-provenance.test.mjs`.",
   "status": "in_progress",
   "dependencies": [
     "2.1"
   ],
   "acceptanceCriteria": [
-    "Add a failing test that the pinned Semgrep command exits non-zero on a seeded JavaScript finding and that its workflow job does not set `continue-on-error`. Add that CI step with `--error`, `--metrics=off`, and `p/javascript`. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
+    "Add failing tests that the Semgrep command exits non-zero when its binary is absent, that `--skip-semgrep` prints a warning and records the skip, and that baseline CI does not pass that flag. Use a stub or absent binary, do not download Semgrep, and keep `npm test` passing without Semgrep installed. Add the fail-closed CI command with `--error`, `--metrics=off`, and `p/javascript`, without an installer or `--skip-semgrep`. Verify with `node --test test/ci-provenance.test.mjs`. works as specified and is covered by the verification profile checks."
   ],
   "factory": {
     "kind": "general",
@@ -27,6 +27,6 @@
       "2.1"
     ]
   },
-  "attemptId": "983f8451-bce2-4aa9-bbe7-fb139d2bf2b1",
-  "updatedAt": "2026-10-22T00:47:52.412Z"
+  "attemptId": null,
+  "updatedAt": "2026-10-22T01:08:31.149Z"
 }
