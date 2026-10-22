@@ -340,6 +340,43 @@ test('upgrade refreshes an owned skill and keeps a custom decision', async () =>
   }
 });
 
+test('init and upgrade preserve unrelated Cline files and refresh owned Cline skills', async () => {
+  const dir = tempProject();
+  try {
+    const appBytes = 'keep-app-cline\n';
+    const teamStyleBytes = '# Team style\nTEAM-STYLE-BYTES\n';
+    const otherClineBytes = 'OTHER-CLINE-KEEP\n';
+    fs.writeFileSync(path.join(dir, 'app.js'), appBytes);
+    fs.mkdirSync(path.join(dir, '.cline/rules'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.cline/rules/team-style.md'), teamStyleBytes);
+    fs.mkdirSync(path.join(dir, '.cline/notes'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.cline/notes/keep.md'), otherClineBytes);
+
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal(fs.readFileSync(path.join(dir, 'app.js'), 'utf8'), appBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/rules/team-style.md'), 'utf8'), teamStyleBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/notes/keep.md'), 'utf8'), otherClineBytes);
+
+    fs.appendFileSync(path.join(dir, '.factory/decisions.md'), '\nCUSTOM-DECISION-KEEP\n');
+    fs.writeFileSync(
+      path.join(dir, '.cline/skills/factory-coordinator/SKILL.md'),
+      '---\nname: factory-coordinator\n---\nOLD-CLINE-SKILL-BODY\n<!-- idefactory:owned -->\n',
+    );
+
+    assert.equal((await idefactory(dir, ['upgrade'])).code, 0);
+    assert.match(read(dir, '.factory/decisions.md'), /CUSTOM-DECISION-KEEP/);
+    const clineSkill = read(dir, '.cline/skills/factory-coordinator/SKILL.md');
+    assert.doesNotMatch(clineSkill, /OLD-CLINE-SKILL-BODY/);
+    assert.match(clineSkill, /You route work/);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/rules/team-style.md'), 'utf8'), teamStyleBytes);
+    assert.equal(fs.readFileSync(path.join(dir, '.cline/notes/keep.md'), 'utf8'), otherClineBytes);
+    assert.equal(fs.existsSync(path.join(dir, 'app.js')), true);
+    assert.equal(fs.readFileSync(path.join(dir, 'app.js'), 'utf8'), appBytes);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('doctor fails in an empty directory and passes after init without backlog', async () => {
   const dir = tempProject();
   try {
