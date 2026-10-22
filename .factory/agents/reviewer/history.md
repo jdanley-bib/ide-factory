@@ -406,3 +406,11 @@ Reviewer: cline-reviewer-1.2
 Implementer: cline-engineer-1.2
 Verdict: ACCEPT
 Re-ran `node --test test/install.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 62da29c worktreeClean:false); unit pass at ae3785d worktreeClean. Product ae3785d: install test only — init leaves app.js and `.cline/rules/team-style.md` byte-for-byte unchanged; upgrade restores edited `.cline/skills/factory-coordinator/SKILL.md`, keeps CUSTOM-DECISION-KEEP and team-style, does not delete other `.cline/` files; `.cline/skills` still in writeAdapters; no CI, doctor, instructions, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
+
+## 2026-10-22 add-cline-ide-adapter/1.3
+
+Attempt: a7444fda-e693-4524-8958-4450ddbebfd8
+Reviewer: cline-reviewer-1.3
+Implementer: cline-engineer-1.3
+Verdict: ACCEPT
+Re-ran `node --test test/install.test.mjs` exit 0, 16 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false at 62357b2 worktreeClean:false); unit pass at ff80ce66 worktreeClean. Product ff80ce66: install test only — no-model scan roots include `.cline/skills`; workflows add `.cline/workflows/factory-${command}.md`; launchPattern unchanged; coordinator template still states IDE session model does the work; no CI, doctor, instructions, queue, gates, or lockout. Transitions verifying → awaiting-review → accepted. No complete/push.
