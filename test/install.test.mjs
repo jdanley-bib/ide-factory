@@ -440,6 +440,12 @@ test('README tells a project how to install and who does the work', () => {
   assert.match(readme, /idefactory init/);
   assert.match(readme, /The IDE's own model does the work/);
   assert.match(readme, /\.factory\/work/);
+  assert.match(readme, /\.cline\/rules\/factory\.md/);
+  assert.match(readme, /\.cline\/skills\/<name>\//);
+  assert.match(readme, /\.cline\/workflows\/factory-\*\.md/);
+  assert.match(readme, /Node 24/);
+  assert.match(readme, /Python 3\.14/);
+  assert.doesNotMatch(readme, /--skip-semgrep/);
 });
 
 test('the CLI process does not execute a model binary on next', async () => {
