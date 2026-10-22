@@ -2,7 +2,7 @@
   "id": "2.2",
   "change": "establish-factory-ci-and-provenance",
   "title": "Add failing tests that the Semgrep command exits non-zero when its binary is absent, that `--skip-semgrep` prints a warning and records the skip, and that baseline CI does not pass that flag. Use a stub or absent binary, do not download Semgrep, and keep `npm test` passing without Semgrep installed. Add the fail-closed CI command with `--error`, `--metrics=off`, and `p/javascript`, without an installer or `--skip-semgrep`. Verify with `node --test test/ci-provenance.test.mjs`.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "2.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "d1db173b-f29e-407b-ab70-9674892ba8ce",
-  "updatedAt": "2026-10-22T01:08:47.968Z"
+  "updatedAt": "2026-10-22T01:29:20.963Z"
 }
