@@ -4,7 +4,7 @@
   "change": "establish-factory-ci-and-provenance",
   "status": "open",
   "startedAt": "2026-10-22T00:17:18.736Z",
-  "lastObservedAt": "2026-10-22T02:08:08.165Z",
+  "lastObservedAt": "2026-10-22T03:27:14.931Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
@@ -12,7 +12,7 @@
     "maxFailures": 5
   },
   "agentSteps": 13,
-  "completedTasks": 7,
+  "completedTasks": 8,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
