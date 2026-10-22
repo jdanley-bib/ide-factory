@@ -4,7 +4,7 @@
   "change": "establish-factory-ci-and-provenance",
   "status": "open",
   "startedAt": "2026-10-22T00:17:18.736Z",
-  "lastObservedAt": "2026-10-22T01:20:14.446Z",
+  "lastObservedAt": "2026-10-22T01:25:45.144Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
@@ -18,11 +18,11 @@
   "baselineFailureIds": [],
   "countedFailureIds": [],
   "lastRequestFingerprint": {
-    "action": "agent-step",
-    "role": "reviewer",
+    "action": "complete",
+    "role": "scribe",
     "taskId": "2.2",
     "attemptId": "d1db173b-f29e-407b-ab70-9674892ba8ce",
-    "attemptState": "verifying",
+    "attemptState": "accepted",
     "workItemStatus": "in_progress"
   },
   "stopReason": null

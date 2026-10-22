@@ -96,3 +96,13 @@ Verdict: ACCEPT
 Product: b2dbe02ec95284d04875f4ce35bf922642d52179
 Commands: `node --test test/ci-provenance.test.mjs` exit 0 (3 pass); advisory `npm audit --audit-level=high` exit 0 (0 vulns).
 Threat review: Manual review of shared secretlint command/config and CI `secret-scan` job in b2dbe02. Exact devDependencies `secretlint@13.0.7` and `@secretlint/secretlint-rule-preset-recommend@13.0.7` match lockfile resolved versions/integrity; both are `dev` only (no runtime dependency). `.secretlintrc.json` loads the recommend preset; CLI defaults `maskSecrets: true` (no `--no-maskSecrets`). Seeded Slack-shaped token is a non-live fixture assembled from base64 at test runtime so the contiguous value is not committed. Focused test locks non-zero on dirty temp tree, zero on clean temp tree, absence of the secret in scanner output, CI step `npx secretlint "**/*"` with no `continue-on-error`, and workflow inherits top-level `permissions: contents: read` with full-SHA action pins and no `pull_request_target`. Per decision `establish-factory-ci-and-provenance-2.1-unit-check`, `.factory/checks.json` stays unit-only and `evidence.security` left empty — no forged threat-review/dependency-audit or CI-scanner attestations; dependency-basic attempt not transitioned. Product not edited; not accepted as product reviewer; complete not run; not pushed.
+
+## 2026-10-22 establish-factory-ci-and-provenance/2.2
+
+Attempt: d1db173b-f29e-407b-ab70-9674892ba8ce
+Reviewer: bc-38c29cb3-bd23-5398-8b3b-4f521619df4d
+Implementer: bc-4ba8835d-2693-569c-a077-834313f33abd
+Verdict: ACCEPT
+Product: 63ede0600be49d4d9f31aec37cfbaa1f4f20b130
+Commands: `npm test` exit 0 (196 pass, no `semgrep` on PATH); `node --test test/ci-provenance.test.mjs` exit 0 (4 pass); `node scripts/run-semgrep.mjs` exit 1 absent binary; `--skip-semgrep` exit 0 with warning + `SEMGREP_SKIP`; advisory `npm audit --audit-level=high` exit 0.
+Threat review: `scripts/run-semgrep.mjs` probes then invokes `semgrep` with `--error`, `--metrics=off`, `--config p/javascript`; no pip/npm/curl download path. CI `sast` runs `node scripts/run-semgrep.mjs` only (no installer, no `--skip-semgrep`, no `continue-on-error`); baseline job omits skip flag. Tests use PATH-isolated trap stubs and a shell `semgrep` stub; installer traps untouched. No Semgrep in `package.json`. Residual: `sast` job will fail on default runners until Semgrep is on PATH elsewhere — matches approved fail-closed posture and human rejection of PyPI install. `evidence.security` left empty; attempt not transitioned; not pushed.
