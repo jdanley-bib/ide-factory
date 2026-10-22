@@ -155,3 +155,12 @@ Authorized-by: human review of the rejected Semgrep attempt
 Work-item: establish-factory-ci-and-provenance/2.2
 Attempt: 983f8451-bce2-4aa9-bbe7-fb139d2bf2b1
 Note: The human resolved the rejection by keeping Semgrep as the SAST scanner and replacing the PyPI installer. `npm test` must not download Semgrep or any other tool and must pass without Semgrep installed. The scan command and CI fail closed when the binary is missing. `--skip-semgrep` skips the scan, prints a warning, and records the skip; baseline CI must not pass it. Unit tests use a stub or absent binary. Preserve the rejected attempt, discard commit `f7e4013` product behavior, and assign a new attempt to a different implementer. Require a distinct security review before product acceptance. Do not forge security evidence or call a forge admin API.
+
+## 2026-10-22 accepted establish-factory-ci-and-provenance-sast-runner-install
+
+Status: accepted
+Id: establish-factory-ci-and-provenance-sast-runner-install
+Authorized-at: 2026-10-22T13:18:00Z
+Authorized-by: human review of the failing ide-factory sast job
+Work-item: establish-factory-ci-and-provenance/2.2
+Note: The ide-factory sast job installs Semgrep on the GitHub Actions runner immediately before the scan. The install pins Semgrep v1.182.0 release commit 240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4 and wheel sha256 19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f. A failed install or scan fails the job. Baseline CI does not pass --skip-semgrep. npm test still does not download or install Semgrep. idefactory init does not copy the workflow or installer. Independent review bc-b0063981-a765-5f5c-96ac-4e2f605287bb accepted the diff.

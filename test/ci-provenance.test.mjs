@@ -49,6 +49,12 @@ const SECRETLINT_COMMAND = 'npx secretlint "**/*"';
  */
 const SEMGREP_COMMAND = 'node scripts/run-semgrep.mjs';
 
+/** Semgrep v1.182.0 release commit and manylinux x86_64 wheel digest. */
+const SEMGREP_GIT_SHA = '240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4';
+const SEMGREP_VERSION = '1.182.0';
+const SEMGREP_WHEEL_SHA256 = '19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f';
+const SETUP_PYTHON_SHA = 'a26af69be951a213d495a4c3e4e4022e16d87065';
+
 /** Required Semgrep argv after the binary name. */
 const SEMGREP_ARGS = ['--error', '--metrics=off', '--config', 'p/javascript'];
 
@@ -289,7 +295,7 @@ function writeExecutable(filePath, body) {
   fs.writeFileSync(filePath, body, { mode: 0o755 });
 }
 
-test('Semgrep command fails closed when absent, --skip-semgrep warns and records, CI does not skip or install', () => {
+test('Semgrep command fails closed when absent, --skip-semgrep warns and records, and the sast job installs a pinned release', () => {
   const yaml = readWorkflow();
 
   const baseline = baselineJobBlock(yaml);
@@ -310,11 +316,34 @@ test('Semgrep command fails closed when absent, --skip-semgrep warns and records
     /--skip-semgrep/,
     'sast job must not pass --skip-semgrep',
   );
-  assert.doesNotMatch(
+  assert.match(
     job,
-    /\b(pip|pip3|python3?\s+-m\s+pip)\b.*\bsemgrep\b|\bsemgrep\s*==|\binstall\b.*\bsemgrep\b/i,
-    'sast job must not install Semgrep',
+    new RegExp(`actions/setup-python@${SETUP_PYTHON_SHA}\\b`),
+    'sast job must pin actions/setup-python to a full commit SHA',
   );
+  assert.match(job, new RegExp(`\\bsemgrep==${SEMGREP_VERSION.replace(/\./g, '\\.')}\\b`));
+  assert.match(job, new RegExp(`\\b${SEMGREP_GIT_SHA}\\b`), 'sast install must pin the Semgrep release commit');
+  assert.match(job, new RegExp(`\\b${SEMGREP_WHEEL_SHA256}\\b`), 'sast install must pin the Semgrep wheel sha256');
+  const pinnedInstall = job.match(/semgrep==1\.182\.0([\s\S]*?)- run: node scripts\/run-semgrep\.mjs/);
+  assert.ok(pinnedInstall, 'pinned Semgrep install must be immediately before the scan');
+  assert.doesNotMatch(
+    pinnedInstall[1],
+    /^\s*-\s+(?:uses|run|name)\s*:/m,
+    'no step may sit between the Semgrep install and the scan',
+  );
+  assert.match(job, /sha256sum\s+-c/, 'sast install must fail closed when the wheel digest does not match');
+  const installSource = fs.readFileSync(path.join(repoRoot, 'src/lib/install.mjs'), 'utf8');
+  assert.doesNotMatch(installSource, /\.github\/workflows|semgrep/i, 'idefactory init must not copy the sast workflow or installer');
+  const templatesRoot = path.join(repoRoot, 'templates');
+  const stack = [templatesRoot];
+  while (stack.length) {
+    const current = stack.pop();
+    for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+      const full = path.join(current, entry.name);
+      if (entry.isDirectory()) stack.push(full);
+      else assert.ok(!full.includes(`${path.sep}workflows${path.sep}`), `template must not include a workflow: ${full}`);
+    }
+  }
 
   const steps = runSteps(job);
   const commands = steps.map((step) => step.command);

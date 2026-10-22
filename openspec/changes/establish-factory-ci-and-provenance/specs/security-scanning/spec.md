@@ -19,17 +19,29 @@ The secret-scan job SHALL exit non-zero when its scanner reports a finding and S
 - **THEN** the job exits zero
 
 ### Requirement: Static analysis
-The SAST command SHALL invoke Semgrep with `--error`, `--metrics=off`, and `p/javascript`. When Semgrep is absent and `--skip-semgrep` is not set, the command and CI job SHALL exit non-zero and SHALL NOT download Semgrep. The CI job SHALL NOT set `continue-on-error` or pass `--skip-semgrep`.
+The shared SAST command SHALL invoke Semgrep with `--error`, `--metrics=off`, and `p/javascript` and SHALL NOT download Semgrep. When Semgrep is absent and `--skip-semgrep` is not set, that command SHALL exit non-zero. The sast job SHALL NOT pass `--skip-semgrep` or set `continue-on-error`.
 
 #### Scenario: Missing scanner
 - **WHEN** the SAST command runs without `--skip-semgrep` and Semgrep is not installed
 - **THEN** it exits non-zero
 - **AND** it does not download Semgrep
 
-#### Scenario: CI does not skip or install
-- **WHEN** the SAST job is read from the workflow
-- **THEN** it does not pass `--skip-semgrep` or install Semgrep
+#### Scenario: CI does not skip
+- **WHEN** the sast job is read from the workflow
+- **THEN** it does not pass `--skip-semgrep`
 - **AND** it does not set `continue-on-error`
+
+### Requirement: Runner Semgrep install
+The ide-factory sast job SHALL install Semgrep on the GitHub Actions runner immediately before the scan. The install SHALL pin Semgrep release commit `240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4` (v1.182.0) and wheel sha256 `19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f`. A failed install or scan SHALL fail the job. `idefactory init` SHALL NOT copy this workflow or installer.
+
+#### Scenario: Pinned runner install
+- **WHEN** the sast job is read from the ide-factory workflow
+- **THEN** it installs that pinned Semgrep immediately before the scan
+- **AND** the install step does not set `continue-on-error`
+
+#### Scenario: Init does not copy the workflow
+- **WHEN** `idefactory init` copies its templates
+- **THEN** it does not copy the sast workflow or a Semgrep installer
 
 ### Requirement: Explicit Semgrep skip
 `--skip-semgrep` SHALL skip the scan, print a warning that names the skip, and record the skip. The baseline CI job SHALL NOT pass `--skip-semgrep`.

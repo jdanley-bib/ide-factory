@@ -8,7 +8,7 @@
 ## 2. Security scanning
 
 - [x] 2.1 Add a failing test that the shared secretlint command exits non-zero on a seeded high-confidence secret, exits zero on a clean tree, and does not print the secret. Add the exact devDependencies, configuration, and the same CI step. Verify with `node --test test/ci-provenance.test.mjs`.
-- [x] 2.2 Add failing tests that the Semgrep command exits non-zero when its binary is absent, that `--skip-semgrep` prints a warning and records the skip, and that baseline CI does not pass that flag. Use a stub or absent binary, do not download Semgrep, and keep `npm test` passing without Semgrep installed. Add the fail-closed CI command with `--error`, `--metrics=off`, and `p/javascript`, without an installer or `--skip-semgrep`. Verify with `node --test test/ci-provenance.test.mjs`.
+- [x] 2.2 Add failing tests that the Semgrep command exits non-zero when its binary is absent, that `--skip-semgrep` prints a warning and records the skip, and that baseline CI does not pass that flag. Use a stub or absent binary, and do not download Semgrep during `npm test`. The ide-factory sast job installs pinned Semgrep on the GitHub Actions runner immediately before the scan. `idefactory init` does not copy that workflow. Verify with `node --test test/ci-provenance.test.mjs`.
 
 ## 3. Release provenance
 
