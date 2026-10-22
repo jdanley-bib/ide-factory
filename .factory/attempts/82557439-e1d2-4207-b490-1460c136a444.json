@@ -2,10 +2,10 @@
   "id": "82557439-e1d2-4207-b490-1460c136a444",
   "change": "establish-factory-ci-and-provenance",
   "taskId": "3.2",
-  "state": "verifying",
+  "state": "accepted",
   "implementerRole": "engineer",
   "implementerId": "bc-b6db62db-72eb-5062-a9c4-75690e46a863",
-  "reviewerId": null,
+  "reviewerId": "bc-0a51a7d1-c8e3-54f7-8015-709e44997fc7",
   "modelProfile": "coding-standard",
   "evidence": {
     "red": {
@@ -59,7 +59,12 @@
       }
     ],
     "security": [],
-    "review": null,
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "bc-0a51a7d1-c8e3-54f7-8015-709e44997fc7",
+      "notes": "",
+      "at": "2026-10-22T01:53:03.120Z"
+    },
     "changedFiles": [],
     "baseRev": null
   },
@@ -83,8 +88,16 @@
     {
       "at": "2026-10-22T01:50:48.784Z",
       "state": "verifying"
+    },
+    {
+      "at": "2026-10-22T01:53:03.084Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-22T01:53:03.120Z",
+      "state": "accepted"
     }
   ],
   "createdAt": "2026-10-22T01:45:25.265Z",
-  "updatedAt": "2026-10-22T01:50:48.784Z"
+  "updatedAt": "2026-10-22T01:53:03.120Z"
 }

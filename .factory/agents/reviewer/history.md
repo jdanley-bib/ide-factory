@@ -367,3 +367,11 @@ Reviewer: bc-700a93d1-c1ed-57e1-b6cb-b8307fce700d
 Implementer: bc-cb82001b-f989-548b-b689-88467eccb27c
 Verdict: ACCEPT
 Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 5 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at dff5fdd); clean-head unit pass at 81a0e27 worktreeClean true. Product 81a0e27: `.github/workflows/release.yml` tag-only `v[0-9]+.[0-9]+.[0-9]+`, `permissions.contents: read` (no `id-token: write`), full-SHA pins on checkout/setup-node/upload-artifact; `npm ci` then pinned `npx @cyclonedx/cyclonedx-npm@6.0.1 --package-lock-only` + `scripts/annotate-release-sbom.mjs` (`lockfile-sha256`, `source-revision`); SBOM pipeline lists all locked deps including `@fission-ai/openspec@1.14.3`; no npm publish. Prior distinct security ACCEPT by bc-199f75bf-8bca-51ee-983a-9c968b384c33 (decision establish-factory-ci-and-provenance-3.1-unit-check; evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
+
+## 2026-10-22 establish-factory-ci-and-provenance/3.2
+
+Attempt: 82557439-e1d2-4207-b490-1460c136a444
+Reviewer: bc-0a51a7d1-c8e3-54f7-8015-709e44997fc7
+Implementer: bc-b6db62db-72eb-5062-a9c4-75690e46a863
+Verdict: ACCEPT
+Re-ran `node --test test/ci-provenance.test.mjs` exit 0, 6 pass. CLI red present (issuer cli, kind unit, exitCode 1, passed false, worktreeClean false at d727050); clean-head unit pass at 2428745 worktreeClean true. Product 4c43e39: `.github/workflows/release.yml` `permissions` `contents: read`, `id-token: write`, `attestations: write`; `actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8` with `subject-path: release/sbom.cdx.json` after SBOM annotation step; no SLSA Build L2/L3 or buildLevel 2/3 claims in workflow. Prior distinct security ACCEPT by bc-191b8d74-d7f2-5c65-813e-42101f6ee2fa (evidence.security empty). Transitions verifying → awaiting-review → accepted. No verify/complete/push.
