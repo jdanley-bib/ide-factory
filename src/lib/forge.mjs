@@ -59,6 +59,22 @@ export function buildCommentPullRequestArgv({ number, body }) {
 }
 
 /**
+ * Build argv for reading pull request comments. Not an admin API call.
+ * @param {{ number: number }} input
+ * @returns {string[]}
+ */
+export function buildListCommentsArgv({ number }) {
+  return [
+    'gh',
+    'pr',
+    'view',
+    String(number),
+    '--json',
+    'comments',
+  ];
+}
+
+/**
  * Resolve how to invoke the forge binary. Tests set IDEFACTORY_FORGE to a stub.
  * @param {NodeJS.ProcessEnv} env
  * @param {string[]} fullArgv argv from build* (first element is `gh`)

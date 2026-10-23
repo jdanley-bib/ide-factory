@@ -6,6 +6,7 @@ import { getAttempt } from './attempt.mjs';
 import {
   buildCommentPullRequestArgv,
   buildCreatePullRequestArgv,
+  buildListCommentsArgv,
   buildUpdatePullRequestArgv,
   runForge,
 } from './forge.mjs';
@@ -153,6 +154,72 @@ export function commentOnPullRequest(project, attemptId, env = process.env) {
   };
   writePullRequestRecord(project, next);
   return { record: next };
+}
+
+/**
+ * Store human pull request comments once, keyed by forge comment id.
+ * Does not authorize accept or complete.
+ * @param {string} project
+ * @param {string} change
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ record: object }}
+ */
+export function capturePullRequestComments(project, change, env = process.env) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const name = String(change || '').trim();
+  if (!CHANGE_NAME.test(name)) {
+    throw new Error('Usage: idefactory pr capture <change>');
+  }
+  const record = readPullRequestRecord(project, name);
+  if (!record) {
+    throw new Error(`No pull request record for ${name}`);
+  }
+
+  const argv = buildListCommentsArgv({ number: record.pullRequest.number });
+  assertSafeForgeArgv(argv);
+  const result = runForge(project, argv, env);
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
+  }
+  let parsed;
+  try {
+    parsed = JSON.parse(result.stdout);
+  } catch {
+    throw new Error('forge comment list returned invalid JSON');
+  }
+  const incoming = Array.isArray(parsed?.comments) ? parsed.comments : [];
+  const captured = Array.isArray(record.capturedComments) ? [...record.capturedComments] : [];
+  const seen = new Set(captured.map((item) => String(item.id)));
+  for (const raw of incoming) {
+    const comment = normalizeCapturedComment(raw);
+    if (!comment || seen.has(comment.id)) continue;
+    captured.push(comment);
+    seen.add(comment.id);
+  }
+  const next = {
+    ...record,
+    postedVerdicts: Array.isArray(record.postedVerdicts) ? record.postedVerdicts : [],
+    capturedComments: captured,
+  };
+  writePullRequestRecord(project, next);
+  return { record: next };
+}
+
+function normalizeCapturedComment(raw) {
+  if (!raw || raw.id === undefined || raw.id === null) return null;
+  const id = String(raw.id).trim();
+  if (!id) return null;
+  let author = '';
+  if (typeof raw.author === 'string') author = raw.author;
+  else if (raw.author && typeof raw.author.login === 'string') author = raw.author.login;
+  const url = typeof raw.url === 'string' ? raw.url : '';
+  const time = typeof raw.createdAt === 'string'
+    ? raw.createdAt
+    : (typeof raw.time === 'string' ? raw.time : '');
+  const body = typeof raw.body === 'string' ? raw.body : '';
+  return { id, author, url, time, body };
 }
 
 /**

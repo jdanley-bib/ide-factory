@@ -49,5 +49,15 @@ if (command === 'pr' && sub === 'comment') {
   process.exit(0);
 }
 
+if (command === 'pr' && sub === 'view') {
+  const commentsPath = process.env.IDEFACTORY_FORGE_COMMENTS;
+  let comments = [];
+  if (commentsPath && fs.existsSync(commentsPath)) {
+    comments = JSON.parse(fs.readFileSync(commentsPath, 'utf8'));
+  }
+  process.stdout.write(JSON.stringify({ comments }));
+  process.exit(0);
+}
+
 process.stderr.write(`unsupported forge argv: ${args.join(' ')}\n`);
 process.exit(1);
