@@ -122,3 +122,11 @@ The printed `idefactory approve` usage line SHALL include `--principal-provider`
 - **WHEN** command help is printed
 - **THEN** the approve usage line includes `--principal-provider`
 - **AND** the approve usage line includes `--principal-subject`
+
+### Requirement: Documented approve example names principal flags
+The README approve example SHALL include `--principal-provider` and `--principal-subject`.
+
+#### Scenario: README example names the flags
+- **WHEN** the README gates section is read
+- **THEN** its approve command example includes `--principal-provider`
+- **AND** its approve command example includes `--principal-subject`

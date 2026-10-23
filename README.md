@@ -80,7 +80,7 @@ Cursor, Claude, and Copilot slash commands are `/factory-status`, `/factory-plan
 `security-sensitive` and `release` profiles ship with `humanGate: true`. The other shipped profiles do not. A missing profile, or a `humanGate` value that is not a boolean, is treated as required. When the gate is required, accept and complete need a scoped approval for that change, task, action (`accept` or `complete`), and clean source revision. The approver is not the implementer, and the approval expires within 24 hours. `idefactory approve` records that decision. It does not publish, deploy, or spend.
 
 ```bash
-idefactory approve <id> --note "what you are allowing" --change <name> --task <id> --action accept --approver <id> --expiry <iso>
+idefactory approve <id> --note "what you are allowing" --change <name> --task <id> --action accept --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso>
 idefactory reject <id> --note "why not"
 ```
 

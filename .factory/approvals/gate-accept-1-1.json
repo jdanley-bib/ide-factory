@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 2,
+  "change": "document-approve-principal-flags",
+  "task": "1.1",
+  "sourceRevision": "8d86911a4411aa86679751a62e869a302d6ff5d9",
+  "action": "accept",
+  "approver": "jason-danley",
+  "issuance": "2026-10-23T21:59:30.053Z",
+  "expiry": "2026-10-24T15:00:00Z",
+  "policyVersion": 2,
+  "principal": {
+    "provider": "local",
+    "subject": "jason-danley",
+    "issuer": "ide-factory-local",
+    "verifiedAt": "2026-10-23T21:59:30.103Z"
+  },
+  "note": "Reviewed and accepted the README approve example"
+}

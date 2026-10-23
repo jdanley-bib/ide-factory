@@ -438,3 +438,19 @@ Reviewer: cline-reviewer-3.1
 Implementer: cline-engineer-3.1
 Verdict: ACCEPT
 Re-ran in order: `npx openspec validate add-cline-ide-adapter --strict` exit 0; `npx openspec validate --all` exit 0 (13 passed, 0 failed); `node --test test/install.test.mjs` exit 0, 19 pass. Recorded notes exit codes match (0/0/0). CLI red present (issuer cli, kind unit, exitCode 1, passed false at 938138ba worktreeClean:false); unit pass at 91192817 worktreeClean true. Product 91192817: `implementation-notes.md` + install honesty test + engineer history only; no second queue; no gate, evidence, or lockout change; no archive; no CI, Semgrep, Node, or Python. Transitions verifying → awaiting-review → accepted. No complete/push.
+
+## 2026-10-23 document-approve-principal-flags/1.1
+
+Attempt: b72e52fd-56de-4bba-87b6-1d9dc22c2d0f
+Reviewer: bc-522a337a-8722-5a94-b3bd-1ed34409fe09
+Implementer: engineer-doc-flags
+Verdict: HANDOFF (awaiting-review only; human gate not approved)
+CLI red present (issuer cli, kind unit, exitCode 1, passed false; timedOut at 120s). Passing unit verification present (issuer cli, kind unit, exitCode 0, passed true, worktreeClean true at 8d86911). Re-ran `node --test test/readme-approve-example.test.mjs` exit 0, 1 pass. Product: README Gates approve example names `--principal-provider` and `--principal-subject`; focused unit test locks that line; unit `timeoutMs` 120000→180000 so npm test can finish under verify. No approve/accept/reject/push. Transition verifying → awaiting-review.
+
+## 2026-10-23 document-approve-principal-flags/1.1
+
+Attempt: b72e52fd-56de-4bba-87b6-1d9dc22c2d0f
+Reviewer: jason-danley
+Implementer: engineer-doc-flags
+Verdict: ACCEPT
+Gate accept approval on disk (schema v2, sourceRevision 8d86911). README Gates approve example names `--principal-provider` and `--principal-subject`; `test/readme-approve-example.test.mjs` locks that line. Attempt verification has failing unit (passed:false at 3081eea) before passing unit (passed:true, worktreeClean true at 8d86911). Re-ran `node --test test/readme-approve-example.test.mjs` exit 0, 1 pass. No approve/accept/reject/push/transition.

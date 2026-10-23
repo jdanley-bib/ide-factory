@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "document-approve-principal-flags",
+  "title": "Add a failing test that the README approve example includes the principal flags, then add those flags to the example.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "The README approve example names both principal flags."
+  ],
+  "factory": {
+    "kind": "docs",
+    "risk": "low",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "release",
+    "dependencies": []
+  },
+  "attemptId": "b72e52fd-56de-4bba-87b6-1d9dc22c2d0f",
+  "updatedAt": "2026-10-23T22:11:49.447Z"
+}

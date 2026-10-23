@@ -172,3 +172,15 @@ Id: enable-local-principal
 Authorized-at: 2026-10-23T19:57:00Z
 Authorized-by: Jason Danley
 Note: This repository moves to governance policy version 2. The temporary principal verifier is `scripts/verify-local-principal.mjs`. It confirms only provider `local` and subject `jason-danley`, and reports issuer `ide-factory-local`. Any other subject or provider exits non-zero and writes nothing. The allowlist stays in this repository and is not copied into the init template. New installs still receive policy version 2 with no verifier until an operator configures one. Schema version 1 approvals in this repository no longer authorize accept or complete.
+
+## 2026-10-23 accepted gate-accept-1-1
+
+Status: accepted
+Id: gate-accept-1-1
+Note: Reviewed and accepted the README approve example
+
+## 2026-10-23 accepted gate-complete-1-1
+
+Status: accepted
+Id: gate-complete-1-1
+Note: Approved completion of the README approve example
