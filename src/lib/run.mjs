@@ -9,6 +9,7 @@ import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
+import { openPullRequest } from './pull-request.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
@@ -34,6 +35,7 @@ Usage:
   idefactory verify run <attemptId> --check <kind> [--red]
   idefactory verify import <attemptId> --file <path>
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
+  idefactory pr open <change> [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
   idefactory lockout create --agent <id> --reviewer <id> --reason "text" [--path dir]
@@ -161,6 +163,8 @@ async function dispatchCommand(cmd, ctx) {
       out(`Completed ${change}/${taskId} attempt ${result.attempt.id}`);
       return 0;
     }
+    case 'pr':
+      return handlePr(project, parsed, env, out);
     case 'approve': {
       const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
         change: parsed.flags.change,
@@ -265,6 +269,21 @@ function handleAttempt(project, parsed, out) {
     return 0;
   }
   throw new Error('Usage: idefactory attempt start|transition|show ...');
+}
+
+function handlePr(project, parsed, env, out) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const sub = parsed.rest[0];
+  if (sub === 'open') {
+    const change = parsed.rest[1];
+    if (!change) throw new Error('Usage: idefactory pr open <change>');
+    const result = openPullRequest(project, change, env);
+    out(JSON.stringify(result.record, null, 2));
+    return 0;
+  }
+  throw new Error('Usage: idefactory pr open <change>');
 }
 
 async function handleVerify(project, parsed, out) {

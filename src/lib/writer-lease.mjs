@@ -22,6 +22,7 @@ const MUTATING = new Set([
   'verify run',
   'verify import',
   'complete',
+  'pr open',
   'approve',
   'reject',
   'lockout create',
@@ -63,6 +64,11 @@ export function cliCommandKey(cmd, rest = []) {
     const sub = String(rest[0] || '').trim();
     if (sub === 'resolve') return 'lockout resolve';
     return 'lockout create';
+  }
+  if (head === 'pr') {
+    const sub = String(rest[0] || '').trim();
+    if (sub === 'open') return 'pr open';
+    return sub ? `pr ${sub}` : 'pr';
   }
   return head;
 }
