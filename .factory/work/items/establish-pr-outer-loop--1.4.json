@@ -1,0 +1,32 @@
+{
+  "id": "1.4",
+  "change": "establish-pr-outer-loop",
+  "title": "Add a failing test that `pr capture` stores the same forge comment id once, and that a stored comment does not allow accept or complete without a scoped approval. Then implement capture. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before capture exists, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "1.3"
+  ],
+  "acceptanceCriteria": [
+    "Human comments are stored once and are not approvals."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.3"
+    ]
+  },
+  "attemptId": "dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa",
+  "updatedAt": "2026-10-23T23:08:34.108Z"
+}

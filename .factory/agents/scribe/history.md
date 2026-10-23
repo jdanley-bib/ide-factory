@@ -255,3 +255,27 @@ Attempt: 27e6311a-e7fa-4b6a-b780-424369c3e88e
 ## 2026-10-23 finalized document-approve-principal-flags/1.1
 
 Attempt: b72e52fd-56de-4bba-87b6-1d9dc22c2d0f
+
+## 2026-10-23 finalized establish-pr-outer-loop/1.1
+
+Attempt: 9abb018f-2cf0-4dfd-82a4-d2441712ec2a
+
+## 2026-10-23 finalized establish-pr-outer-loop/1.2
+
+Attempt: 67cba4f1-3e38-4d87-b81f-d6da87d73341
+
+## 2026-10-23 finalized establish-pr-outer-loop/1.3
+
+Attempt: 09bb15e3-48ff-4c13-b758-2247e580a2eb
+
+## 2026-10-23 finalized establish-pr-outer-loop/1.4
+
+Attempt: dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa
+
+## 2026-10-23 finalized establish-pr-outer-loop/2.1
+
+Attempt: 0ca9be2d-9ad6-42de-991d-ca0e47ebe521
+
+## 2026-10-23 finalized establish-pr-outer-loop/2.2
+
+Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e

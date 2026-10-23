@@ -1,0 +1,32 @@
+{
+  "id": "2.2",
+  "change": "establish-pr-outer-loop",
+  "title": "Add a failing test that command help names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. Then add those lines to the help text. Verify the test fails with `node --test test/pr-help.test.mjs` before the help edit, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "2.1"
+  ],
+  "acceptanceCriteria": [
+    "Help names the new commands."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "2.1"
+    ]
+  },
+  "attemptId": "b04b6ee2-4f24-498e-beba-dcfa1473350e",
+  "updatedAt": "2026-10-23T23:23:35.636Z"
+}

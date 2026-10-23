@@ -1,0 +1,32 @@
+{
+  "id": "1.3",
+  "change": "establish-pr-outer-loop",
+  "title": "Add a failing test that `pr comment` posts the verdict already stored on the attempt, and that a missing verdict exits non-zero without writing one. Then implement that command. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "1.2"
+  ],
+  "acceptanceCriteria": [
+    "A posted verdict comes from the attempt record."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.2"
+    ]
+  },
+  "attemptId": "09bb15e3-48ff-4c13-b758-2247e580a2eb",
+  "updatedAt": "2026-10-23T23:00:23.015Z"
+}

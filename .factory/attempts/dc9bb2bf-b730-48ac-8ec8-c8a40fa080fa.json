@@ -1,0 +1,108 @@
+{
+  "id": "dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa",
+  "change": "establish-pr-outer-loop",
+  "taskId": "1.4",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-pr-loop",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-23T23:02:34.916Z",
+      "finishedAt": "2026-10-23T23:04:35.782Z",
+      "logDigest": "sha256:4cce851985aeb8dcc5bfa7bda4ab42af83cb2e6d52470df70a4a13f1eea7aa0f",
+      "artifactDigests": [],
+      "attemptId": "dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "8f3dcb95be08903e7f614333bcb48aa65cdfe636"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-23T23:05:13.667Z",
+        "finishedAt": "2026-10-23T23:07:14.467Z",
+        "logDigest": "sha256:f37dae9640ec2b5f7f4be58d39bcf0bbd8b9e190a6a67e94edf1f410508c9706",
+        "artifactDigests": [],
+        "attemptId": "dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "1dd0042354b45a21f14cb380489e2e49bb798a1c"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "reviewerId": "jason-danley",
+      "notes": "",
+      "at": "2026-10-23T23:08:27.610Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-23T23:00:29.301Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-23T23:00:29.302Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-23T23:02:12.936Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-23T23:05:08.873Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-23T23:07:17.578Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-23T23:07:17.614Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-23T23:08:27.610Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-23T23:08:34.108Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-23T23:00:29.301Z",
+  "updatedAt": "2026-10-23T23:08:34.108Z"
+}

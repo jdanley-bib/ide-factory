@@ -454,3 +454,51 @@ Reviewer: jason-danley
 Implementer: engineer-doc-flags
 Verdict: ACCEPT
 Gate accept approval on disk (schema v2, sourceRevision 8d86911). README Gates approve example names `--principal-provider` and `--principal-subject`; `test/readme-approve-example.test.mjs` locks that line. Attempt verification has failing unit (passed:false at 3081eea) before passing unit (passed:true, worktreeClean true at 8d86911). Re-ran `node --test test/readme-approve-example.test.mjs` exit 0, 1 pass. No approve/accept/reject/push/transition.
+
+## 2026-10-23 establish-pr-outer-loop/1.1
+
+Attempt: 9abb018f-2cf0-4dfd-82a4-d2441712ec2a
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 27dbc48) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at e4a646e). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 1 pass. Product: `pr open` one branch/`factory/<change>` + one local record; stub forge; second open updates same PR; argv forbids merge and forge admin API. No body evidence links (1.2), comment, capture, scaffold, help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.2
+
+Attempt: 67cba4f1-3e38-4d87-b81f-d6da87d73341
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 18176f1) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 5f029cc). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 2 pass. Product: PR body includes source revision and attempt id paths; omits check log text and env/secret values. No comment, capture, scaffold, help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.3
+
+Attempt: 09bb15e3-48ff-4c13-b758-2247e580a2eb
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 035e892) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 6753a27). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 3 pass. Product: `pr comment` posts the verdict and role already stored on the attempt; missing verdict exits non-zero and writes no verdict. No capture, scaffold, help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.4
+
+Attempt: dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 8f3dcb9) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 1dd0042). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 4 pass. Product: `pr capture` stores one forge comment id once; stored comment does not authorize accept or complete without a scoped approval. No scaffold, help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/2.1
+
+Attempt: 0ca9be2d-9ad6-42de-991d-ca0e47ebe521
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at e0138fd) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at dc0e4a8). Re-ran `node --test test/consumer-ci-scaffold.test.mjs` exit 0, 1 pass. Product: `ci scaffold` writes `.github/workflows/factory-consumer.yml` only when absent (Node 24, npm ci, npm test, npm audit --audit-level=high, npx openspec validate --all); existing file unchanged with non-zero exit; no Semgrep or pull_request_target; init does not create it; no forge admin API. This repo's `.github/workflows/ci.yml` unchanged. No help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/2.2
+
+Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at b3d3307) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at b7e7936). Re-ran `node --test test/pr-help.test.mjs` exit 0, 1 pass. Product: help names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. No approve, transition, or push.

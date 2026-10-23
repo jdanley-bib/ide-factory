@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "establish-pr-outer-loop",
+  "title": "Add a failing test that `pr open` records one pull request for a change and a second open updates it, using a stub forge. Then implement that command. The test also asserts the stub argv does not merge and does not call the forge admin API. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "One change has one branch and one pull request record."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "9abb018f-2cf0-4dfd-82a4-d2441712ec2a",
+  "updatedAt": "2026-10-23T22:44:48.631Z"
+}
