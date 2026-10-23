@@ -85,8 +85,16 @@ function writeCheckRegistry(dir, exitByKind) {
   );
 }
 
+function setPolicyVersion(dir, version) {
+  const configPath = path.join(dir, '.factory/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.governance.policyVersion = version;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
 async function seedChange(dir, tasksBody) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
+  setPolicyVersion(dir, 1);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'openspec/changes/demo/tasks.md'),

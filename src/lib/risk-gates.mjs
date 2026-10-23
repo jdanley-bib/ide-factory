@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText, writeText } from './layout.mjs';
+import { readPolicyVersion } from './principal.mjs';
 import {
   commandDigest,
   isSecurityPatternedCheck,
@@ -9,7 +10,6 @@ import {
 } from './verification-evidence.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
-const DEFAULT_POLICY_VERSION = 1;
 const MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
 const ALLOWED_ACTIONS = new Set(['accept', 'complete']);
 
@@ -45,7 +45,7 @@ export function validateScopedApproval(record, options = {}) {
     }
   }
 
-  if (record.schemaVersion !== SUPPORTED_SCHEMA_VERSION) {
+  if (record.schemaVersion !== 1 && record.schemaVersion !== 2) {
     throw new Error(`unsupported approval schema version: ${record.schemaVersion}`);
   }
 
@@ -85,8 +85,23 @@ export function validateScopedApproval(record, options = {}) {
     throw new Error('approval approver must differ from the implementer');
   }
 
+  if (record.schemaVersion === 2) {
+    const principal = record.principal;
+    if (!principal || typeof principal !== 'object' || Array.isArray(principal)) {
+      throw new Error('approval principal is required');
+    }
+    for (const field of ['provider', 'subject', 'issuer', 'verifiedAt']) {
+      if (typeof principal[field] !== 'string' || principal[field].length === 0) {
+        throw new Error(`approval principal ${field} must be a non-empty string`);
+      }
+    }
+    if (record.approver !== principal.subject) {
+      throw new Error('approval approver must equal the verified principal subject');
+    }
+  }
+
   return {
-    schemaVersion: SUPPORTED_SCHEMA_VERSION,
+    schemaVersion: record.schemaVersion,
     change: record.change,
     task: record.task,
     sourceRevision: record.sourceRevision,
@@ -95,6 +110,7 @@ export function validateScopedApproval(record, options = {}) {
     issuance: record.issuance,
     expiry: record.expiry,
     policyVersion: record.policyVersion,
+    ...(record.schemaVersion === 2 ? { principal: { ...record.principal } } : {}),
     ...(typeof record.note === 'string' ? { note: record.note } : {}),
   };
 }
@@ -214,6 +230,8 @@ function hasMatchingScopedApproval(project, scope) {
     if (record.action !== scope.action) continue;
     if (record.sourceRevision !== sourceRevision) continue;
     if (record.policyVersion !== policyVersion) continue;
+    if (policyVersion >= 2 && record.schemaVersion !== 2) continue;
+    if (policyVersion >= 2 && record.principal?.subject !== record.approver) continue;
     if (
       typeof scope.implementerId === 'string'
       && scope.implementerId.length > 0
@@ -228,19 +246,6 @@ function hasMatchingScopedApproval(project, scope) {
     return true;
   }
   return false;
-}
-
-function readPolicyVersion(project) {
-  const configPath = path.join(project, '.factory', 'config.json');
-  if (!fs.existsSync(configPath)) return DEFAULT_POLICY_VERSION;
-  try {
-    const config = JSON.parse(readText(configPath));
-    const version = config?.governance?.policyVersion;
-    if (Number.isInteger(version) && version > 0) return version;
-  } catch {
-    // fall through to default
-  }
-  return DEFAULT_POLICY_VERSION;
 }
 
 function resolveNowMs(now) {

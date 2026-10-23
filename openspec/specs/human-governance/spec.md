@@ -17,6 +17,19 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** no approval file is written
 - **AND** `decisions.md` gains no entry for that id
 
+### Requirement: Verified approval principal
+When governance policy version is 2, the file SHALL also contain a verified principal and the approver SHALL equal that principal's subject. Without a confirmed principal, policy version 2 SHALL write nothing.
+
+#### Scenario: Policy version 2 requires a verified principal
+- **WHEN** policy version is 2 and approve runs with every scope field but no confirmed principal
+- **THEN** no approval file is written
+- **AND** `decisions.md` gains no entry
+
+#### Scenario: Confirmed principal is stored
+- **WHEN** policy version is 2 and the configured verifier confirms the principal
+- **THEN** the approval file contains that provider, subject, issuer, and verifiedAt
+- **AND** the approver equals the subject
+
 ### Requirement: Rejection record
 `idefactory reject` SHALL record the rejection in `decisions.md`.
 
@@ -25,7 +38,7 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** `decisions.md` contains a rejected entry for that id
 
 ### Requirement: Reviewer lockout note
-`idefactory lockout` SHALL create a versioned lockout with immutable creation data naming its id, agent, reviewer, reason, and time, and SHALL NOT delete product files. An active lockout SHALL block completion. `idefactory lockout resolve <id>` SHALL require a resolver distinct from the locked agent and a reason, and SHALL write one immutable resolution event instead of deleting creation history.
+`idefactory lockout` SHALL create a versioned lockout with immutable creation data naming its id, agent, reviewer, reason, and time, and SHALL NOT delete product files. An active lockout SHALL block completion. `idefactory lockout resolve <id>` SHALL require a resolver distinct from the locked agent and a reason, and SHALL write one immutable resolution event instead of deleting creation history. When governance policy version is 2, that resolver SHALL be a verified principal.
 
 #### Scenario: Lockout file
 - **WHEN** lockout runs with an agent and a reason
@@ -50,6 +63,10 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** a resolution event preserves a reference to that note
 - **AND** the legacy lockout no longer blocks completion without being renamed or deleted
 
+#### Scenario: Policy version 2 resolver
+- **WHEN** policy version is 2 and lockout resolve names a resolver that is not a verified principal
+- **THEN** the command exits with an error and writes no resolution event
+
 ### Requirement: Doctor
 `idefactory doctor` SHALL exit non-zero when `.factory/` or a required adapter file is missing, including `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md`, and SHALL exit zero when init has completed and the required files exist.
 
@@ -65,6 +82,26 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **WHEN** doctor runs in a project that has factory state and is missing `.cline/rules/factory.md` or `.cline/skills/factory-coordinator/SKILL.md`
 - **THEN** the exit code is non-zero
 - **AND** the report names the missing Cline path
+
+### Requirement: Doctor policy report
+Doctor SHALL report the governance policy version. When that version is 1, doctor SHALL warn that gate approvals are not bound to a verified principal. That warning SHALL NOT by itself make a healthy install exit non-zero.
+
+#### Scenario: Policy version is reported
+- **WHEN** doctor runs on a healthy install
+- **THEN** the report names the governance policy version
+
+#### Scenario: Policy version 1 warning
+- **WHEN** doctor runs on a healthy install whose governance policy version is 1
+- **THEN** the exit code is zero
+- **AND** the report warns that approvals are not bound to a verified principal
+
+### Requirement: Unmapped check kind
+Doctor SHALL name every profile check kind with no `checks.json` entry. That warning SHALL NOT by itself make a healthy install exit non-zero.
+
+#### Scenario: Unmapped check kind
+- **WHEN** a profile requires a check kind that `checks.json` does not map
+- **THEN** doctor names that kind
+- **AND** the exit code remains zero when the install is otherwise healthy
 
 ### Requirement: Golden rules file
 The product SHALL install `.factory/governance.md` as the operational baseline, SHALL NOT create `GOLDEN_RULES.md`, and SHALL NOT overwrite a pre-existing human-owned `GOLDEN_RULES.md`.

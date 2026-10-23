@@ -7,6 +7,7 @@ import {
   readFinalizationJournal,
 } from './finalization-recovery.mjs';
 import { hasActiveLockout } from './govern.mjs';
+import { appendControlEvent } from './event-log.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
@@ -379,13 +380,21 @@ function persistCompleteBeforeRequest(project, session, fingerprint) {
 }
 
 function closeRunSession(project, session, stopReason, extra = {}) {
-  return writeRunSession(project, {
+  const written = writeRunSession(project, {
     ...session,
     ...extra,
     status: 'closed',
     stopReason,
     lastObservedAt: new Date().toISOString(),
   });
+  appendControlEvent(project, {
+    type: 'run.stopped',
+    time: written.lastObservedAt,
+    runId: written.runId,
+    change: written.change,
+    stopReason,
+  });
+  return written;
 }
 
 function stageForState(state, item) {

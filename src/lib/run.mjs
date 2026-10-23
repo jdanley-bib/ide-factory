@@ -3,12 +3,15 @@ import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { completeWorkItem } from './complete.mjs';
 import { approve, createLockout, doctor, reject, resolveLockout, status } from './govern.mjs';
+import { buildStatusDocument } from './read-model.mjs';
+import { previewChecks } from './checks-preview.mjs';
 import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
+import { consumeEventWarning } from './event-log.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -20,7 +23,8 @@ Usage:
   idefactory init [path] [--force-roster] [--with-openspec]
   idefactory upgrade [path]
   idefactory doctor [path]
-  idefactory status [path]
+  idefactory status [--json] [path]
+  idefactory checks preview [--path dir]
   idefactory sync-tasks <change> [--path dir]
   idefactory next [--change name] [--path dir]
   idefactory run --change <name> [--until human-gate] [--max-tasks N] [--max-agent-steps N] [--new-run] [--path dir]
@@ -68,9 +72,15 @@ export async function run(argv, io = {}) {
     // HALT bypasses the writer lease so emergency stop cannot be blocked.
     if (cmd === 'halt') return await execute();
     if (isMutatingCommand(commandKey)) {
-      return await withWriterLease(project, commandKey, execute);
+      const code = await withWriterLease(project, commandKey, execute);
+      const warning = consumeEventWarning();
+      if (warning) err(warning);
+      return code;
     }
-    return await execute();
+    const code = await execute();
+    const warning = consumeEventWarning();
+    if (warning) err(warning);
+    return code;
   } catch (error) {
     err(error.message || String(error));
     return 1;
@@ -99,7 +109,17 @@ async function dispatchCommand(cmd, ctx) {
     case 'doctor':
       return reportDoctor(project, out, err);
     case 'status':
+      if (parsed.flags.json) {
+        out(JSON.stringify(buildStatusDocument(project)));
+        return 0;
+      }
       out(status(project, env));
+      return 0;
+    case 'checks':
+      if (parsed.rest[0] !== 'preview') {
+        throw new Error('Usage: idefactory checks preview');
+      }
+      out(previewChecks(project));
       return 0;
     case 'sync-tasks': {
       const change = parsed.rest[0];
@@ -148,6 +168,8 @@ async function dispatchCommand(cmd, ctx) {
         action: parsed.flags.action,
         approver: parsed.flags.approver,
         expiry: parsed.flags.expiry,
+        principalProvider: parsed.flags['principal-provider'],
+        principalSubject: parsed.flags['principal-subject'],
       });
       out(`Recorded approval ${file}`);
       return 0;
@@ -287,6 +309,7 @@ function reportDoctor(project, out, err) {
   } else {
     out('doctor: ok');
   }
+  out(`policy version: ${report.policyVersion}`);
   for (const item of report.warnings) err(`warning: ${item}`);
   if (halted(project) && !report.warnings.some((item) => item.includes('HALT'))) {
     err('warning: HALT file is present');

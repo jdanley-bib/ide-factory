@@ -64,8 +64,16 @@ function writeCheckRegistry(dir, exitByKind) {
   );
 }
 
+function setPolicyVersion(dir, version) {
+  const configPath = path.join(dir, '.factory/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.governance.policyVersion = version;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
 async function seedDemoChange(dir) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
+  setPolicyVersion(dir, 1);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   writeText(
     path.join(dir, 'openspec/changes/demo/tasks.md'),
@@ -187,6 +195,9 @@ test('approve and reject append, and lockout writes a note', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const config = JSON.parse(fs.readFileSync(path.join(dir, '.factory/config.json'), 'utf8'));
+    config.governance.policyVersion = 1;
+    fs.writeFileSync(path.join(dir, '.factory/config.json'), JSON.stringify(config, null, 2));
     ensureCleanGitCommit(dir);
     const first = await idefactory(dir, scopedApproveArgs('spend-ok', 'allowed for test'));
     assert.equal(first.code, 0, first.err);
@@ -321,6 +332,7 @@ test('lockout resolve is idempotent for exact repeats and rejects conflicts', as
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
+    setPolicyVersion(dir, 1);
     const locked = await idefactory(dir, [
       'lockout', '--agent', 'engineer-x', '--reviewer', 'reviewer-y', '--reason', 'reject',
     ]);

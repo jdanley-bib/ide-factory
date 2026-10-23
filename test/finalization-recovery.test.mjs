@@ -1173,6 +1173,10 @@ function writeCheckRegistry(dir, exitByKind) {
 
 async function seedCompleteFixture(dir) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
+  const configPath = path.join(dir, '.factory/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.governance.policyVersion = 1;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'openspec/changes/demo/tasks.md'),

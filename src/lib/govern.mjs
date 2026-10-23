@@ -2,11 +2,11 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
+import { appendControlEvent } from './event-log.mjs';
+import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
 import { resolveGitBinding } from './verification-evidence.mjs';
 import { listWorkItems, workCounts } from './work.mjs';
-
-const DEFAULT_POLICY_VERSION = 1;
 
 const REQUIRED = [
   '.factory/team.md',
@@ -48,7 +48,14 @@ export function doctor(project) {
   }
   if (!fs.existsSync(path.join(project, 'openspec'))) warnings.push('openspec/ is not initialized');
   if (fs.existsSync(path.join(project, 'HALT'))) warnings.push('HALT file is present');
-  return { errors, warnings };
+  const policyVersion = readPolicyVersion(project);
+  if (policyVersion < 2) {
+    warnings.push('gate approvals are not bound to a verified principal');
+  }
+  for (const kind of unmappedCheckKinds(project)) {
+    warnings.push(`unmapped check kind: ${kind}`);
+  }
+  return { errors, warnings, policyVersion };
 }
 
 export function status(project, _env) {
@@ -115,8 +122,19 @@ export function approve(project, id, note, scope = {}) {
   }
 
   const issuance = new Date().toISOString();
+  const policyVersion = readPolicyVersion(project);
+  let principal;
+  if (policyVersion >= 2) {
+    principal = confirmPrincipal(project, {
+      provider: scope.principalProvider,
+      subject: scope.principalSubject,
+    });
+    if (scope.approver !== principal.subject) {
+      throw new Error('approval approver must equal the verified principal subject');
+    }
+  }
   const record = {
-    schemaVersion: 1,
+    schemaVersion: principal ? 2 : 1,
     change: scope.change,
     task: scope.task,
     sourceRevision,
@@ -124,8 +142,9 @@ export function approve(project, id, note, scope = {}) {
     approver: scope.approver,
     issuance,
     expiry: scope.expiry,
-    policyVersion: readPolicyVersion(project),
+    policyVersion,
     note,
+    ...(principal ? { principal } : {}),
   };
 
   let file;
@@ -140,24 +159,41 @@ export function approve(project, id, note, scope = {}) {
   const entry = `\n## ${stamp.slice(0, 10)} accepted ${id}\n\nStatus: accepted\nId: ${id}\nNote: ${note}\n`;
   fs.appendFileSync(decisions, entry.endsWith('\n') ? entry : `${entry}\n`);
   ledger(project, 'accepted', { id });
+  appendControlEvent(project, {
+    type: 'approval.issued',
+    time: issuance,
+    id,
+    change: scope.change,
+    task: scope.task,
+  });
   return file;
+}
+
+function unmappedCheckKinds(project) {
+  const profilesPath = path.join(project, '.factory', 'profiles.json');
+  const registryPath = path.join(project, '.factory', 'checks.json');
+  if (!fs.existsSync(profilesPath) || !fs.existsSync(registryPath)) return [];
+  let profiles;
+  let registry;
+  try {
+    profiles = JSON.parse(readText(profilesPath));
+    registry = JSON.parse(readText(registryPath));
+  } catch {
+    return [];
+  }
+  const mapped = new Set(Object.keys(registry?.checks || {}));
+  const missing = new Set();
+  for (const profile of Object.values(profiles || {})) {
+    if (!profile || !Array.isArray(profile.checks)) continue;
+    for (const kind of profile.checks) {
+      if (typeof kind === 'string' && !mapped.has(kind)) missing.add(kind);
+    }
+  }
+  return [...missing].sort();
 }
 
 export function reject(project, id, note) {
   return recordDecision(project, id, note, 'rejected');
-}
-
-function readPolicyVersion(project) {
-  const configPath = path.join(project, '.factory', 'config.json');
-  if (!fs.existsSync(configPath)) return DEFAULT_POLICY_VERSION;
-  try {
-    const config = JSON.parse(readText(configPath));
-    const version = config?.governance?.policyVersion;
-    if (Number.isInteger(version) && version > 0) return version;
-  } catch {
-    // fall through to default
-  }
-  return DEFAULT_POLICY_VERSION;
 }
 
 /**
@@ -185,6 +221,12 @@ export function createLockout(project, { agent, reviewer, reason }) {
   };
   writeJsonExclusive(createdPath, record);
   ledger(project, 'lockout', { agent, reviewer: who, id });
+  appendControlEvent(project, {
+    type: 'lockout.created',
+    time: createdAt,
+    id,
+    agent,
+  });
   return { id, createdPath };
 }
 
@@ -223,6 +265,12 @@ export function resolveLockout(project, id, { resolver, reason }) {
   }
   if (resolver === created.agent) {
     throw new Error('lockout resolver must be distinct from the locked agent');
+  }
+  if (readPolicyVersion(project) >= 2) {
+    confirmPrincipal(project, {
+      provider: configuredPrincipalProvider(project),
+      subject: resolver,
+    });
   }
 
   const resolvedPath = lockoutResolvedPath(project, id);
@@ -270,6 +318,12 @@ function resolveLegacyLockout(project, legacy, { resolver, reason }) {
   const { basename, absPath, relPath, body, digest, agent } = legacy;
   if (resolver === agent) {
     throw new Error('lockout resolver must be distinct from the locked agent');
+  }
+  if (readPolicyVersion(project) >= 2) {
+    confirmPrincipal(project, {
+      provider: configuredPrincipalProvider(project),
+      subject: resolver,
+    });
   }
 
   const createdPath = lockoutCreatedPath(project, basename);
@@ -328,6 +382,12 @@ function writeOrMatchResolution(project, id, resolvedPath, resolution) {
   }
   writeJsonExclusive(resolvedPath, resolution);
   ledger(project, 'lockout-resolve', { id, resolver: resolution.resolver });
+  appendControlEvent(project, {
+    type: 'lockout.resolved',
+    time: resolution.resolvedAt,
+    id,
+    resolver: resolution.resolver,
+  });
   return { id, resolvedPath };
 }
 
@@ -442,6 +502,13 @@ function recordDecision(project, id, note, status) {
   const file = path.join(project, '.factory', 'approvals', `${stamp}-${id}.md`);
   writeText(file, `# ${status} ${id}\n\n${note}\n`);
   ledger(project, status, { id });
+  if (status === 'rejected') {
+    appendControlEvent(project, {
+      type: 'decision.rejected',
+      time: new Date().toISOString(),
+      id,
+    });
+  }
   return file;
 }
 
