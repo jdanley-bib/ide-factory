@@ -41,6 +41,14 @@ An approval SHALL record the change, task, source revision, action, approver, is
 - **WHEN** the approver identifier equals the implementer identifier
 - **THEN** the approval does not authorize the action
 
+### Requirement: Approval write keeps the bound revision
+After a successful approve whose only new uncommitted paths are the approval file and `.factory/decisions.md`, that approval SHALL still authorize its action at the same HEAD.
+
+#### Scenario: Gate matches after approve
+- **WHEN** approve succeeds and the only new uncommitted paths are the approval file and `.factory/decisions.md`
+- **THEN** the approval authorizes its action
+- **AND** the source revision is unchanged
+
 ### Requirement: Policy version 2 approval schema
 When governance policy version is 2, only a schema version 2 approval whose approver equals a verified principal subject SHALL authorize the action. A schema version 1 approval SHALL NOT authorize an action at policy version 2. At policy version 1, a schema version 1 approval SHALL authorize as before.
 

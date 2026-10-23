@@ -449,10 +449,12 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/work/',
   '.factory/orchestration/',
   '.factory/observability/',
+  '.factory/approvals/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',
   '.factory/active-change.json',
+  '.factory/decisions.md',
 ]);
 
 function normalizeGitPath(relPath) {
