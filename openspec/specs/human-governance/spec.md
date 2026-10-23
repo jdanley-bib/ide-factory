@@ -6,7 +6,7 @@ Records human approvals for spend and publishing, and reports whether a factory 
 ## Requirements
 
 ### Requirement: Approval record
-`idefactory approve` SHALL write a scoped approval file under `.factory/approvals/` and an entry in `.factory/decisions.md`, and SHALL NOT publish, deploy, or spend. The file SHALL contain the note plus the change, task, source revision, action, approver, issuance, expiry, and policy version. When any scope field is missing, the command SHALL write no approval file and SHALL NOT append `decisions.md`. When governance policy version is 2, the file SHALL also contain a verified principal and the approver SHALL equal that principal's subject. Without a confirmed principal, policy version 2 SHALL write nothing.
+`idefactory approve` SHALL write a scoped approval file under `.factory/approvals/` and an entry in `.factory/decisions.md`, and SHALL NOT publish, deploy, or spend. The file SHALL contain the note plus the change, task, source revision, action, approver, issuance, expiry, and policy version. When any scope field is missing, the command SHALL write no approval file and SHALL NOT append `decisions.md`.
 
 #### Scenario: Approve
 - **WHEN** approve runs with an id, a note, and every scope field
@@ -16,6 +16,9 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **WHEN** approve runs with an id and a note and omits a scope field
 - **THEN** no approval file is written
 - **AND** `decisions.md` gains no entry for that id
+
+### Requirement: Verified approval principal
+When governance policy version is 2, the file SHALL also contain a verified principal and the approver SHALL equal that principal's subject. Without a confirmed principal, policy version 2 SHALL write nothing.
 
 #### Scenario: Policy version 2 requires a verified principal
 - **WHEN** policy version is 2 and approve runs with every scope field but no confirmed principal
@@ -65,7 +68,7 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** the command exits with an error and writes no resolution event
 
 ### Requirement: Doctor
-`idefactory doctor` SHALL exit non-zero when `.factory/` or a required adapter file is missing, including `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md`, and SHALL exit zero when init has completed and the required files exist. Doctor SHALL report the governance policy version. When that version is 1, doctor SHALL warn that gate approvals are not bound to a verified principal. Doctor SHALL name every profile check kind with no `checks.json` entry. Those warnings SHALL NOT by themselves make a healthy install exit non-zero.
+`idefactory doctor` SHALL exit non-zero when `.factory/` or a required adapter file is missing, including `.cline/rules/factory.md` and `.cline/skills/factory-coordinator/SKILL.md`, and SHALL exit zero when init has completed and the required files exist.
 
 #### Scenario: Missing install
 - **WHEN** doctor runs in an empty directory
@@ -80,10 +83,20 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **THEN** the exit code is non-zero
 - **AND** the report names the missing Cline path
 
+### Requirement: Doctor policy report
+Doctor SHALL report the governance policy version. When that version is 1, doctor SHALL warn that gate approvals are not bound to a verified principal. That warning SHALL NOT by itself make a healthy install exit non-zero.
+
+#### Scenario: Policy version is reported
+- **WHEN** doctor runs on a healthy install
+- **THEN** the report names the governance policy version
+
 #### Scenario: Policy version 1 warning
 - **WHEN** doctor runs on a healthy install whose governance policy version is 1
 - **THEN** the exit code is zero
 - **AND** the report warns that approvals are not bound to a verified principal
+
+### Requirement: Unmapped check kind
+Doctor SHALL name every profile check kind with no `checks.json` entry. That warning SHALL NOT by itself make a healthy install exit non-zero.
 
 #### Scenario: Unmapped check kind
 - **WHEN** a profile requires a check kind that `checks.json` does not map
