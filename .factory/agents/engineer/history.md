@@ -523,3 +523,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run 09bb15e3-48ff-4c13-b758-2247e580a2eb --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 035e892042efbda3670a075eabd8841808ed5320).
 Green: `node src/cli.mjs verify run 09bb15e3-48ff-4c13-b758-2247e580a2eb --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 6753a27786e7edb21ffb4fdfa870a5ad5e2b92d1).
 Scope: `pr comment` only — posts the verdict and role already stored on the attempt review record; missing verdict exits non-zero and does not write one. No capture, scaffold, help, review accept, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.4
+
+Attempt: dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8f3dcb95be08903e7f614333bcb48aa65cdfe636).
+Green: `node src/cli.mjs verify run dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 1dd0042354b45a21f14cb380489e2e49bb798a1c).
+Scope: `pr capture` only — stores each forge comment id once (author, url, time, body). A stored comment does not authorize accept or complete; the human gate still requires a scoped approval. No scaffold, help, review accept, or push.

@@ -32,7 +32,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.4 Add a failing test that `pr capture` stores the same forge comment id once, and that a stored comment does not allow accept or complete without a scoped approval. Then implement capture. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before capture exists, and passes with the same command after it.
+- [x] 1.4 Add a failing test that `pr capture` stores the same forge comment id once, and that a stored comment does not allow accept or complete without a scoped approval. Then implement capture. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before capture exists, and passes with the same command after it.
   - Human comments are stored once and are not approvals.
   factory:
     kind: general
