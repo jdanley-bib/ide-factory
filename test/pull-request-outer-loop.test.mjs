@@ -3,6 +3,8 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { humanGateAllows } from '../src/lib/risk-gates.mjs';
+import { getWorkItem, updateWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const fakeForge = path.join(repoRoot, 'support/fake-forge.mjs');
@@ -351,6 +353,122 @@ test('pr comment posts the stored verdict and role; missing verdict writes nothi
     );
     const afterMissing = JSON.parse(fs.readFileSync(missingFile, 'utf8'));
     assert.equal(afterMissing.evidence.review, null);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('pr capture stores one forge comment id and does not authorize accept or complete', async () => {
+  const dir = tempProject();
+  const change = 'demo-capture';
+  const taskId = '1.1';
+  const attemptId = 'cccccccc-dddd-4eee-8fff-000000000001';
+  const commentId = 'IC_kw_comment_1';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  const commentsPath = path.join(dir, 'forge-comments.json');
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    fs.mkdirSync(path.join(dir, 'openspec/changes', change), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'openspec/changes', change, 'tasks.md'),
+      [
+        `- [ ] ${taskId} Capture item`,
+        '  factory:',
+        '    kind: general',
+        '    checks: [unit]',
+        '    verificationProfile: release',
+        '    roles: [engineer, reviewer, scribe]',
+        '',
+      ].join('\n'),
+    );
+    assert.equal((await idefactory(dir, ['sync-tasks', change])).code, 0);
+    ensureCleanGitCommit(dir);
+
+    fs.writeFileSync(commentsPath, JSON.stringify([
+      {
+        id: commentId,
+        author: { login: 'human-reviewer' },
+        url: 'https://example.test/comment/1',
+        createdAt: '2026-10-23T12:00:00Z',
+        body: 'ship it',
+      },
+    ]));
+
+    const forgeEnv = {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+      IDEFACTORY_FORGE_COMMENTS: commentsPath,
+    };
+    const opened = await idefactory(dir, ['pr', 'open', change], forgeEnv);
+    assert.equal(opened.code, 0, opened.err || opened.out);
+
+    const first = await idefactory(dir, ['pr', 'capture', change], forgeEnv);
+    assert.equal(first.code, 0, first.err || first.out);
+    const second = await idefactory(dir, ['pr', 'capture', change], forgeEnv);
+    assert.equal(second.code, 0, second.err || second.out);
+
+    const recordPath = path.join(dir, '.factory', 'pull-requests', `${change}.json`);
+    const record = JSON.parse(fs.readFileSync(recordPath, 'utf8'));
+    const stored = record.capturedComments.filter((item) => item.id === commentId);
+    assert.equal(stored.length, 1, 'the same forge comment id is stored once');
+    assert.equal(stored[0].author, 'human-reviewer');
+    assert.equal(stored[0].url, 'https://example.test/comment/1');
+    assert.equal(stored[0].time, '2026-10-23T12:00:00Z');
+    assert.equal(stored[0].body, 'ship it');
+    assertSafeForgeArgv(readArgvLog(logPath));
+
+    updateWorkItem(dir, change, taskId, { status: 'in_progress', attemptId });
+    writeAttempt(dir, {
+      id: attemptId,
+      change,
+      taskId,
+      state: 'awaiting-review',
+      implementerRole: 'engineer',
+      implementerId: 'engineer-pr-loop',
+      reviewerId: null,
+      modelProfile: 'coding-standard',
+      evidence: {
+        red: null,
+        verification: [],
+        security: [],
+        review: null,
+        changedFiles: [],
+        baseRev: null,
+      },
+      history: [],
+      createdAt: '2026-10-23T00:00:00.000Z',
+      updatedAt: '2026-10-23T00:00:00.000Z',
+    });
+
+    const scope = {
+      action: 'accept',
+      verificationProfile: 'release',
+      change,
+      task: taskId,
+      implementerId: 'engineer-pr-loop',
+    };
+    assert.equal(humanGateAllows(dir, scope), false);
+    assert.equal(humanGateAllows(dir, { ...scope, action: 'complete' }), false);
+
+    const run = await idefactory(dir, [
+      'run', '--change', change, '--max-tasks', '1', '--max-agent-steps', '5',
+    ]);
+    assert.equal(run.code, 0, run.err || run.out);
+    assert.match(run.out, /Run stopped \(human-gate\)/);
+    assert.equal(getWorkItem(dir, change, taskId).status, 'in_progress');
+
+    const attemptFile = path.join(dir, '.factory', 'attempts', `${attemptId}.json`);
+    const awaiting = JSON.parse(fs.readFileSync(attemptFile, 'utf8'));
+    awaiting.state = 'accepted';
+    awaiting.reviewerId = 'reviewer-other';
+    fs.writeFileSync(attemptFile, `${JSON.stringify(awaiting, null, 2)}\n`);
+
+    const done = await idefactory(dir, ['complete', change, taskId, '--attempt', attemptId]);
+    assert.notEqual(done.code, 0, 'complete must stay refused without a scoped approval');
+    assert.match(done.err, /human.?gate|approval|complete/i);
+    assert.notEqual(getWorkItem(dir, change, taskId).status, 'done');
   } finally {
     cleanup(dir);
   }
