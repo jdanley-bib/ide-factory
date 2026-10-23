@@ -9,6 +9,8 @@ description: >
 
 <!-- idefactory:owned -->
 
+The IDE session model does the work.
+
 1. Restate the backlog acceptance criterion as one observable behavior.
 2. Write a failing test that fails because the behavior is missing, not because the test is broken.
 3. Run that test and read the failure.

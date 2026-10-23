@@ -9,6 +9,8 @@ description: >
 
 <!-- idefactory:owned -->
 
+The IDE session model does the work.
+
 1. Read the work item `verificationProfile` and `checks` from the packet or `.factory/work/items/`.
 2. Map each required check to a project command (unit, build, playwright, docs, etc.).
 3. Run each command in the project. Do not describe a run you did not start.
