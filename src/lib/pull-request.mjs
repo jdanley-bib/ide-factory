@@ -28,9 +28,8 @@ export function openPullRequest(project, change, env = process.env) {
   }
 
   const branch = `factory/${name}`;
-  const recordPath = pullRequestRecordPath(project, name);
   const existing = readPullRequestRecord(project, name);
-  const body = buildPullRequestBody(name);
+  const body = buildPullRequestBody(project, name);
   const bodyDigest = digestBody(body);
 
   if (!existing) {
@@ -122,15 +121,111 @@ function writePullRequestRecord(project, record) {
   writeText(pullRequestRecordPath(project, record.change), `${JSON.stringify(record, null, 2)}\n`);
 }
 
-function buildPullRequestBody(change) {
-  return [
+/**
+ * Build a pull request body that links factory evidence without copying logs
+ * or environment values.
+ * @param {string} project
+ * @param {string} change
+ * @returns {string}
+ */
+export function buildPullRequestBody(project, change) {
+  const sourceRevision = resolveSourceRevision(project, change);
+  const attempts = listAttemptsForChange(project, change);
+  const lines = [
     `# ${change}`,
     '',
-    'Factory pull request for this OpenSpec change.',
-    '',
     `Change: ${change}`,
-    'Evidence: see `.factory/` in this branch.',
-  ].join('\n');
+    `Source revision: ${sourceRevision || '(unknown)'}`,
+    '',
+    'Attempts:',
+  ];
+  if (attempts.length === 0) {
+    lines.push('- (none recorded)');
+  } else {
+    for (const attempt of attempts) {
+      const rel = `.factory/attempts/${attempt.id}.json`;
+      lines.push(`- \`${attempt.id}\` (\`${rel}\`)`);
+    }
+  }
+
+  const approvalPaths = listExistingApprovalPaths(project);
+  lines.push('', 'Approvals:');
+  if (approvalPaths.length === 0) {
+    lines.push('- (none)');
+  } else {
+    for (const rel of approvalPaths) {
+      lines.push(`- \`${rel}\``);
+    }
+  }
+
+  const checkRecordPaths = attempts.map((attempt) => `.factory/attempts/${attempt.id}.json`);
+  lines.push('', 'Check records:');
+  if (checkRecordPaths.length === 0) {
+    lines.push('- (none)');
+  } else {
+    for (const rel of checkRecordPaths) {
+      lines.push(`- \`${rel}\``);
+    }
+  }
+
+  return `${lines.join('\n')}\n`;
+}
+
+function resolveSourceRevision(project, change) {
+  const fromGit = gitHead(project);
+  if (fromGit) return fromGit;
+  const attempts = listAttemptsForChange(project, change);
+  for (const attempt of attempts) {
+    for (const record of attempt.evidence?.verification || []) {
+      if (typeof record?.sourceRevision === 'string' && record.sourceRevision.length > 0) {
+        return record.sourceRevision;
+      }
+    }
+    if (typeof attempt.evidence?.red?.sourceRevision === 'string'
+      && attempt.evidence.red.sourceRevision.length > 0) {
+      return attempt.evidence.red.sourceRevision;
+    }
+  }
+  return '';
+}
+
+function listAttemptsForChange(project, change) {
+  const root = path.join(project, '.factory', 'attempts');
+  if (!fs.existsSync(root)) return [];
+  const attempts = [];
+  for (const name of fs.readdirSync(root)) {
+    if (!name.endsWith('.json')) continue;
+    const file = path.join(root, name);
+    try {
+      const attempt = JSON.parse(fs.readFileSync(file, 'utf8'));
+      if (attempt?.change === change && typeof attempt.id === 'string') {
+        attempts.push(attempt);
+      }
+    } catch {
+      // Skip unreadable attempt files.
+    }
+  }
+  attempts.sort((a, b) => String(a.id).localeCompare(String(b.id)));
+  return attempts;
+}
+
+function listExistingApprovalPaths(project) {
+  const root = path.join(project, '.factory', 'approvals');
+  if (!fs.existsSync(root)) return [];
+  return fs.readdirSync(root)
+    .filter((name) => name.endsWith('.json'))
+    .sort()
+    .map((name) => `.factory/approvals/${name}`);
+}
+
+function gitHead(project) {
+  const result = spawnSync('git', ['rev-parse', 'HEAD'], {
+    cwd: project,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (result.status !== 0) return '';
+  return (result.stdout || '').trim();
 }
 
 function digestBody(body) {
