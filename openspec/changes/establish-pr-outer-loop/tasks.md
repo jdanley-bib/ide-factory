@@ -22,7 +22,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.3 Add a failing test that `pr comment` posts the verdict already stored on the attempt, and that a missing verdict exits non-zero without writing one. Then implement that command. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.
+- [x] 1.3 Add a failing test that `pr comment` posts the verdict already stored on the attempt, and that a missing verdict exits non-zero without writing one. Then implement that command. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.
   - A posted verdict comes from the attempt record.
   factory:
     kind: general

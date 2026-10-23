@@ -515,3 +515,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run 67cba4f1-3e38-4d87-b81f-d6da87d73341 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 18176f14fbd476677526e79d980e1ca310ff8782).
 Green: `node src/cli.mjs verify run 67cba4f1-3e38-4d87-b81f-d6da87d73341 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 5f029cc5ab5f124013a2cf3f2b4e4990408f48f5).
 Scope: PR body evidence links only — source revision, attempt ids, approval/check record paths; no check log text or env values. No comment, capture, scaffold, help, review accept, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.3
+
+Attempt: 09bb15e3-48ff-4c13-b758-2247e580a2eb
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run 09bb15e3-48ff-4c13-b758-2247e580a2eb --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 035e892042efbda3670a075eabd8841808ed5320).
+Green: `node src/cli.mjs verify run 09bb15e3-48ff-4c13-b758-2247e580a2eb --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 6753a27786e7edb21ffb4fdfa870a5ad5e2b92d1).
+Scope: `pr comment` only — posts the verdict and role already stored on the attempt review record; missing verdict exits non-zero and does not write one. No capture, scaffold, help, review accept, or push.
