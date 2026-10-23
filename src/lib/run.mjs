@@ -9,6 +9,7 @@ import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
+import { scaffoldConsumerCi } from './ci-scaffold.mjs';
 import { capturePullRequestComments, commentOnPullRequest, openPullRequest } from './pull-request.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
@@ -165,6 +166,8 @@ async function dispatchCommand(cmd, ctx) {
     }
     case 'pr':
       return handlePr(project, parsed, env, out);
+    case 'ci':
+      return handleCi(project, parsed, out);
     case 'approve': {
       const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
         change: parsed.flags.change,
@@ -269,6 +272,19 @@ function handleAttempt(project, parsed, out) {
     return 0;
   }
   throw new Error('Usage: idefactory attempt start|transition|show ...');
+}
+
+function handleCi(project, parsed, out) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const sub = parsed.rest[0];
+  if (sub === 'scaffold') {
+    const file = scaffoldConsumerCi(project);
+    out(`Wrote ${file}`);
+    return 0;
+  }
+  throw new Error('Usage: idefactory ci scaffold');
 }
 
 function handlePr(project, parsed, env, out) {

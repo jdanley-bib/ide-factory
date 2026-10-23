@@ -25,6 +25,7 @@ const MUTATING = new Set([
   'pr open',
   'pr comment',
   'pr capture',
+  'ci scaffold',
   'approve',
   'reject',
   'lockout create',
@@ -73,6 +74,11 @@ export function cliCommandKey(cmd, rest = []) {
     if (sub === 'comment') return 'pr comment';
     if (sub === 'capture') return 'pr capture';
     return sub ? `pr ${sub}` : 'pr';
+  }
+  if (head === 'ci') {
+    const sub = String(rest[0] || '').trim();
+    if (sub === 'scaffold') return 'ci scaffold';
+    return sub ? `ci ${sub}` : 'ci';
   }
   return head;
 }
