@@ -28,7 +28,13 @@
   },
   "governance": {
     "protectedPaths": [".factory/decisions.md", ".factory/agents/"],
-    "reviewerMustDiffer": true
+    "reviewerMustDiffer": true,
+    "policyVersion": 2,
+    "principalVerifier": {
+      "provider": "local",
+      "timeoutMs": 5000,
+      "argv": ["node", "scripts/verify-local-principal.mjs"]
+    }
   },
   "run": {
     "defaultMaxTasks": 20

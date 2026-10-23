@@ -164,3 +164,11 @@ Authorized-at: 2026-10-22T13:18:00Z
 Authorized-by: human review of the failing ide-factory sast job
 Work-item: establish-factory-ci-and-provenance/2.2
 Note: The ide-factory sast job installs Semgrep on the GitHub Actions runner immediately before the scan. The install pins Semgrep v1.182.0 release commit 240da9f30cd06fb4ee00c2c31c114c1c1f5ee0f4 and wheel sha256 19a82868830389c039bb71bfc0aeebb28385e5b65740120710eff050324ad14f. A failed install or scan fails the job. Baseline CI does not pass --skip-semgrep. npm test still does not download or install Semgrep. idefactory init does not copy the workflow or installer. Independent review bc-b0063981-a765-5f5c-96ac-4e2f605287bb accepted the diff.
+
+## 2026-10-23 accepted enable-local-principal
+
+Status: accepted
+Id: enable-local-principal
+Authorized-at: 2026-10-23T19:57:00Z
+Authorized-by: Jason Danley
+Note: This repository moves to governance policy version 2. The temporary principal verifier is `scripts/verify-local-principal.mjs`. It confirms only provider `local` and subject `jason-danley`, and reports issuer `ide-factory-local`. Any other subject or provider exits non-zero and writes nothing. The allowlist stays in this repository and is not copied into the init template. New installs still receive policy version 2 with no verifier until an operator configures one. Schema version 1 approvals in this repository no longer authorize accept or complete.
