@@ -37,6 +37,9 @@ Usage:
   idefactory verify import <attemptId> --file <path>
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory pr open <change> [--path dir]
+  idefactory pr comment <attemptId> [--path dir]
+  idefactory pr capture <change> [--path dir]
+  idefactory ci scaffold [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
   idefactory lockout create --agent <id> --reviewer <id> --reason "text" [--path dir]
