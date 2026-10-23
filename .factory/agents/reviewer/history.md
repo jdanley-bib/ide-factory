@@ -494,3 +494,11 @@ Reviewer: jason-danley
 Implementer: engineer-pr-loop
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at e0138fd) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at dc0e4a8). Re-ran `node --test test/consumer-ci-scaffold.test.mjs` exit 0, 1 pass. Product: `ci scaffold` writes `.github/workflows/factory-consumer.yml` only when absent (Node 24, npm ci, npm test, npm audit --audit-level=high, npx openspec validate --all); existing file unchanged with non-zero exit; no Semgrep or pull_request_target; init does not create it; no forge admin API. This repo's `.github/workflows/ci.yml` unchanged. No help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/2.2
+
+Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at b3d3307) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at b7e7936). Re-ran `node --test test/pr-help.test.mjs` exit 0, 1 pass. Product: help names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. No approve, transition, or push.

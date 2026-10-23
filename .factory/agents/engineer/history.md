@@ -539,3 +539,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run 0ca9be2d-9ad6-42de-991d-ca0e47ebe521 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision e0138fd71f5a19324e3e265a4dc001dafa107b2a).
 Green: `node src/cli.mjs verify run 0ca9be2d-9ad6-42de-991d-ca0e47ebe521 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision dc0e4a898a7819255bb09e12859670956210066a).
 Scope: `ci scaffold` only — writes `.github/workflows/factory-consumer.yml` when absent (Node 24, npm ci, npm test, npm audit --audit-level=high, npx openspec validate --all, contents read). Existing file is left unchanged and the command exits non-zero. init and upgrade do not copy it. This repo's ci.yml and release.yml are unchanged. No Semgrep, pull_request_target, forge admin API, help text, review accept, or push.
+
+## 2026-10-23 establish-pr-outer-loop/2.2
+
+Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run b04b6ee2-4f24-498e-beba-dcfa1473350e --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b3d33070b4237c782fac71a80db28d26523576d6).
+Green: `node src/cli.mjs verify run b04b6ee2-4f24-498e-beba-dcfa1473350e --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b7e7936920b20b08bcd10e6af1ac4a7d16514995).
+Scope: help text only — names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. No review accept or push.

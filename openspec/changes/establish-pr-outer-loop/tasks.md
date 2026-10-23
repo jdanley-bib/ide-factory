@@ -54,7 +54,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 2.2 Add a failing test that command help names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. Then add those lines to the help text. Verify the test fails with `node --test test/pr-help.test.mjs` before the help edit, and passes with the same command after it.
+- [x] 2.2 Add a failing test that command help names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. Then add those lines to the help text. Verify the test fails with `node --test test/pr-help.test.mjs` before the help edit, and passes with the same command after it.
   - Help names the new commands.
   factory:
     kind: general

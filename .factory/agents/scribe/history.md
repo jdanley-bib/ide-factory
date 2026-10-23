@@ -275,3 +275,7 @@ Attempt: dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa
 ## 2026-10-23 finalized establish-pr-outer-loop/2.1
 
 Attempt: 0ca9be2d-9ad6-42de-991d-ca0e47ebe521
+
+## 2026-10-23 finalized establish-pr-outer-loop/2.2
+
+Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e

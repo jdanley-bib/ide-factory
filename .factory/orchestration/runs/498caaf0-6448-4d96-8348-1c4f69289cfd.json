@@ -4,15 +4,15 @@
   "change": "establish-pr-outer-loop",
   "status": "open",
   "startedAt": "2026-10-23T22:35:32.599Z",
-  "lastObservedAt": "2026-10-23T23:16:06.602Z",
+  "lastObservedAt": "2026-10-23T23:23:35.570Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 10,
-  "completedTasks": 4,
+  "agentSteps": 12,
+  "completedTasks": 5,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
@@ -20,8 +20,8 @@
   "lastRequestFingerprint": {
     "action": "complete",
     "role": "scribe",
-    "taskId": "2.1",
-    "attemptId": "0ca9be2d-9ad6-42de-991d-ca0e47ebe521",
+    "taskId": "2.2",
+    "attemptId": "b04b6ee2-4f24-498e-beba-dcfa1473350e",
     "attemptState": "accepted",
     "workItemStatus": "in_progress"
   },
