@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "d730c19b-88cf-40dc-9617-5093962589b4",
+  "change": "document-approve-principal-flags",
+  "status": "closed",
+  "startedAt": "2026-10-23T21:36:15.031Z",
+  "lastObservedAt": "2026-10-23T21:36:47.475Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 1,
+  "completedTasks": 0,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "agent-step",
+    "role": "engineer",
+    "taskId": "1.1",
+    "attemptId": "b72e52fd-56de-4bba-87b6-1d9dc22c2d0f",
+    "attemptState": "assigned",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": "unchanged-state"
+}

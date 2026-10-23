@@ -491,3 +491,11 @@ Green commands (recorded in notes):
 2. `npx openspec validate --all` exit 0
 3. `node --test test/install.test.mjs` exit 0
 Scope: integration notes only — no second queue; no gate, evidence, or lockout change; no model launch; no archive; no review, complete, or push.
+
+## 2026-10-23 document-approve-principal-flags/1.1
+
+Attempt: b72e52fd-56de-4bba-87b6-1d9dc22c2d0f
+Implementer: engineer-doc-flags
+Red: `node src/cli.mjs verify run … --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit; timedOut at 120s before timeout bump).
+Green: `node src/cli.mjs verify run … --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8d86911a4411aa86679751a62e869a302d6ff5d9).
+Scope: README Gates approve example + `test/readme-approve-example.test.mjs` only for product; unit `timeoutMs` 120000→180000 so npm test can finish under verify. Stopped at verifying — no awaiting-review, accept, approve, or push.

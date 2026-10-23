@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "runId": "ec2b1746-5165-4935-b9d3-758ae055f222",
+  "change": "document-approve-principal-flags",
+  "status": "open",
+  "startedAt": "2026-10-23T21:39:39.076Z",
+  "lastObservedAt": "2026-10-23T22:12:02.516Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 3,
+  "completedTasks": 1,
+  "failureCount": 1,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [
+    "b72e52fd-56de-4bba-87b6-1d9dc22c2d0f:2026-10-23T21:50:53.726Z:sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4"
+  ],
+  "lastRequestFingerprint": {
+    "action": "complete",
+    "role": "scribe",
+    "taskId": "1.1",
+    "attemptId": "b72e52fd-56de-4bba-87b6-1d9dc22c2d0f",
+    "attemptState": "accepted",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: add-cline-ide-adapter/3.1 (2026-10-22)
+Last finalized: document-approve-principal-flags/1.1 (2026-10-23)
