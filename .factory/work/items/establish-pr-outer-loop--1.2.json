@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "establish-pr-outer-loop",
+  "title": "Add a failing test that the pull request body includes the source revision and attempt id and omits check logs and environment values. Then include those links. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the body change, and passes with the same command after it.",
+  "status": "todo",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "The body links evidence and leaves logs out."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-23T22:35:27.259Z"
+}

@@ -2,7 +2,7 @@
 
 ## 1. Pull request outer loop
 
-- [ ] 1.1 Add a failing test that `pr open` records one pull request for a change and a second open updates it, using a stub forge. Then implement that command. The test also asserts the stub argv does not merge and does not call the forge admin API. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.
+- [x] 1.1 Add a failing test that `pr open` records one pull request for a change and a second open updates it, using a stub forge. Then implement that command. The test also asserts the stub argv does not merge and does not call the forge admin API. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the command exists, and passes with the same command after it.
   - One change has one branch and one pull request record.
   factory:
     kind: general

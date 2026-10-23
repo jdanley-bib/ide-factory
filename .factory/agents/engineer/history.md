@@ -499,3 +499,11 @@ Implementer: engineer-doc-flags
 Red: `node src/cli.mjs verify run … --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit; timedOut at 120s before timeout bump).
 Green: `node src/cli.mjs verify run … --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8d86911a4411aa86679751a62e869a302d6ff5d9).
 Scope: README Gates approve example + `test/readme-approve-example.test.mjs` only for product; unit `timeoutMs` 120000→180000 so npm test can finish under verify. Stopped at verifying — no awaiting-review, accept, approve, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.1
+
+Attempt: 9abb018f-2cf0-4dfd-82a4-d2441712ec2a
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run 9abb018f-2cf0-4dfd-82a4-d2441712ec2a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 27dbc480b421b3f7c319bf269b1b5d167e9691e9).
+Green: `node src/cli.mjs verify run 9abb018f-2cf0-4dfd-82a4-d2441712ec2a --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision e4a646e83c62a1bc5fb07f4b893c71f821d84911).
+Scope: `pr open` only — stub forge, `factory/<change>` branch, `.factory/pull-requests/<change>.json`, create then update same PR, no merge / forge admin API / shell. No body evidence links (1.2), comment, capture, scaffold, help, review accept, or push.

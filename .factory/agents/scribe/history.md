@@ -255,3 +255,7 @@ Attempt: 27e6311a-e7fa-4b6a-b780-424369c3e88e
 ## 2026-10-23 finalized document-approve-principal-flags/1.1
 
 Attempt: b72e52fd-56de-4bba-87b6-1d9dc22c2d0f
+
+## 2026-10-23 finalized establish-pr-outer-loop/1.1
+
+Attempt: 9abb018f-2cf0-4dfd-82a4-d2441712ec2a

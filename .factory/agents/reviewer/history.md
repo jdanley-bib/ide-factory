@@ -454,3 +454,11 @@ Reviewer: jason-danley
 Implementer: engineer-doc-flags
 Verdict: ACCEPT
 Gate accept approval on disk (schema v2, sourceRevision 8d86911). README Gates approve example names `--principal-provider` and `--principal-subject`; `test/readme-approve-example.test.mjs` locks that line. Attempt verification has failing unit (passed:false at 3081eea) before passing unit (passed:true, worktreeClean true at 8d86911). Re-ran `node --test test/readme-approve-example.test.mjs` exit 0, 1 pass. No approve/accept/reject/push/transition.
+
+## 2026-10-23 establish-pr-outer-loop/1.1
+
+Attempt: 9abb018f-2cf0-4dfd-82a4-d2441712ec2a
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 27dbc48) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at e4a646e). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 1 pass. Product: `pr open` one branch/`factory/<change>` + one local record; stub forge; second open updates same PR; argv forbids merge and forge admin API. No body evidence links (1.2), comment, capture, scaffold, help, approve, transition, or push.
