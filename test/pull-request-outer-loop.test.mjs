@@ -145,3 +145,90 @@ test('pr open records one pull request per change; second open updates the same 
     cleanup(dir);
   }
 });
+
+function bodyFromCreateArgv(argvLists) {
+  const create = argvLists.find((argv) => argv[0] === 'pr' && argv[1] === 'create');
+  assert.ok(create, 'expected a forge pr create argv');
+  const index = create.indexOf('--body');
+  assert.ok(index >= 0 && create[index + 1], 'create argv must include --body');
+  return create[index + 1];
+}
+
+test('pr open body links source revision and attempt id; omits check logs and env values', async () => {
+  const dir = tempProject();
+  const change = 'demo-body-links';
+  const attemptId = '11111111-2222-4333-8444-555555555555';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  const checkLogMarker = 'CHECK_LOG_SHOULD_NOT_APPEAR_IN_BODY';
+  const envMarker = 'ENV_VALUE_SHOULD_NOT_APPEAR_IN_BODY';
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    fs.mkdirSync(path.join(dir, 'openspec/changes', change), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, 'openspec/changes', change, 'tasks.md'),
+      '- [ ] 1.1 Body links\n',
+    );
+    assert.equal((await idefactory(dir, ['sync-tasks', change])).code, 0);
+
+    const head = ensureCleanGitCommit(dir);
+    fs.mkdirSync(path.join(dir, '.factory', 'attempts'), { recursive: true });
+    fs.writeFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      `${JSON.stringify({
+        id: attemptId,
+        change,
+        taskId: '1.1',
+        state: 'awaiting-review',
+        implementerRole: 'engineer',
+        implementerId: 'engineer-body',
+        reviewerId: null,
+        modelProfile: 'coding-standard',
+        evidence: {
+          red: null,
+          verification: [{
+            schemaVersion: 1,
+            kind: 'unit',
+            exitCode: 0,
+            passed: true,
+            issuer: 'cli',
+            sourceRevision: head,
+            logDigest: 'sha256:deadbeef',
+            stdout: checkLogMarker,
+          }],
+          security: [],
+          review: null,
+          changedFiles: [],
+          baseRev: null,
+        },
+        history: [],
+        createdAt: '2026-10-23T00:00:00.000Z',
+        updatedAt: '2026-10-23T00:00:00.000Z',
+      }, null, 2)}\n`,
+    );
+    fs.writeFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.unit.log`),
+      `${checkLogMarker}\nnpm test output that must stay out of the pull request body\n`,
+    );
+
+    const opened = await idefactory(dir, ['pr', 'open', change], {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+      IDEFACTORY_TEST_SECRET: envMarker,
+      PATH: process.env.PATH,
+      HOME: process.env.HOME,
+    });
+    assert.equal(opened.code, 0, opened.err || opened.out);
+
+    const body = bodyFromCreateArgv(readArgvLog(logPath));
+    assert.match(body, new RegExp(change));
+    assert.match(body, new RegExp(head));
+    assert.match(body, new RegExp(attemptId));
+    assert.doesNotMatch(body, new RegExp(checkLogMarker));
+    assert.doesNotMatch(body, new RegExp(envMarker));
+    assert.doesNotMatch(body, /IDEFACTORY_TEST_SECRET/);
+  } finally {
+    cleanup(dir);
+  }
+});
