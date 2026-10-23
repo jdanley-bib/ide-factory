@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from './attempt.mjs';
+import { appendControlEvent } from './event-log.mjs';
 import { halted, writeText } from './layout.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
@@ -233,6 +234,13 @@ export async function verifyRun(project, attemptId, options = {}) {
 
   attempt.updatedAt = new Date().toISOString();
   writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
+  appendControlEvent(project, {
+    type: 'verification.recorded',
+    time: finishedAt,
+    attemptId,
+    commandDigest: record.commandDigest,
+    exitCode: record.exitCode,
+  });
   return { attempt, record };
 }
 
@@ -369,6 +377,13 @@ export async function verifyImport(project, attemptId, options = {}) {
 
   attempt.updatedAt = new Date().toISOString();
   writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
+  appendControlEvent(project, {
+    type: 'verification.recorded',
+    time: record.finishedAt,
+    attemptId,
+    commandDigest: record.commandDigest,
+    exitCode: record.exitCode,
+  });
   return { attempt, record };
 }
 
@@ -433,6 +448,7 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/attempts/',
   '.factory/work/',
   '.factory/orchestration/',
+  '.factory/observability/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',

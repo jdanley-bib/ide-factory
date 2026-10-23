@@ -96,6 +96,13 @@ function approveArgs(id, note, scope) {
   return args;
 }
 
+function setPolicyVersion(dir, version) {
+  const configPath = path.join(dir, '.factory/config.json');
+  const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  config.governance.policyVersion = version;
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+}
+
 function decisionsText(dir) {
   return fs.readFileSync(path.join(dir, '.factory', 'decisions.md'), 'utf8');
 }
@@ -214,6 +221,7 @@ test('approve with id, note, and every scope field writes JSON and appends decis
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
+    setPolicyVersion(dir, 1);
     const head = ensureCleanGitCommit(dir);
     const beforeDecisions = decisionsText(dir);
     const id = 'scoped-accept-ok';
@@ -371,6 +379,7 @@ async function seedGatedChange(dir, {
   taskId = '2.1',
 } = {}) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
+  setPolicyVersion(dir, 1);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'openspec/changes/demo/tasks.md'),
@@ -659,6 +668,7 @@ async function seedSecurityStageChange(dir, {
   roles = ['engineer', 'security-reviewer', 'reviewer', 'scribe'],
 } = {}) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
+  setPolicyVersion(dir, 1);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
   fs.writeFileSync(
     path.join(dir, 'openspec/changes/demo/tasks.md'),

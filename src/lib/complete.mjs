@@ -1,6 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, transitionAttempt } from './attempt.mjs';
+import { appendControlEvent } from './event-log.mjs';
+import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import {
   finalizationJournalPath,
   readFinalizationJournal,
@@ -84,6 +86,12 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     if (attempt.implementerId === attempt.reviewerId) {
       throw new Error('reviewer must differ from implementer');
     }
+    if (readPolicyVersion(project) >= 2) {
+      confirmPrincipal(project, {
+        provider: configuredPrincipalProvider(project),
+        subject: attempt.reviewerId,
+      });
+    }
   }
 
   const requiredChecks = requiredChecksFor(project, item);
@@ -124,6 +132,13 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     // Best-effort ledger only after the work-item commit point.
     if (result.status !== 'already-committed') {
       ledger(project, 'complete', { change, taskId, attemptId });
+      appendControlEvent(project, {
+        type: 'work.completed',
+        time: finalizedAt,
+        id: taskId,
+        change,
+        attemptId,
+      });
     }
     return {
       item: result.item || getWorkItem(project, change, taskId),

@@ -502,3 +502,24 @@ test('implementation notes record add-cline-ide-adapter verification commands', 
     cursor = idx + command.length;
   }
 });
+
+test('new init sets policy version 2 and reinstall preserves policy and checks.json', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const configPath = path.join(dir, '.factory/config.json');
+    const created = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.equal(created.governance.policyVersion, 2);
+    created.governance.policyVersion = 1;
+    fs.writeFileSync(configPath, JSON.stringify(created, null, 2));
+    const registryPath = path.join(dir, '.factory/checks.json');
+    const custom = '{"schemaVersion":1,"checks":{"unit":{"argv":["npm","test"],"cwdPolicy":"project","timeoutMs":120000,"artifacts":[]},"project":{"argv":["node","-e","process.exit(0)"],"cwdPolicy":"project","timeoutMs":1000,"artifacts":[]}}}\n';
+    fs.writeFileSync(registryPath, custom);
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const again = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    assert.equal(again.governance.policyVersion, 1);
+    assert.equal(fs.readFileSync(registryPath, 'utf8'), custom);
+  } finally {
+    cleanup(dir);
+  }
+});

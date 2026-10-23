@@ -924,6 +924,16 @@ function observedExitCode(command) {
   return result.status ?? 1;
 }
 
+function isArchivedChangeValidate(command) {
+  const match = command.match(/^npx openspec validate (\S+)(?: --strict)?$/);
+  if (!match || match[1].startsWith('--')) return false;
+  const name = match[1];
+  if (fs.existsSync(path.join(repoRoot, 'openspec', 'changes', name))) return false;
+  const archive = path.join(repoRoot, 'openspec', 'changes', 'archive');
+  if (!fs.existsSync(archive)) return false;
+  return fs.readdirSync(archive).some((entry) => entry === name || entry.endsWith(`-${name}`));
+}
+
 test('implementation notes record task 5.1 integration commands with honest exit codes', () => {
   const notesPath = path.join(
     repoRoot,
@@ -954,6 +964,11 @@ test('implementation notes record task 5.1 integration commands with honest exit
       `section ${index + 1} (\`${expectedCommand}\`) must record a real exit code 0–255`,
     );
     if (inNpmTestLifecycle) {
+      continue;
+    }
+    // Openspec validates active changes only. After archive, the historical
+    // command name is unknown, so a live re-run cannot reproduce the original exit.
+    if (isArchivedChangeValidate(expectedCommand)) {
       continue;
     }
     if (nestedNpmTestRun && expectedCommand === 'npm test') {

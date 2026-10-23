@@ -80,7 +80,7 @@ Completion SHALL require recorded implementer and reviewer identifiers and SHALL
 - **THEN** completion fails and the work item remains unfinished
 
 ### Requirement: Finalize accepted work
-Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD. It SHALL journal deterministic target contents, idempotently apply every pre-commit target, and atomically mark the work item done as the final correctness-critical write. A failure before that commit point SHALL leave the item not done and recoverable by repeating complete. When the verification profile `humanGate` is true, complete SHALL also require a valid scoped approval whose action is `complete`.
+Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD.
 
 #### Scenario: Successful completion
 - **WHEN** complete receives an accepted attempt with distinct role identifiers, a schema-valid passing attestation for every required check at the current clean HEAD, and a verification profile whose `humanGate` is false
@@ -91,6 +91,21 @@ Complete SHALL require an accepted attempt, or a matching recoverable finalizati
 #### Scenario: Missing evidence
 - **WHEN** required verification evidence is absent
 - **THEN** complete fails and does not claim the work item is finalized
+
+#### Scenario: Forged pass boolean
+- **WHEN** an attempt carries a caller-supplied check object whose pass boolean is true and no verification-command attestation
+- **THEN** complete fails and the work item remains unfinished
+
+#### Scenario: Unknown or unmapped check
+- **WHEN** a required check kind is absent from the registry or has no argv mapping
+- **THEN** complete fails and the work item remains unfinished
+
+#### Scenario: Stale source revision
+- **WHEN** a required attestation names a source revision other than the current clean HEAD
+- **THEN** complete fails and the work item remains unfinished
+
+### Requirement: Journaled completion commit
+Complete SHALL journal deterministic target contents, idempotently apply every pre-commit target, and atomically mark the work item done as the final correctness-critical write. A failure before that commit point SHALL leave the item not done and recoverable by repeating complete.
 
 #### Scenario: Recover interrupted completion
 - **WHEN** complete is repeated for a matching journal whose work item is not done
@@ -108,17 +123,8 @@ Complete SHALL require an accepted attempt, or a matching recoverable finalizati
 - **THEN** complete may proceed
 - **AND** unrelated dirt, HEAD drift, or conflict fails closed
 
-#### Scenario: Forged pass boolean
-- **WHEN** an attempt carries a caller-supplied check object whose pass boolean is true and no verification-command attestation
-- **THEN** complete fails and the work item remains unfinished
-
-#### Scenario: Unknown or unmapped check
-- **WHEN** a required check kind is absent from the registry or has no argv mapping
-- **THEN** complete fails and the work item remains unfinished
-
-#### Scenario: Stale source revision
-- **WHEN** a required attestation names a source revision other than the current clean HEAD
-- **THEN** complete fails and the work item remains unfinished
+### Requirement: Gated completion approval
+When the verification profile `humanGate` is true, complete SHALL also require a valid scoped approval whose action is `complete`.
 
 #### Scenario: Gated completion
 - **WHEN** `humanGate` is true and no valid `complete` approval exists
