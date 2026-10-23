@@ -44,7 +44,7 @@
 
 ## 2. Consumer CI scaffold
 
-- [ ] 2.1 Add a failing test that `ci scaffold` writes `.github/workflows/factory-consumer.yml` only when it is absent, that the file runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all` on Node 24, and that the file does not mention Semgrep or `pull_request_target`. The test also shows `init` does not create that file and the command does not call the forge admin API. Then implement the command in a temporary project. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the command exists, and passes with the same command after it.
+- [x] 2.1 Add a failing test that `ci scaffold` writes `.github/workflows/factory-consumer.yml` only when it is absent, that the file runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all` on Node 24, and that the file does not mention Semgrep or `pull_request_target`. The test also shows `init` does not create that file and the command does not call the forge admin API. Then implement the command in a temporary project. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the command exists, and passes with the same command after it.
   - The consumer workflow is written once and stays narrower than this repository's CI.
   factory:
     kind: general

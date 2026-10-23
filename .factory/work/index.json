@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-23T23:08:34.108Z",
+  "updatedAt": "2026-10-23T23:16:06.672Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -200,7 +200,7 @@
     {
       "change": "establish-pr-outer-loop",
       "id": "2.1",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "establish-pr-outer-loop",

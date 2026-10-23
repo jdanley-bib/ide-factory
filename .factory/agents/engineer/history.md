@@ -531,3 +531,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8f3dcb95be08903e7f614333bcb48aa65cdfe636).
 Green: `node src/cli.mjs verify run dc9bb2bf-b730-48ac-8ec8-c8a40fa080fa --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 1dd0042354b45a21f14cb380489e2e49bb798a1c).
 Scope: `pr capture` only — stores each forge comment id once (author, url, time, body). A stored comment does not authorize accept or complete; the human gate still requires a scoped approval. No scaffold, help, review accept, or push.
+
+## 2026-10-23 establish-pr-outer-loop/2.1
+
+Attempt: 0ca9be2d-9ad6-42de-991d-ca0e47ebe521
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run 0ca9be2d-9ad6-42de-991d-ca0e47ebe521 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision e0138fd71f5a19324e3e265a4dc001dafa107b2a).
+Green: `node src/cli.mjs verify run 0ca9be2d-9ad6-42de-991d-ca0e47ebe521 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision dc0e4a898a7819255bb09e12859670956210066a).
+Scope: `ci scaffold` only — writes `.github/workflows/factory-consumer.yml` when absent (Node 24, npm ci, npm test, npm audit --audit-level=high, npx openspec validate --all, contents read). Existing file is left unchanged and the command exits non-zero. init and upgrade do not copy it. This repo's ci.yml and release.yml are unchanged. No Semgrep, pull_request_target, forge admin API, help text, review accept, or push.

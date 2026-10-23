@@ -2,7 +2,7 @@
   "id": "2.1",
   "change": "establish-pr-outer-loop",
   "title": "Add a failing test that `ci scaffold` writes `.github/workflows/factory-consumer.yml` only when it is absent, that the file runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all` on Node 24, and that the file does not mention Semgrep or `pull_request_target`. The test also shows `init` does not create that file and the command does not call the forge admin API. Then implement the command in a temporary project. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the command exists, and passes with the same command after it.",
-  "status": "todo",
+  "status": "done",
   "dependencies": [],
   "acceptanceCriteria": [
     "The consumer workflow is written once and stays narrower than this repository's CI."
@@ -23,6 +23,6 @@
     "verificationProfile": "frontend-low",
     "dependencies": []
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-23T22:35:27.261Z"
+  "attemptId": "0ca9be2d-9ad6-42de-991d-ca0e47ebe521",
+  "updatedAt": "2026-10-23T23:16:06.672Z"
 }
