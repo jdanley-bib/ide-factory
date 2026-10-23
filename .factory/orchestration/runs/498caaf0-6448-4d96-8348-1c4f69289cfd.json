@@ -4,7 +4,7 @@
   "change": "establish-pr-outer-loop",
   "status": "open",
   "startedAt": "2026-10-23T22:35:32.599Z",
-  "lastObservedAt": "2026-10-23T23:23:35.570Z",
+  "lastObservedAt": "2026-10-23T23:23:35.736Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
@@ -12,7 +12,7 @@
     "maxFailures": 5
   },
   "agentSteps": 12,
-  "completedTasks": 5,
+  "completedTasks": 6,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
