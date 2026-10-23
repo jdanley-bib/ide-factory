@@ -43,6 +43,22 @@ export function buildUpdatePullRequestArgv({ number, body }) {
 }
 
 /**
+ * Build argv for posting a comment on an existing pull request.
+ * @param {{ number: number, body: string }} input
+ * @returns {string[]}
+ */
+export function buildCommentPullRequestArgv({ number, body }) {
+  return [
+    'gh',
+    'pr',
+    'comment',
+    String(number),
+    '--body',
+    body,
+  ];
+}
+
+/**
  * Resolve how to invoke the forge binary. Tests set IDEFACTORY_FORGE to a stub.
  * @param {NodeJS.ProcessEnv} env
  * @param {string[]} fullArgv argv from build* (first element is `gh`)

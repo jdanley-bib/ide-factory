@@ -9,7 +9,7 @@ import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
-import { openPullRequest } from './pull-request.mjs';
+import { commentOnPullRequest, openPullRequest } from './pull-request.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
@@ -283,7 +283,14 @@ function handlePr(project, parsed, env, out) {
     out(JSON.stringify(result.record, null, 2));
     return 0;
   }
-  throw new Error('Usage: idefactory pr open <change>');
+  if (sub === 'comment') {
+    const attemptId = parsed.rest[1];
+    if (!attemptId) throw new Error('Usage: idefactory pr comment <attemptId>');
+    const result = commentOnPullRequest(project, attemptId, env);
+    out(JSON.stringify(result.record, null, 2));
+    return 0;
+  }
+  throw new Error('Usage: idefactory pr open <change>\n       idefactory pr comment <attemptId>');
 }
 
 async function handleVerify(project, parsed, out) {

@@ -2,7 +2,9 @@ import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { getAttempt } from './attempt.mjs';
 import {
+  buildCommentPullRequestArgv,
   buildCreatePullRequestArgv,
   buildUpdatePullRequestArgv,
   runForge,
@@ -88,6 +90,69 @@ export function openPullRequest(project, change, env = process.env) {
   };
   writePullRequestRecord(project, record);
   return { record, created: false };
+}
+
+/**
+ * Post the verdict already stored on an attempt. Does not create a verdict.
+ * @param {string} project
+ * @param {string} attemptId
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ record: object }}
+ */
+export function commentOnPullRequest(project, attemptId, env = process.env) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const id = String(attemptId || '').trim();
+  if (!id) throw new Error('Usage: idefactory pr comment <attemptId>');
+  const attempt = getAttempt(project, id);
+  if (!attempt) throw new Error(`Attempt not found: ${id}`);
+
+  const review = attempt.evidence?.review;
+  const verdict = typeof review?.verdict === 'string' ? review.verdict.trim() : '';
+  const role = typeof review?.role === 'string' ? review.role.trim() : '';
+  if (!verdict || !role) {
+    throw new Error('pr comment requires a verdict and role already stored on the attempt');
+  }
+
+  const record = readPullRequestRecord(project, attempt.change);
+  if (!record) {
+    throw new Error(`No pull request record for ${attempt.change}`);
+  }
+
+  const lines = [
+    `Role: ${role}`,
+    `Verdict: ${verdict}`,
+    `Attempt: ${attempt.id}`,
+  ];
+  const reviewerId = review.reviewerId || attempt.reviewerId;
+  if (typeof reviewerId === 'string' && reviewerId.length > 0) {
+    lines.push(`Reviewer: ${reviewerId}`);
+  }
+  const body = `${lines.join('\n')}\n`;
+  const argv = buildCommentPullRequestArgv({
+    number: record.pullRequest.number,
+    body,
+  });
+  assertSafeForgeArgv(argv);
+  const result = runForge(project, argv, env);
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
+  }
+
+  const posted = {
+    attemptId: attempt.id,
+    verdict,
+    role,
+    reviewerId: reviewerId || null,
+  };
+  const next = {
+    ...record,
+    postedVerdicts: [...(Array.isArray(record.postedVerdicts) ? record.postedVerdicts : []), posted],
+    capturedComments: Array.isArray(record.capturedComments) ? record.capturedComments : [],
+  };
+  writePullRequestRecord(project, next);
+  return { record: next };
 }
 
 /**

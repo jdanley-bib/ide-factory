@@ -44,5 +44,10 @@ if (command === 'pr' && sub === 'edit') {
   process.exit(0);
 }
 
+if (command === 'pr' && sub === 'comment') {
+  process.stdout.write('');
+  process.exit(0);
+}
+
 process.stderr.write(`unsupported forge argv: ${args.join(' ')}\n`);
 process.exit(1);
