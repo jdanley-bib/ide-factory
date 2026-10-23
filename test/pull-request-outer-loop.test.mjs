@@ -232,3 +232,126 @@ test('pr open body links source revision and attempt id; omits check logs and en
     cleanup(dir);
   }
 });
+
+function writeAttempt(dir, attempt) {
+  fs.mkdirSync(path.join(dir, '.factory', 'attempts'), { recursive: true });
+  const file = path.join(dir, '.factory', 'attempts', `${attempt.id}.json`);
+  fs.writeFileSync(file, `${JSON.stringify(attempt, null, 2)}\n`);
+  return file;
+}
+
+function commentBodies(argvLists) {
+  return argvLists
+    .filter((argv) => argv[0] === 'pr' && argv[1] === 'comment')
+    .map((argv) => {
+      const index = argv.indexOf('--body');
+      return index >= 0 ? argv[index + 1] : '';
+    });
+}
+
+test('pr comment posts the stored verdict and role; missing verdict writes nothing', async () => {
+  const dir = tempProject();
+  const change = 'demo-stored-verdict';
+  const storedAttemptId = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
+  const missingAttemptId = 'ffffffff-1111-4222-8333-444444444444';
+  const storedVerdict = 'ACCEPT';
+  const storedRole = 'security-reviewer';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    ensureCleanGitCommit(dir);
+    const forgeEnv = {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+    };
+    const opened = await idefactory(dir, ['pr', 'open', change], forgeEnv);
+    assert.equal(opened.code, 0, opened.err || opened.out);
+
+    const storedFile = writeAttempt(dir, {
+      id: storedAttemptId,
+      change,
+      taskId: '1.1',
+      state: 'accepted',
+      implementerRole: 'engineer',
+      implementerId: 'engineer-pr-loop',
+      reviewerId: 'reviewer-stored',
+      modelProfile: 'coding-standard',
+      evidence: {
+        red: null,
+        verification: [],
+        security: [],
+        review: {
+          verdict: storedVerdict,
+          role: storedRole,
+          reviewerId: 'reviewer-stored',
+          notes: '',
+        },
+        changedFiles: [],
+        baseRev: null,
+      },
+      history: [],
+      createdAt: '2026-10-23T00:00:00.000Z',
+      updatedAt: '2026-10-23T00:00:00.000Z',
+    });
+    const storedBefore = fs.readFileSync(storedFile, 'utf8');
+
+    const posted = await idefactory(dir, ['pr', 'comment', storedAttemptId], forgeEnv);
+    assert.equal(posted.code, 0, posted.err || posted.out);
+    assert.equal(fs.readFileSync(storedFile, 'utf8'), storedBefore, 'posting must not rewrite the attempt');
+
+    const bodies = commentBodies(readArgvLog(logPath));
+    assert.equal(bodies.length, 1, 'forge receives one comment for the stored verdict');
+    assert.match(bodies[0], new RegExp(storedVerdict));
+    assert.match(bodies[0], new RegExp(storedRole));
+    assertSafeForgeArgv(readArgvLog(logPath));
+
+    const record = JSON.parse(fs.readFileSync(
+      path.join(dir, '.factory', 'pull-requests', `${change}.json`),
+      'utf8',
+    ));
+    assert.ok(
+      record.postedVerdicts.some((item) => item.verdict === storedVerdict && item.role === storedRole
+        && item.attemptId === storedAttemptId),
+      'local record stores the posted verdict',
+    );
+
+    const missingFile = writeAttempt(dir, {
+      id: missingAttemptId,
+      change,
+      taskId: '1.2',
+      state: 'awaiting-review',
+      implementerRole: 'engineer',
+      implementerId: 'engineer-pr-loop',
+      reviewerId: null,
+      modelProfile: 'coding-standard',
+      evidence: {
+        red: null,
+        verification: [],
+        security: [],
+        review: null,
+        changedFiles: [],
+        baseRev: null,
+      },
+      history: [],
+      createdAt: '2026-10-23T00:00:00.000Z',
+      updatedAt: '2026-10-23T00:00:00.000Z',
+    });
+    const missingBefore = fs.readFileSync(missingFile, 'utf8');
+    const commentsBefore = commentBodies(readArgvLog(logPath)).length;
+
+    const missing = await idefactory(dir, ['pr', 'comment', missingAttemptId], forgeEnv);
+    assert.notEqual(missing.code, 0, 'missing verdict must exit non-zero');
+    assert.equal(fs.readFileSync(missingFile, 'utf8'), missingBefore, 'missing verdict must not write a verdict');
+    assert.equal(
+      commentBodies(readArgvLog(logPath)).length,
+      commentsBefore,
+      'missing verdict must not post to the forge',
+    );
+    const afterMissing = JSON.parse(fs.readFileSync(missingFile, 'utf8'));
+    assert.equal(afterMissing.evidence.review, null);
+  } finally {
+    cleanup(dir);
+  }
+});
