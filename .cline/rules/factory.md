@@ -1,0 +1,7 @@
+When the human asks the factory or the team to plan, build, run, full pipeline, review, apply an OpenSpec change, or report status, follow the factory-coordinator skill and keep team memory in `.factory/`.
+
+Unrelated requests are left alone. Do not change `.factory/` or factory adapters for unrelated work.
+
+The IDE session model does the work. The human authors OpenSpec proposals.
+
+<!-- idefactory:owned -->

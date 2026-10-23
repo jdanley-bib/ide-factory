@@ -9,6 +9,8 @@ description: >
 
 <!-- idefactory:owned -->
 
+The IDE session model does the work.
+
 1. Reproduce the failure with one command.
 2. Read the error before choosing a fix.
 3. Trace the failing path to the line that is wrong.
