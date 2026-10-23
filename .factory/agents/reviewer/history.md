@@ -462,3 +462,11 @@ Reviewer: jason-danley
 Implementer: engineer-pr-loop
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at 27dbc48) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at e4a646e). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 1 pass. Product: `pr open` one branch/`factory/<change>` + one local record; stub forge; second open updates same PR; argv forbids merge and forge admin API. No body evidence links (1.2), comment, capture, scaffold, help, approve, transition, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.2
+
+Attempt: 67cba4f1-3e38-4d87-b81f-d6da87d73341
+Reviewer: jason-danley
+Implementer: engineer-pr-loop
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 18176f1) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 5f029cc). Re-ran `node --test test/pull-request-outer-loop.test.mjs` exit 0, 2 pass. Product: PR body includes source revision and attempt id paths; omits check log text and env/secret values. No comment, capture, scaffold, help, approve, transition, or push.

@@ -12,7 +12,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.2 Add a failing test that the pull request body includes the source revision and attempt id and omits check logs and environment values. Then include those links. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the body change, and passes with the same command after it.
+- [x] 1.2 Add a failing test that the pull request body includes the source revision and attempt id and omits check logs and environment values. Then include those links. Verify the test fails with `node --test test/pull-request-outer-loop.test.mjs` before the body change, and passes with the same command after it.
   - The body links evidence and leaves logs out.
   factory:
     kind: general

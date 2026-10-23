@@ -507,3 +507,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run 9abb018f-2cf0-4dfd-82a4-d2441712ec2a --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 27dbc480b421b3f7c319bf269b1b5d167e9691e9).
 Green: `node src/cli.mjs verify run 9abb018f-2cf0-4dfd-82a4-d2441712ec2a --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision e4a646e83c62a1bc5fb07f4b893c71f821d84911).
 Scope: `pr open` only — stub forge, `factory/<change>` branch, `.factory/pull-requests/<change>.json`, create then update same PR, no merge / forge admin API / shell. No body evidence links (1.2), comment, capture, scaffold, help, review accept, or push.
+
+## 2026-10-23 establish-pr-outer-loop/1.2
+
+Attempt: 67cba4f1-3e38-4d87-b81f-d6da87d73341
+Implementer: engineer-pr-loop
+Red: `node src/cli.mjs verify run 67cba4f1-3e38-4d87-b81f-d6da87d73341 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 18176f14fbd476677526e79d980e1ca310ff8782).
+Green: `node src/cli.mjs verify run 67cba4f1-3e38-4d87-b81f-d6da87d73341 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 5f029cc5ab5f124013a2cf3f2b4e4990408f48f5).
+Scope: PR body evidence links only — source revision, attempt ids, approval/check record paths; no check log text or env values. No comment, capture, scaffold, help, review accept, or push.
