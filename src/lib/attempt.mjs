@@ -120,10 +120,12 @@ export function transitionAttempt(project, attemptId, nextState, {
     };
   }
   const securityVerdict = securityHandoffVerdict(attempt, nextState, evidence);
+  const securityReviewerId = securityReviewerIdFrom(evidence);
   if (securityVerdict) {
     attempt.evidence.securityReview = {
       verdict: securityVerdict,
       role: 'security-reviewer',
+      ...(securityReviewerId ? { reviewerId: securityReviewerId } : {}),
     };
   }
   mergeEvidence(attempt, nextState, evidence);
@@ -145,6 +147,7 @@ export function transitionAttempt(project, attemptId, nextState, {
       attemptId,
       verdict: securityVerdict,
       role: 'security-reviewer',
+      ...(securityReviewerId ? { reviewerId: securityReviewerId } : {}),
     }, env);
   }
 
@@ -158,6 +161,11 @@ function securityHandoffVerdict(attempt, nextState, evidence) {
   ) return '';
   if (typeof evidence?.verdict !== 'string') return '';
   return evidence.verdict.trim();
+}
+
+function securityReviewerIdFrom(evidence) {
+  if (typeof evidence?.securityReviewerId !== 'string') return '';
+  return evidence.securityReviewerId.trim();
 }
 
 function rejectCallerSuppliedCheckResults(evidence) {
