@@ -116,19 +116,38 @@ export function commentOnPullRequest(project, attemptId, env = process.env) {
     throw new Error('pr comment requires a verdict and role already stored on the attempt');
   }
 
+  const reviewerId = review.reviewerId || attempt.reviewerId;
+  return postVerdictComment(project, {
+    attemptId: attempt.id,
+    verdict,
+    role,
+    reviewerId: typeof reviewerId === 'string' ? reviewerId : null,
+  }, env);
+}
+
+/**
+ * Post one already-stored verdict through the forge port.
+ * Does not read or write evidence.review.
+ * @param {string} project
+ * @param {{ attemptId: string, verdict: string, role: string, reviewerId?: string|null }} stored
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {{ record: object }}
+ */
+export function postVerdictComment(project, stored, env = process.env) {
+  const attempt = getAttempt(project, stored.attemptId);
+  if (!attempt) throw new Error(`Attempt not found: ${stored.attemptId}`);
   const record = readPullRequestRecord(project, attempt.change);
   if (!record) {
     throw new Error(`No pull request record for ${attempt.change}`);
   }
 
   const lines = [
-    `Role: ${role}`,
-    `Verdict: ${verdict}`,
+    `Role: ${stored.role}`,
+    `Verdict: ${stored.verdict}`,
     `Attempt: ${attempt.id}`,
   ];
-  const reviewerId = review.reviewerId || attempt.reviewerId;
-  if (typeof reviewerId === 'string' && reviewerId.length > 0) {
-    lines.push(`Reviewer: ${reviewerId}`);
+  if (typeof stored.reviewerId === 'string' && stored.reviewerId.length > 0) {
+    lines.push(`Reviewer: ${stored.reviewerId}`);
   }
   const body = `${lines.join('\n')}\n`;
   const argv = buildCommentPullRequestArgv({
@@ -143,9 +162,9 @@ export function commentOnPullRequest(project, attemptId, env = process.env) {
 
   const posted = {
     attemptId: attempt.id,
-    verdict,
-    role,
-    reviewerId: reviewerId || null,
+    verdict: stored.verdict,
+    role: stored.role,
+    reviewerId: stored.reviewerId || null,
   };
   const next = {
     ...record,

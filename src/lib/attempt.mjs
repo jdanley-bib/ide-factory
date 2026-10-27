@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { ledger, writeText } from './layout.mjs';
 import {
   commentOnPullRequest,
+  postVerdictComment,
   readPullRequestRecord,
 } from './pull-request.mjs';
 import {
@@ -116,6 +117,13 @@ export function transitionAttempt(project, attemptId, nextState, {
       at: new Date().toISOString(),
     };
   }
+  const securityVerdict = securityHandoffVerdict(attempt, nextState, evidence);
+  if (securityVerdict) {
+    attempt.evidence.securityReview = {
+      verdict: securityVerdict,
+      role: 'security-reviewer',
+    };
+  }
   mergeEvidence(attempt, nextState, evidence);
   attempt.state = nextState;
   attempt.updatedAt = new Date().toISOString();
@@ -130,8 +138,21 @@ export function transitionAttempt(project, attemptId, nextState, {
       commentOnPullRequest(project, attemptId, env);
     }
   }
+  if (securityVerdict && readPullRequestRecord(project, attempt.change)) {
+    postVerdictComment(project, {
+      attemptId,
+      verdict: securityVerdict,
+      role: 'security-reviewer',
+    }, env);
+  }
 
   return attempt;
+}
+
+function securityHandoffVerdict(attempt, nextState, evidence) {
+  if (attempt.state !== 'security-checking' || nextState !== 'awaiting-review') return '';
+  if (typeof evidence?.verdict !== 'string') return '';
+  return evidence.verdict.trim();
 }
 
 function rejectCallerSuppliedCheckResults(evidence) {
