@@ -49,6 +49,82 @@ function assertConsumerWorkflow(yaml) {
   }
 }
 
+test('init keeps custom workflow bytes; upgrade and scaffold refuse overwrite', async () => {
+  const custom = 'custom-consumer-workflow-bytes\n# keep me\n';
+
+  // Init leaves an existing custom workflow byte-for-byte unchanged and exits 0.
+  const initDir = tempProject();
+  try {
+    const existing = workflowPath(initDir);
+    fs.mkdirSync(path.dirname(existing), { recursive: true });
+    fs.writeFileSync(existing, custom);
+    const initResult = await idefactory(initDir, ['init']);
+    assert.equal(initResult.code, 0, initResult.err || initResult.out);
+    assert.equal(fs.readFileSync(existing, 'utf8'), custom);
+  } finally {
+    cleanup(initDir);
+  }
+
+  // Init with HALT present and an existing workflow still exits 0 and keeps bytes
+  // (init uses writeConsumerWorkflowIfAbsent, not the throwing scaffoldConsumerCi).
+  const haltDir = tempProject();
+  try {
+    const existing = workflowPath(haltDir);
+    fs.mkdirSync(path.dirname(existing), { recursive: true });
+    fs.writeFileSync(existing, custom);
+    fs.writeFileSync(path.join(haltDir, 'HALT'), 'stop\n');
+    const haltInit = await idefactory(haltDir, ['init']);
+    assert.equal(haltInit.code, 0, haltInit.err || haltInit.out);
+    assert.equal(fs.readFileSync(existing, 'utf8'), custom);
+  } finally {
+    cleanup(haltDir);
+  }
+
+  // Upgrade does not create a missing workflow.
+  const upgradeDir = tempProject();
+  try {
+    fs.mkdirSync(path.join(upgradeDir, '.factory'), { recursive: true });
+    fs.writeFileSync(path.join(upgradeDir, '.factory', 'team.md'), '# team\n');
+    assert.equal((await idefactory(upgradeDir, ['upgrade'])).code, 0);
+    assert.equal(
+      fs.existsSync(workflowPath(upgradeDir)),
+      false,
+      'upgrade must not create the consumer workflow',
+    );
+  } finally {
+    cleanup(upgradeDir);
+  }
+
+  // ci scaffold still exits non-zero and leaves existing bytes unchanged.
+  const scaffoldDir = tempProject();
+  const logPath = path.join(scaffoldDir, 'forge-argv.log');
+  const ghLog = path.join(scaffoldDir, 'gh-calls.log');
+  try {
+    const existing = workflowPath(scaffoldDir);
+    fs.mkdirSync(path.dirname(existing), { recursive: true });
+    fs.writeFileSync(existing, custom);
+    const bin = path.join(scaffoldDir, 'bin');
+    fs.mkdirSync(bin);
+    fs.writeFileSync(
+      path.join(bin, 'gh'),
+      '#!/bin/sh\nprintf "%s\\n" "$*" >> "$IDEFACTORY_GH_LOG"\nexit 1\n',
+    );
+    fs.chmodSync(path.join(bin, 'gh'), 0o755);
+    const refused = await idefactory(scaffoldDir, ['ci', 'scaffold'], {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_GH_LOG: ghLog,
+      PATH: `${bin}:${process.env.PATH || ''}`,
+    });
+    assert.notEqual(refused.code, 0, 'scaffold must exit non-zero when the file exists');
+    assert.equal(fs.readFileSync(existing, 'utf8'), custom);
+    assert.equal(fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8').trim() : '', '');
+    assert.equal(fs.existsSync(ghLog) ? fs.readFileSync(ghLog, 'utf8').trim() : '', '');
+  } finally {
+    cleanup(scaffoldDir);
+  }
+});
+
 test('init writes the consumer workflow once; scaffold and upgrade stay write-once', async () => {
   const dir = tempProject();
   const logPath = path.join(dir, 'forge-argv.log');
