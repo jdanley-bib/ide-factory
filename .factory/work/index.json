@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T16:51:39.574Z",
+  "updatedAt": "2026-10-27T17:07:38.833Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -400,7 +400,7 @@
     {
       "change": "treat-agent-histories-as-run-state",
       "id": "1.2",
-      "status": "in_progress"
+      "status": "done"
     }
   ]
 }

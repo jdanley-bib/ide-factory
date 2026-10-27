@@ -319,3 +319,7 @@ Attempt: 5539df8c-9932-45ec-9c23-c3526aee9fa0
 ## 2026-10-27 finalized treat-agent-histories-as-run-state/1.1
 
 Attempt: de5fea2b-210d-4cfa-b628-c5ffaaac1d05
+
+## 2026-10-27 finalized treat-agent-histories-as-run-state/1.2
+
+Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6

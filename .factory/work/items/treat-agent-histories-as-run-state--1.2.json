@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "treat-agent-histories-as-run-state",
   "title": "Add a failing test that a brand-new role directory, which `git status --porcelain` collapses to `?? .factory/agents/<role>/` when `status.showUntrackedFiles` is `normal`, leaves `resolveGitBinding` clean at that HEAD when the directory's only file is `history.md`, and `verify run` records `passed` true with that source revision. When that collapsed directory also contains `charter.md` or any other file, the worktree stays dirty and verify does not record a pass. Do not change the `git status --porcelain` invocation and do not add `.factory/agents/` as a prefix. Then treat that collapsed directory as run-state only when its only file is `history.md`. Verify the test fails with `node --test test/agent-history-run-state.test.mjs` before that directory rule, and passes with the same command and `node --test test/approval-run-state.test.mjs` after it.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "1.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "46e5b4b8-f68d-486a-974c-0facadf816a6",
-  "updatedAt": "2026-10-27T16:51:39.573Z"
+  "updatedAt": "2026-10-27T17:07:38.833Z"
 }

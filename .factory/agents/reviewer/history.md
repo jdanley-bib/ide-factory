@@ -584,3 +584,11 @@ Reviewer: jason-danley
 Implementer: engineer-agent-histories
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at 8c3cb18) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at be738a3). Product: one-segment `.factory/agents/<role>/history.md` is run-state. Charters, identity notes, nested history files, and product source stay dirty. Histories stay tracked.
+
+## 2026-10-27 treat-agent-histories-as-run-state/1.2
+
+Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
+Reviewer: jason-danley
+Implementer: engineer-agent-histories
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 4a93533) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 0ca3bc4). Product: a collapsed new role directory stays clean only when it contains just history.md. A charter in that directory stays dirty. git status invocation unchanged.
