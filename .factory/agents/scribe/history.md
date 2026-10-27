@@ -307,3 +307,7 @@ Attempt: b160dc32-e1cb-4933-bcfb-6332851200ca
 ## 2026-10-27 finalized scaffold-consumer-ci-on-init/1.1
 
 Attempt: 56e6e0d7-25cb-438f-a6a9-471fe8a5205b
+
+## 2026-10-27 finalized scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8

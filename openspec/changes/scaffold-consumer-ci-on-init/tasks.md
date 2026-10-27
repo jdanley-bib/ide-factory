@@ -12,7 +12,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.2 Add a failing test that when `idefactory init` creates `.github/workflows/factory-consumer.yml`, the command output names that path, including when factory state already exists and only the workflow is missing. When the file already exists, init still exits 0, leaves the bytes unchanged, and does not name that path. Then add the path to init's created list only when the write-if-absent helper creates the file. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.2 Add a failing test that when `idefactory init` creates `.github/workflows/factory-consumer.yml`, the command output names that path, including when factory state already exists and only the workflow is missing. When the file already exists, init still exits 0, leaves the bytes unchanged, and does not name that path. Then add the path to init's created list only when the write-if-absent helper creates the file. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
   - Init names the consumer workflow only when it creates that file.
   factory:
     kind: general

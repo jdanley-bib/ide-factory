@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "scaffold-consumer-ci-on-init",
   "title": "Add a failing test that when `idefactory init` creates `.github/workflows/factory-consumer.yml`, the command output names that path, including when factory state already exists and only the workflow is missing. When the file already exists, init still exits 0, leaves the bytes unchanged, and does not name that path. Then add the path to init's created list only when the write-if-absent helper creates the file. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.",
-  "status": "in_progress",
+  "status": "done",
   "dependencies": [
     "1.1"
   ],
@@ -28,5 +28,5 @@
     ]
   },
   "attemptId": "7328599f-2208-4fcf-8a20-99e7e40692e8",
-  "updatedAt": "2026-10-27T15:26:42.804Z"
+  "updatedAt": "2026-10-27T15:56:53.103Z"
 }

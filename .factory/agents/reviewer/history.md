@@ -558,3 +558,12 @@ Reviewer: jason-danley
 Implementer: engineer-consumer-ci
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at b6b367e) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at d582596). Product: init writes the absent consumer workflow; ci scaffold still refuses an existing file and still stops on HALT. No Semgrep, consumer SAST, or forge admin API.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
+Reviewer: jason-danley
+Implementer: engineer-consumer-ci
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 0c56888) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 33d011d). Product: init names `.github/workflows/factory-consumer.yml` only when it creates that file. No Semgrep, consumer SAST, or forge admin API.
+
