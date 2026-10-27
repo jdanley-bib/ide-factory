@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "2c5e8551-0f91-4a0e-b356-b56ffc32a362",
+  "change": "post-stored-review-comments",
+  "status": "open",
+  "startedAt": "2026-10-27T13:20:51.467Z",
+  "lastObservedAt": "2026-10-27T13:31:43.100Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 4,
+  "completedTasks": 0,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "complete",
+    "role": "scribe",
+    "taskId": "1.1",
+    "attemptId": "4bb283ff-4db5-4448-bda8-c7f86b09af8b",
+    "attemptState": "accepted",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

@@ -1,0 +1,109 @@
+{
+  "id": "4bb283ff-4db5-4448-bda8-c7f86b09af8b",
+  "change": "post-stored-review-comments",
+  "taskId": "1.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-review-comments",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T13:23:04.693Z",
+      "finishedAt": "2026-10-27T13:25:05.710Z",
+      "logDigest": "sha256:a2755fc41c87f7062a3c956a56ac7f727a2f8155ef831c329d7a83a4f189d45b",
+      "artifactDigests": [],
+      "attemptId": "4bb283ff-4db5-4448-bda8-c7f86b09af8b",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "4717ebf6965357af8df8e932167e311cd66de893"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T13:28:08.587Z",
+        "finishedAt": "2026-10-27T13:30:09.555Z",
+        "logDigest": "sha256:742eefd64d65c0a3477d4409756d9b02d74f47cb26acd0e31d54b64ae9956342",
+        "artifactDigests": [],
+        "attemptId": "4bb283ff-4db5-4448-bda8-c7f86b09af8b",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "be4f244bf4ebe5fc9260b42dd09aee9e84bd1a2e"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Task 1.1 accept stores reviewer role and posts one stub comment when a pull request record exists.",
+      "at": "2026-10-27T13:31:43.031Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T13:20:51.530Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T13:20:51.531Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T13:23:01.828Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T13:25:10.738Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T13:30:26.962Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T13:31:15.493Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T13:31:43.031Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T13:31:56.661Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T13:20:51.530Z",
+  "updatedAt": "2026-10-27T13:31:56.661Z"
+}

@@ -547,3 +547,11 @@ Implementer: engineer-pr-loop
 Red: `node src/cli.mjs verify run b04b6ee2-4f24-498e-beba-dcfa1473350e --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b3d33070b4237c782fac71a80db28d26523576d6).
 Green: `node src/cli.mjs verify run b04b6ee2-4f24-498e-beba-dcfa1473350e --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b7e7936920b20b08bcd10e6af1ac4a7d16514995).
 Scope: help text only — names `pr open`, `pr comment`, `pr capture`, and `ci scaffold`. No review accept or push.
+
+## 2026-10-27 post-stored-review-comments/1.1
+
+Attempt: 4bb283ff-4db5-4448-bda8-c7f86b09af8b
+Implementer: engineer-review-comments
+Red: `node src/cli.mjs verify run 4bb283ff-4db5-4448-bda8-c7f86b09af8b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 4717ebf6965357af8df8e932167e311cd66de893).
+Green: `node src/cli.mjs verify run 4bb283ff-4db5-4448-bda8-c7f86b09af8b --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision be4f244bf4ebe5fc9260b42dd09aee9e84bd1a2e).
+Scope: accept and reject store `evidence.review.role` as `reviewer` and post one comment through the existing forge port when a pull request record exists. No security-reviewer store, dedupe, missing-record behavior, capture, scaffold, or push.
