@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "scaffold-consumer-ci-on-init",
   "title": "Add a test that `idefactory init` exits 0 and leaves an existing consumer workflow byte-for-byte unchanged, that `idefactory upgrade` still does not create a missing workflow, and that `idefactory ci scaffold` still exits non-zero and leaves existing bytes unchanged. Then keep that exists-path on the write-if-absent helper so init does not use the throwing scaffold command. Verify with `node --test test/consumer-ci-scaffold.test.mjs`. The exists and upgrade assertions pass on current main; they must still pass after task 1.1.",
-  "status": "todo",
+  "status": "in_progress",
   "dependencies": [
     "1.1"
   ],
@@ -27,6 +27,6 @@
       "1.1"
     ]
   },
-  "attemptId": null,
-  "updatedAt": "2026-10-27T15:15:53.511Z"
+  "attemptId": "7328599f-2208-4fcf-8a20-99e7e40692e8",
+  "updatedAt": "2026-10-27T15:26:42.804Z"
 }

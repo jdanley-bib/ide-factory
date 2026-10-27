@@ -4,25 +4,25 @@
   "change": "scaffold-consumer-ci-on-init",
   "status": "open",
   "startedAt": "2026-10-27T15:16:14.782Z",
-  "lastObservedAt": "2026-10-27T15:25:02.888Z",
+  "lastObservedAt": "2026-10-27T15:26:42.805Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 2,
-  "completedTasks": 0,
+  "agentSteps": 3,
+  "completedTasks": 1,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
   "countedFailureIds": [],
   "lastRequestFingerprint": {
     "action": "agent-step",
-    "role": "reviewer",
-    "taskId": "1.1",
-    "attemptId": "56e6e0d7-25cb-438f-a6a9-471fe8a5205b",
-    "attemptState": "verifying",
+    "role": "engineer",
+    "taskId": "1.2",
+    "attemptId": "7328599f-2208-4fcf-8a20-99e7e40692e8",
+    "attemptState": "assigned",
     "workItemStatus": "in_progress"
   },
   "stopReason": null

@@ -603,3 +603,9 @@ Implementer: engineer-consumer-ci
 Red: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b6b367ea56c1b9d4fb1372a5792c550886a4704b).
 Green: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision d582596c112ca65ab186cc84175703646adcce6c).
 Scope: init writes the absent consumer workflow through writeConsumerWorkflowIfAbsent. ci scaffold still stops on HALT and still throws when the file exists. No Semgrep, consumer SAST, pull_request_target, or push.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
+Implementer: engineer-consumer-ci
+Test commit: 61e27f66e002a1f46321304fe5f0d305cf185496 adds init-on-custom-bytes, init with a root HALT file and an existing workflow, upgrade-does-not-create, and scaffold-refuses-overwrite. `node --test test/consumer-ci-scaffold.test.mjs` exited 0 (2 tests). `verify run --check unit --red` ran `npm test` at that commit and exited 0, so no evidence.red was stored. No production change. No Semgrep or consumer SAST. Not finalized.
