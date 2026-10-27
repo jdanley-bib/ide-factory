@@ -485,9 +485,12 @@ function porcelainPaths(line) {
   return [normalizeGitPath(unquoteGitPath(rest))];
 }
 
+const AGENT_HISTORY_RUN_STATE = /^\.factory\/agents\/[^/]+\/history\.md$/;
+
 function isFactoryRunStatePath(relPath) {
   const normalized = normalizeGitPath(relPath);
   if (FACTORY_RUN_STATE_FILES.has(normalized)) return true;
+  if (AGENT_HISTORY_RUN_STATE.test(normalized)) return true;
   return FACTORY_RUN_STATE_PREFIXES.some(
     (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
   );
