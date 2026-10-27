@@ -49,6 +49,56 @@ function assertConsumerWorkflow(yaml) {
   }
 }
 
+test('init names the consumer workflow only when it creates that file', async () => {
+  const namedPath = '.github/workflows/factory-consumer.yml';
+
+  // Fresh init creates the workflow and the Created line names that path.
+  const fresh = tempProject();
+  try {
+    const first = await idefactory(fresh, ['init']);
+    assert.equal(first.code, 0, first.err || first.out);
+    assert.ok(fs.existsSync(workflowPath(fresh)), 'init must create the consumer workflow');
+    assert.match(
+      first.out,
+      /\.github\/workflows\/factory-consumer\.yml/,
+      `fresh init output must name ${namedPath}; got: ${first.out}`,
+    );
+
+    // After the file is deleted and factory state remains, re-init recreates it and names it.
+    fs.unlinkSync(workflowPath(fresh));
+    assert.equal(fs.existsSync(workflowPath(fresh)), false);
+    const again = await idefactory(fresh, ['init']);
+    assert.equal(again.code, 0, again.err || again.out);
+    assert.ok(fs.existsSync(workflowPath(fresh)), 're-init must recreate the missing workflow');
+    assert.match(
+      again.out,
+      /\.github\/workflows\/factory-consumer\.yml/,
+      `re-init output must name ${namedPath}; got: ${again.out}`,
+    );
+  } finally {
+    cleanup(fresh);
+  }
+
+  // Existing custom workflow: exit 0, bytes unchanged, output does not name the path.
+  const custom = 'custom-consumer-workflow-bytes\n# keep me\n';
+  const existingDir = tempProject();
+  try {
+    const existing = workflowPath(existingDir);
+    fs.mkdirSync(path.dirname(existing), { recursive: true });
+    fs.writeFileSync(existing, custom);
+    const result = await idefactory(existingDir, ['init']);
+    assert.equal(result.code, 0, result.err || result.out);
+    assert.equal(fs.readFileSync(existing, 'utf8'), custom);
+    assert.doesNotMatch(
+      result.out,
+      /factory-consumer\.yml/,
+      `existing workflow must not be named in output; got: ${result.out}`,
+    );
+  } finally {
+    cleanup(existingDir);
+  }
+});
+
 test('init keeps custom workflow bytes; upgrade and scaffold refuse overwrite', async () => {
   const custom = 'custom-consumer-workflow-bytes\n# keep me\n';
 
