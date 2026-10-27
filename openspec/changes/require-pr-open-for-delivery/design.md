@@ -53,11 +53,23 @@ Alternatives considered:
 - Treat any JSON file under `.factory/pull-requests/` as enough. Rejected. A cursor-branch record would look deliverable, which is the gap this change closes.
 - Make archive a new `idefactory archive` command. Rejected. Archive stays the OpenSpec move. The factory only refuses to perform it without the record.
 
+### Cloud agents use a runtime GH_TOKEN
+
+`idefactory pr open`, `idefactory pr comment`, and `idefactory pr capture` call the GitHub CLI. On a Cursor cloud agent, the Cursor GitHub App token is not sufficient for those commands. The agent needs a Cursor environment runtime secret named `GH_TOKEN`. The secret is a fine-grained personal access token limited to this repository, with contents read and write, pull requests read and write, and metadata read. This change names that secret and those permissions. It does not include a token value, and it does not commit a dotenv file or any other credential file.
+
+Later Azure DevOps and Zoho credentials use that same pattern: Cursor environment runtime secrets, not committed files. This change does not add those integrations.
+
+Alternatives considered:
+
+- Reuse the Cursor GitHub App installation token. Rejected. That token cannot run the pull-request commands this change requires.
+- Commit the token, or write it into the change. Rejected. Credentials stay runtime secrets.
+
 ## Risks / Trade-offs
 
 - [The generated OpenSpec archive skill does not mention the predicate] → The factory rule and factory-openspec do, and those are what init installs. The agent stops before the move when the check fails.
 - [A hand-written file that copies the `pr open` shape would pass] → The branch must be `factory/<change>`, and number and URL must be present. This change does not add a signature.
 - [The five merged changes have no records, so the stage 1 exit test still fails] → This change does not invent those records. The stage stays failed until real `pr open` records exist.
+- [A cloud agent without `GH_TOKEN` cannot open, comment, or capture] → The secret is set on the Cursor environment. This change does not embed a token. The Cursor GitHub App token does not replace it.
 
 ## Migration Plan
 

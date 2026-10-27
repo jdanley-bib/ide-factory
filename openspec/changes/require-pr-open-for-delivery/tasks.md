@@ -28,4 +28,5 @@
 
 - Jason approves this change before it is executable. Do not sync tasks until then.
 - Open the pull request for this change with `idefactory pr open` on `factory/require-pr-open-for-delivery`.
+- A cloud agent needs a Cursor environment runtime secret named `GH_TOKEN` before `pr open`, `pr comment`, and `pr capture`. The secret is a fine-grained personal access token for this repository only: contents read and write, pull requests read and write, and metadata read. The Cursor GitHub App token is not sufficient. Do not write the token value into the repository. Later Azure DevOps and Zoho credentials are runtime secrets in the same way, not committed files.
 - Do not merge.
