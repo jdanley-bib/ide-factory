@@ -335,3 +335,7 @@ Attempt: 0ccbced1-8bcd-4280-a22a-615979c3a4f4
 ## 2026-10-27 finalized require-pr-open-for-delivery/1.1
 
 Attempt: e9c6f0fa-dd21-40b3-9c55-aea083ed3686
+
+## 2026-10-27 finalized require-pr-open-for-delivery/1.2
+
+Attempt: 299c323b-60da-4261-be98-f1f5bc10f377

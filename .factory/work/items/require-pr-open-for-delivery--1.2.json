@@ -2,7 +2,7 @@
   "id": "1.2",
   "change": "require-pr-open-for-delivery",
   "title": "Add a failing test that `isDeliverableChange` is false when `.factory/pull-requests/<change>.json` is missing, when the pull request number or URL is absent, and when the branch is not `factory/<change>`. It is true for a record with that branch, a positive pull request number, and a non-empty URL. The same test shows the stage 1 exit check fails a change when the predicate is false and accepts the record check when the predicate is true. Verify the test fails with `node --test test/pr-deliverable.test.mjs` before the predicate exists. Then add `isDeliverableChange` beside `readPullRequestRecord` in `src/lib/pull-request.mjs`, and state in the factory-openspec and factory-coordinator templates that archive runs this check first and does not move the change when it is false. Verify `node --test test/pr-deliverable.test.mjs` and `node --test test/pull-request-outer-loop.test.mjs` pass.",
-  "status": "todo",
+  "status": "done",
   "dependencies": [
     "1.1"
   ],
@@ -27,11 +27,11 @@
       "1.1"
     ]
   },
-  "attemptId": null,
+  "attemptId": "299c323b-60da-4261-be98-f1f5bc10f377",
   "provenance": {
     "algorithm": "sha256",
     "text": "Add a failing test that `isDeliverableChange` is false when `.factory/pull-requests/<change>.json` is missing, when the pull request number or URL is absent, and when the branch is not `factory/<change>`. It is true for a record with that branch, a positive pull request number, and a non-empty URL. The same test shows the stage 1 exit check fails a change when the predicate is false and accepts the record check when the predicate is true. Verify the test fails with `node --test test/pr-deliverable.test.mjs` before the predicate exists. Then add `isDeliverableChange` beside `readPullRequestRecord` in `src/lib/pull-request.mjs`, and state in the factory-openspec and factory-coordinator templates that archive runs this check first and does not move the change when it is false. Verify `node --test test/pr-deliverable.test.mjs` and `node --test test/pull-request-outer-loop.test.mjs` pass.",
     "digest": "a61bd2663d8e0a292318ea0127941c768f1c93e0556dcd27335bcf2083bd6ae1"
   },
-  "updatedAt": "2026-10-27T18:58:55.259Z"
+  "updatedAt": "2026-10-27T19:14:47.792Z"
 }

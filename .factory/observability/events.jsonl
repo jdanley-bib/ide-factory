@@ -66,3 +66,6 @@
 {"type":"verification.recorded","time":"2026-10-27T19:01:52.834Z","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":1}
 {"type":"verification.recorded","time":"2026-10-27T19:05:18.560Z","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":0}
 {"type":"work.completed","time":"2026-10-27T19:06:48.384Z","id":"1.1","change":"require-pr-open-for-delivery","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686"}
+{"type":"verification.recorded","time":"2026-10-27T19:10:19.324Z","attemptId":"299c323b-60da-4261-be98-f1f5bc10f377","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":1}
+{"type":"verification.recorded","time":"2026-10-27T19:13:36.795Z","attemptId":"299c323b-60da-4261-be98-f1f5bc10f377","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":0}
+{"type":"work.completed","time":"2026-10-27T19:14:47.792Z","id":"1.2","change":"require-pr-open-for-delivery","attemptId":"299c323b-60da-4261-be98-f1f5bc10f377"}
