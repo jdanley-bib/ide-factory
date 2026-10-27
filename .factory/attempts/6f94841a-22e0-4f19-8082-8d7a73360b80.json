@@ -1,0 +1,109 @@
+{
+  "id": "6f94841a-22e0-4f19-8082-8d7a73360b80",
+  "change": "stabilize-openspec-artifact-workflow",
+  "taskId": "1.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-openspec-workflow",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T17:36:58.316Z",
+      "finishedAt": "2026-10-27T17:39:29.681Z",
+      "logDigest": "sha256:5255f67d622abe31bc23e5dc544d4c3b6d37114b7acf53844b29f921d4d3c5d2",
+      "artifactDigests": [],
+      "attemptId": "6f94841a-22e0-4f19-8082-8d7a73360b80",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "abed83befb51c800c883cd78887fc243c0afa7f2"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T17:39:44.575Z",
+        "finishedAt": "2026-10-27T17:42:15.771Z",
+        "logDigest": "sha256:016d9c45b99791a36d325df08ae609067a30cd075432e811b6b111b64cf734cf",
+        "artifactDigests": [],
+        "attemptId": "6f94841a-22e0-4f19-8082-8d7a73360b80",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "c9e81fb04f6f6ebd0309e0ab7f5607c503551a1b"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Pin matches the installed 1.14.3 tarball. Red was the caret range.",
+      "at": "2026-10-27T17:43:56.322Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T17:34:41.898Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T17:34:41.900Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T17:42:53.326Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T17:42:53.364Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T17:42:53.409Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T17:42:53.452Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T17:43:56.322Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T17:44:00.440Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T17:34:41.898Z",
+  "updatedAt": "2026-10-27T17:44:00.440Z"
+}

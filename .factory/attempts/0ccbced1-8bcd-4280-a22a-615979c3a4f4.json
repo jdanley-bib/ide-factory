@@ -1,0 +1,109 @@
+{
+  "id": "0ccbced1-8bcd-4280-a22a-615979c3a4f4",
+  "change": "stabilize-openspec-artifact-workflow",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-openspec-workflow",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T17:47:46.752Z",
+      "finishedAt": "2026-10-27T17:50:18.122Z",
+      "logDigest": "sha256:375881c85db04a1f7088daf4f7f21fca9c4ca6a01cbc9ec3f26ce53e3174459d",
+      "artifactDigests": [],
+      "attemptId": "0ccbced1-8bcd-4280-a22a-615979c3a4f4",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "194d3e2b46cb6bd06b4a41edabf2279aa4f74cb3"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T17:52:12.327Z",
+        "finishedAt": "2026-10-27T17:54:43.763Z",
+        "logDigest": "sha256:170d68dbf2ad1fecd7f958ee3ab67bd8923c109b8f709ebfa1ddffddd7015bb3",
+        "artifactDigests": [],
+        "attemptId": "0ccbced1-8bcd-4280-a22a-615979c3a4f4",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "c14eb08fdf5ca98552c73b2c4be7d970b9b12385"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Task identity sync matches the design. Red was the missing provenance and remap behavior.",
+      "at": "2026-10-27T17:56:49.257Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T17:44:29.114Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T17:44:29.116Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T17:55:19.454Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T17:55:19.493Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T17:55:19.531Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T17:55:19.570Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T17:56:49.257Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T17:56:49.378Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T17:44:29.114Z",
+  "updatedAt": "2026-10-27T17:56:49.378Z"
+}

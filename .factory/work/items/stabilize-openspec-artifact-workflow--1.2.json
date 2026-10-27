@@ -1,0 +1,37 @@
+{
+  "id": "1.2",
+  "change": "stabilize-openspec-artifact-workflow",
+  "title": "Add failing tests in `test/task-identity.test.mjs` on a temporary project. After the first sync, the new work item stores a sha256 provenance digest of its normalized title. A second sync of the same `tasks.md` leaves work-item ids and statuses unchanged. A whitespace-only rewrite of that title does not create a second item. Renumbering that one task to a new checkbox id leaves exactly one work item, at the new id, with the same status; an attempt started before the renumber stays unaccepted and its task id follows the new checkbox id. Replacing one synced task with two, and replacing two synced tasks with one, each make `sync-tasks` exit non-zero, leave `.factory/work/` unchanged, and print a reconciliation report. Checking a synced box by hand and syncing again leaves the work item status not done and the attempt state not accepted. Moving the change directory under `openspec/changes/archive/` and writing main spec text leaves attempt state, evidence, and work-item status unchanged and does not accept the attempt. Verify the file fails with `node --test test/task-identity.test.mjs` before the matcher change, then implement the match rules in `src/lib/queue.mjs` from design.md. Verify that file passes and `node --test test/queue.test.mjs` still passes.",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "Sync keeps one work item for an unchanged or wording-preserving task, fails closed on an ambiguous remap, and does not treat a hand-checked box, an archive, or a spec write as completion."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "0ccbced1-8bcd-4280-a22a-615979c3a4f4",
+  "updatedAt": "2026-10-27T17:56:49.378Z",
+  "provenance": {
+    "algorithm": "sha256",
+    "text": "Add failing tests in `test/task-identity.test.mjs` on a temporary project. After the first sync, the new work item stores a sha256 provenance digest of its normalized title. A second sync of the same `tasks.md` leaves work-item ids and statuses unchanged. A whitespace-only rewrite of that title does not create a second item. Renumbering that one task to a new checkbox id leaves exactly one work item, at the new id, with the same status; an attempt started before the renumber stays unaccepted and its task id follows the new checkbox id. Replacing one synced task with two, and replacing two synced tasks with one, each make `sync-tasks` exit non-zero, leave `.factory/work/` unchanged, and print a reconciliation report. Checking a synced box by hand and syncing again leaves the work item status not done and the attempt state not accepted. Moving the change directory under `openspec/changes/archive/` and writing main spec text leaves attempt state, evidence, and work-item status unchanged and does not accept the attempt. Verify the file fails with `node --test test/task-identity.test.mjs` before the matcher change, then implement the match rules in `src/lib/queue.mjs` from design.md. Verify that file passes and `node --test test/queue.test.mjs` still passes.",
+    "digest": "f8764f511aae40e3c71ecda1a8a9d3b9e08432f7650b65e78f830b30a6ec9246"
+  }
+}

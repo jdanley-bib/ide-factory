@@ -1,3 +1,3 @@
 # Now
 
-Last finalized: treat-agent-histories-as-run-state/1.2 (2026-10-27)
+Last finalized: stabilize-openspec-artifact-workflow/1.2 (2026-10-27)

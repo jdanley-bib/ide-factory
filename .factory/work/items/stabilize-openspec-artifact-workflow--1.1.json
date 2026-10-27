@@ -1,0 +1,33 @@
+{
+  "id": "1.1",
+  "change": "stabilize-openspec-artifact-workflow",
+  "title": "Add a failing test in `test/openspec-pin.test.mjs` that reads `package.json` and asserts `@fission-ai/openspec` is exactly `1.14.3` with no range, and that devDependency names do not include `@bradygaster/squad` or any name starting with `@squad4cursor/`. Verify it fails with `node --test test/openspec-pin.test.mjs` while the manifest still says `^1.14.3`. Then set that root dependency and the matching lockfile declaration to `1.14.3`, leave the resolved tarball at `1.14.3`, and do not fetch packages. Verify the same test passes.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "The manifest pins the installed OpenSpec version and does not gain a Squad or Squad4Cursor package."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "6f94841a-22e0-4f19-8082-8d7a73360b80",
+  "updatedAt": "2026-10-27T17:55:19.614Z",
+  "provenance": {
+    "algorithm": "sha256",
+    "text": "Add a failing test in `test/openspec-pin.test.mjs` that reads `package.json` and asserts `@fission-ai/openspec` is exactly `1.14.3` with no range, and that devDependency names do not include `@bradygaster/squad` or any name starting with `@squad4cursor/`. Verify it fails with `node --test test/openspec-pin.test.mjs` while the manifest still says `^1.14.3`. Then set that root dependency and the matching lockfile declaration to `1.14.3`, leave the resolved tarball at `1.14.3`, and do not fetch packages. Verify the same test passes.",
+    "digest": "d388934490e1e8941bd8f2930819a016f1ea729782b4a54ff9b111fad2af1ec7"
+  }
+}

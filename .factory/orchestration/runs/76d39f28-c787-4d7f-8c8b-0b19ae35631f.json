@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "76d39f28-c787-4d7f-8c8b-0b19ae35631f",
+  "change": "stabilize-openspec-artifact-workflow",
+  "status": "open",
+  "startedAt": "2026-10-27T17:34:41.885Z",
+  "lastObservedAt": "2026-10-27T17:56:56.119Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 4,
+  "completedTasks": 2,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "complete",
+    "role": "scribe",
+    "taskId": "1.2",
+    "attemptId": "0ccbced1-8bcd-4280-a22a-615979c3a4f4",
+    "attemptState": "accepted",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}
