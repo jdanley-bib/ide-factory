@@ -71,7 +71,7 @@ The unit tests for these commands SHALL run through a stub forge. `npm test` SHA
 - **AND** no live forge client is executed
 
 ### Requirement: Review verdict stores its role
-An accepted or rejected attempt SHALL store the role `reviewer` with the verdict. A security-reviewer verdict SHALL store the role `security-reviewer`. The factory SHALL NOT invent a verdict when one was not stored.
+An accepted or rejected attempt SHALL store the role `reviewer` with the verdict. A security-reviewer verdict SHALL store the role `security-reviewer` and the reviewer identity that produced it. The factory SHALL NOT invent a verdict when one was not stored.
 
 #### Scenario: Accept stores the reviewer role
 - **WHEN** an attempt transitions to accepted with a stored verdict
@@ -86,6 +86,11 @@ An accepted or rejected attempt SHALL store the role `reviewer` with the verdict
 #### Scenario: Missing security verdict is not invented
 - **WHEN** the security-reviewer handoff stores no verdict
 - **THEN** no security-reviewer verdict is written
+
+#### Scenario: Security reviewer identity is stored and posted
+- **WHEN** a security-reviewer verdict is stored with a reviewer identity
+- **THEN** that record includes that reviewer identity
+- **AND** the comment posted for that verdict names that reviewer, the same way an accept or reject comment already does
 
 ### Requirement: Stored verdict is posted to the pull request
 When a pull request record exists for the change, storing a verdict and role SHALL post one comment that includes that role, that verdict, and the attempt id. Posting the same attempt and role again SHALL NOT create another comment. When no pull request record exists, storing the verdict SHALL succeed and SHALL NOT post.
