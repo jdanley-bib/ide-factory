@@ -154,7 +154,7 @@ async function dispatchCommand(cmd, ctx) {
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
     case 'attempt':
-      return handleAttempt(project, parsed, out);
+      return handleAttempt(project, parsed, env, out);
     case 'verify':
       return await handleVerify(project, parsed, out);
     case 'complete': {
@@ -234,7 +234,7 @@ async function dispatchCommand(cmd, ctx) {
   }
 }
 
-function handleAttempt(project, parsed, out) {
+function handleAttempt(project, parsed, env, out) {
   if (halted(project) && parsed.rest[0] !== 'show') {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
@@ -262,6 +262,7 @@ function handleAttempt(project, parsed, out) {
     const attempt = transitionAttempt(project, attemptId, state, {
       evidence,
       actorId: evidence.implementerId || evidence.reviewerId || null,
+      env,
     });
     out(JSON.stringify(attempt, null, 2));
     return 0;
