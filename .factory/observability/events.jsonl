@@ -63,3 +63,6 @@
 {"type":"verification.recorded","time":"2026-10-27T17:50:18.122Z","attemptId":"0ccbced1-8bcd-4280-a22a-615979c3a4f4","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":1}
 {"type":"verification.recorded","time":"2026-10-27T17:54:43.763Z","attemptId":"0ccbced1-8bcd-4280-a22a-615979c3a4f4","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":0}
 {"type":"work.completed","time":"2026-10-27T17:56:49.378Z","id":"1.2","change":"stabilize-openspec-artifact-workflow","attemptId":"0ccbced1-8bcd-4280-a22a-615979c3a4f4"}
+{"type":"verification.recorded","time":"2026-10-27T19:01:52.834Z","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":1}
+{"type":"verification.recorded","time":"2026-10-27T19:05:18.560Z","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686","commandDigest":"sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4","exitCode":0}
+{"type":"work.completed","time":"2026-10-27T19:06:48.384Z","id":"1.1","change":"require-pr-open-for-delivery","attemptId":"e9c6f0fa-dd21-40b3-9c55-aea083ed3686"}

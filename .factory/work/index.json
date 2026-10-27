@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T17:56:49.378Z",
+  "updatedAt": "2026-10-27T19:06:48.384Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -376,6 +376,16 @@
       "change": "reconcile-factory-specifications",
       "id": "2.2",
       "status": "done"
+    },
+    {
+      "change": "require-pr-open-for-delivery",
+      "id": "1.1",
+      "status": "done"
+    },
+    {
+      "change": "require-pr-open-for-delivery",
+      "id": "1.2",
+      "status": "todo"
     },
     {
       "change": "scaffold-consumer-ci-on-init",
