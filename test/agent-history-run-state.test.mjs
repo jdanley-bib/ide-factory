@@ -400,3 +400,80 @@ test('git check-ignore does not ignore engineer history.md', async () => {
     cleanup(dir);
   }
 });
+
+test('collapsed new role directory with only history.md stays clean and verify records a pass', async () => {
+  const dir = tempProject();
+  try {
+    const { attempt, head } = await seedVerifyFixture(dir);
+    git(dir, ['config', 'status.showUntrackedFiles', 'normal']);
+
+    const roleDir = path.join(dir, '.factory/agents/auditor');
+    fs.mkdirSync(roleDir, { recursive: true });
+    fs.writeFileSync(path.join(roleDir, 'history.md'), '# auditor session\n');
+
+    const porcelain = spawnSync('git', ['status', '--porcelain'], {
+      cwd: dir,
+      encoding: 'utf8',
+      shell: false,
+    });
+    assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+    const lines = porcelain.stdout.split('\n').filter((line) => line.length > 0);
+    assert.ok(
+      lines.includes('?? .factory/agents/auditor/'),
+      `expected collapsed directory line, got: ${JSON.stringify(lines)}`,
+    );
+    assert.ok(
+      !lines.some((line) => line.includes('.factory/agents/auditor/history.md')),
+      `history.md must not appear as its own porcelain path, got: ${JSON.stringify(lines)}`,
+    );
+
+    const binding = resolveGitBinding(dir);
+    assert.equal(binding.worktreeClean, true);
+    assert.equal(binding.sourceRevision, head);
+
+    const verified = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit']);
+    assert.equal(verified.code, 0, verified.err);
+    const stored = JSON.parse(fs.readFileSync(path.join(dir, `.factory/attempts/${attempt.id}.json`), 'utf8'));
+    const record = stored.evidence.verification.at(-1);
+    assert.equal(record.passed, true);
+    assert.equal(record.sourceRevision, head);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('collapsed new role directory with history.md and charter.md stays dirty and verify does not pass', async () => {
+  const dir = tempProject();
+  try {
+    const { attempt } = await seedVerifyFixture(dir);
+    git(dir, ['config', 'status.showUntrackedFiles', 'normal']);
+
+    const roleDir = path.join(dir, '.factory/agents/mentor');
+    fs.mkdirSync(roleDir, { recursive: true });
+    fs.writeFileSync(path.join(roleDir, 'history.md'), '# mentor session\n');
+    fs.writeFileSync(path.join(roleDir, 'charter.md'), '# mentor charter\n');
+
+    const porcelain = spawnSync('git', ['status', '--porcelain'], {
+      cwd: dir,
+      encoding: 'utf8',
+      shell: false,
+    });
+    assert.equal(porcelain.status, 0, porcelain.stderr || porcelain.stdout);
+    const lines = porcelain.stdout.split('\n').filter((line) => line.length > 0);
+    assert.ok(
+      lines.includes('?? .factory/agents/mentor/'),
+      `expected collapsed directory line, got: ${JSON.stringify(lines)}`,
+    );
+
+    const binding = resolveGitBinding(dir);
+    assert.equal(binding.worktreeClean, false);
+
+    const verified = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit']);
+    assert.equal(verified.code, 0, verified.err);
+    const stored = JSON.parse(fs.readFileSync(path.join(dir, `.factory/attempts/${attempt.id}.json`), 'utf8'));
+    const record = stored.evidence.verification.at(-1);
+    assert.equal(record.passed, false);
+  } finally {
+    cleanup(dir);
+  }
+});
