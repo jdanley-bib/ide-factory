@@ -600,3 +600,11 @@ Reviewer: jason-danley
 Implementer: engineer-openspec-workflow
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at abed83b) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at c9e81fb). Product: exact OpenSpec pin 1.14.3. Resolved tarball unchanged. No Squad package added.
+
+## 2026-10-27 stabilize-openspec-artifact-workflow/1.2
+
+Attempt: 0ccbced1-8bcd-4280-a22a-615979c3a4f4
+Reviewer: jason-danley
+Implementer: engineer-openspec-workflow
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 194d3e2) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at c14eb08). Product: task identity, provenance, fail-closed remap, and hand-check/archive non-completion match the design. queue.test.mjs was not weakened.

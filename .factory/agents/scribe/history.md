@@ -327,3 +327,7 @@ Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
 ## 2026-10-27 finalized stabilize-openspec-artifact-workflow/1.1
 
 Attempt: 6f94841a-22e0-4f19-8082-8d7a73360b80
+
+## 2026-10-27 finalized stabilize-openspec-artifact-workflow/1.2
+
+Attempt: 0ccbced1-8bcd-4280-a22a-615979c3a4f4

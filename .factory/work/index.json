@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T17:44:00.440Z",
+  "updatedAt": "2026-10-27T17:56:49.378Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -400,7 +400,7 @@
     {
       "change": "stabilize-openspec-artifact-workflow",
       "id": "1.2",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "treat-agent-histories-as-run-state",
