@@ -34,7 +34,22 @@ function nodeVersions(yaml) {
   return [...yaml.matchAll(/\bnode-version\s*:\s*['"]?(\d+)['"]?/g)].map((match) => match[1]);
 }
 
-test('ci scaffold writes the consumer workflow once and init does not', async () => {
+function assertConsumerWorkflow(yaml) {
+  for (const command of REQUIRED_COMMANDS) {
+    assert.match(yaml, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+  const versions = nodeVersions(yaml);
+  assert.ok(versions.length > 0, 'workflow must set node-version');
+  for (const version of versions) {
+    assert.equal(version, '24', `node-version must be 24, found ${version}`);
+  }
+  assert.match(yaml, /contents:\s*read/);
+  for (const pattern of FORBIDDEN_WORKFLOW) {
+    assert.doesNotMatch(yaml, pattern, `workflow must not match ${pattern}`);
+  }
+}
+
+test('init writes the consumer workflow once; scaffold and upgrade stay write-once', async () => {
   const dir = tempProject();
   const logPath = path.join(dir, 'forge-argv.log');
   const ghLog = path.join(dir, 'gh-calls.log');
@@ -42,9 +57,11 @@ test('ci scaffold writes the consumer workflow once and init does not', async ()
   const releaseBefore = fs.readFileSync(repoRelease);
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
-    assert.equal(fs.existsSync(workflowPath(dir)), false, 'init must not create the consumer workflow');
-    assert.equal((await idefactory(dir, ['upgrade'])).code, 0);
-    assert.equal(fs.existsSync(workflowPath(dir)), false, 'upgrade must not create the consumer workflow');
+    assert.ok(fs.existsSync(workflowPath(dir)), 'init must create the consumer workflow');
+    const initYaml = fs.readFileSync(workflowPath(dir), 'utf8');
+    assertConsumerWorkflow(initYaml);
+    assert.equal(fs.existsSync(path.join(dir, '.github', 'workflows', 'ci.yml')), false);
+    assert.equal(fs.existsSync(path.join(dir, '.github', 'workflows', 'release.yml')), false);
 
     const bin = path.join(dir, 'bin');
     fs.mkdirSync(bin);
@@ -60,31 +77,56 @@ test('ci scaffold writes the consumer workflow once and init does not', async ()
       PATH: `${bin}:${process.env.PATH || ''}`,
     };
 
-    const created = await idefactory(dir, ['ci', 'scaffold'], forgeEnv);
-    assert.equal(created.code, 0, created.err || created.out);
-    assert.ok(fs.existsSync(workflowPath(dir)), 'absent consumer workflow must be written');
-    const yaml = fs.readFileSync(workflowPath(dir), 'utf8');
-    for (const command of REQUIRED_COMMANDS) {
-      assert.match(yaml, new RegExp(command.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-    }
-    const versions = nodeVersions(yaml);
-    assert.ok(versions.length > 0, 'workflow must set node-version');
-    for (const version of versions) {
-      assert.equal(version, '24', `node-version must be 24, found ${version}`);
-    }
-    assert.match(yaml, /contents:\s*read/);
-    for (const pattern of FORBIDDEN_WORKFLOW) {
-      assert.doesNotMatch(yaml, pattern, `workflow must not match ${pattern}`);
-    }
-    assert.equal(fs.existsSync(path.join(dir, '.github', 'workflows', 'ci.yml')), false);
-    assert.equal(fs.existsSync(path.join(dir, '.github', 'workflows', 'release.yml')), false);
-    assert.equal(fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8').trim() : '', '');
-    assert.equal(fs.existsSync(ghLog) ? fs.readFileSync(ghLog, 'utf8').trim() : '', '');
-
+    // After init created the file, scaffold on that directory must exit non-zero.
     const written = fs.readFileSync(workflowPath(dir));
     const again = await idefactory(dir, ['ci', 'scaffold'], forgeEnv);
     assert.notEqual(again.code, 0, 'scaffold must exit non-zero when the file exists');
     assert.deepEqual(fs.readFileSync(workflowPath(dir)), written);
+
+    // Upgrade must not create a missing workflow (use a dir that was not just initialized).
+    const upgradeDir = tempProject();
+    try {
+      fs.mkdirSync(path.join(upgradeDir, '.factory'), { recursive: true });
+      fs.writeFileSync(path.join(upgradeDir, '.factory', 'team.md'), '# team\n');
+      assert.equal((await idefactory(upgradeDir, ['upgrade'])).code, 0);
+      assert.equal(
+        fs.existsSync(workflowPath(upgradeDir)),
+        false,
+        'upgrade must not create the consumer workflow',
+      );
+    } finally {
+      cleanup(upgradeDir);
+    }
+
+    // Scaffold still writes when absent — use a directory that was not just initialized.
+    const scaffoldDir = tempProject();
+    const scaffoldLog = path.join(scaffoldDir, 'forge-argv.log');
+    const scaffoldGhLog = path.join(scaffoldDir, 'gh-calls.log');
+    try {
+      const scaffoldEnv = {
+        ...forgeEnv,
+        IDEFACTORY_FORGE_LOG: scaffoldLog,
+        IDEFACTORY_GH_LOG: scaffoldGhLog,
+      };
+      const created = await idefactory(scaffoldDir, ['ci', 'scaffold'], scaffoldEnv);
+      assert.equal(created.code, 0, created.err || created.out);
+      assert.ok(fs.existsSync(workflowPath(scaffoldDir)), 'absent consumer workflow must be written');
+      assertConsumerWorkflow(fs.readFileSync(workflowPath(scaffoldDir), 'utf8'));
+      assert.equal(fs.existsSync(path.join(scaffoldDir, '.github', 'workflows', 'ci.yml')), false);
+      assert.equal(fs.existsSync(path.join(scaffoldDir, '.github', 'workflows', 'release.yml')), false);
+      assert.equal(fs.existsSync(scaffoldLog) ? fs.readFileSync(scaffoldLog, 'utf8').trim() : '', '');
+      assert.equal(
+        fs.existsSync(scaffoldGhLog) ? fs.readFileSync(scaffoldGhLog, 'utf8').trim() : '',
+        '',
+      );
+
+      const scaffoldWritten = fs.readFileSync(workflowPath(scaffoldDir));
+      const scaffoldAgain = await idefactory(scaffoldDir, ['ci', 'scaffold'], scaffoldEnv);
+      assert.notEqual(scaffoldAgain.code, 0, 'scaffold must exit non-zero when the file exists');
+      assert.deepEqual(fs.readFileSync(workflowPath(scaffoldDir)), scaffoldWritten);
+    } finally {
+      cleanup(scaffoldDir);
+    }
 
     const kept = 'custom-consumer-workflow\n';
     const other = tempProject();
@@ -99,6 +141,8 @@ test('ci scaffold writes the consumer workflow once and init does not', async ()
       cleanup(other);
     }
 
+    assert.equal(fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8').trim() : '', '');
+    assert.equal(fs.existsSync(ghLog) ? fs.readFileSync(ghLog, 'utf8').trim() : '', '');
     assert.deepEqual(fs.readFileSync(repoCi), ciBefore);
     assert.deepEqual(fs.readFileSync(repoRelease), releaseBefore);
   } finally {
