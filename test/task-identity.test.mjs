@@ -172,8 +172,9 @@ test('replacing one synced task with two fails closed with a reconciliation repo
     assert.notEqual(result.code, 0);
     assertWorkByteIdentical(before, snapshotWork(dir));
     const report = reportText(result);
-    assert.match(report, /demo/);
-    assert.match(report, /1\.1/);
+    assert.match(report, /Reconciliation failed for change demo/);
+    assert.match(report, /unmatched previous checkbox ids:/);
+    assert.match(report, /unmatched current checkbox ids:/);
     assert.match(report, /1\.2/);
   } finally {
     cleanup(dir);
@@ -197,7 +198,9 @@ test('replacing two synced tasks with one fails closed with a reconciliation rep
     assert.notEqual(result.code, 0);
     assertWorkByteIdentical(before, snapshotWork(dir));
     const report = reportText(result);
-    assert.match(report, /demo/);
+    assert.match(report, /Reconciliation failed for change demo/);
+    assert.match(report, /unmatched previous checkbox ids:/);
+    assert.match(report, /unmatched current checkbox ids:/);
     assert.match(report, /1\.1/);
     assert.match(report, /1\.2/);
   } finally {

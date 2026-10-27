@@ -1,10 +1,13 @@
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { attemptsRoot, getAttempt } from './attempt.mjs';
 import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
 import {
   ensureWorkDirs,
   getWorkItem,
+  itemPath,
   listWorkItems,
   selectReady,
   upsertWorkItem,
@@ -26,6 +29,19 @@ export function parseCheckboxes(markdown) {
   return tasks;
 }
 
+export function normalizeTaskText(title) {
+  return String(title || '').trim().replace(/\s+/g, ' ');
+}
+
+export function provenanceForTitle(title) {
+  const text = normalizeTaskText(title);
+  return {
+    algorithm: 'sha256',
+    text,
+    digest: createHash('sha256').update(text, 'utf8').digest('hex'),
+  };
+}
+
 export function loadChangeTasks(project, change) {
   assertChangeName(change);
   const file = path.join(project, 'openspec', 'changes', change, 'tasks.md');
@@ -43,6 +59,16 @@ export function syncTasks(project, change, _env) {
   if (halted(project)) throw haltError();
   ensureWorkDirs(project);
   const tasks = loadChangeTasks(project, change);
+  const existing = listWorkItems(project, change);
+
+  if (existing.length === 0) {
+    return createInitialItems(project, change, tasks);
+  }
+
+  return reconcileExistingItems(project, change, tasks, existing);
+}
+
+function createInitialItems(project, change, tasks) {
   let created = 0;
   let skipped = 0;
   for (const task of tasks) {
@@ -50,10 +76,78 @@ export function syncTasks(project, change, _env) {
       skipped += 1;
       continue;
     }
-    if (getWorkItem(project, change, task.id)) {
-      skipped += 1;
-      continue;
+    writeNewWorkItem(project, change, task);
+    created += 1;
+  }
+  return finishSync(project, change, created, skipped);
+}
+
+function reconcileExistingItems(project, change, tasks, existing) {
+  const currentIds = tasks.map((task) => task.id);
+  const previousIds = existing.map((item) => item.id);
+  const currentIdSet = new Set(currentIds);
+  const previousIdSet = new Set(previousIds);
+
+  if (hasDuplicateNormalizedTitles(tasks.map((task) => task.title))
+    || hasDuplicateNormalizedTitles(existing.map((item) => itemNormalizedText(item)))) {
+    throw reconciliationError(change, previousIds, currentIds);
+  }
+
+  const sameIdSet = currentIdSet.size === previousIdSet.size
+    && [...currentIdSet].every((id) => previousIdSet.has(id));
+
+  if (sameIdSet) {
+    const taskById = new Map(tasks.map((task) => [task.id, task]));
+    const itemById = new Map(existing.map((item) => [item.id, item]));
+    const allTextEqual = [...currentIdSet].every((id) => (
+      normalizeTaskText(taskById.get(id).title) === itemNormalizedText(itemById.get(id))
+    ));
+
+    if (allTextEqual) {
+      return applyIdempotentSync(project, change, tasks, itemById);
     }
+    return applyTitleUpdates(project, change, tasks, itemById);
+  }
+
+  const textMatch = oneToOneTextMatch(tasks, existing);
+  if (textMatch) {
+    return applyRenumbers(project, change, tasks, textMatch);
+  }
+
+  throw reconciliationError(change, unmatchedPreviousIds(tasks, existing), unmatchedCurrentIds(tasks, existing));
+}
+
+function applyIdempotentSync(project, change, tasks, itemById) {
+  let created = 0;
+  let skipped = 0;
+  for (const task of tasks) {
+    const item = itemById.get(task.id);
+    const provenance = provenanceForTitle(task.title);
+    const existingProv = item.provenance;
+    const provenanceEqual = existingProv
+      && existingProv.algorithm === provenance.algorithm
+      && existingProv.text === provenance.text
+      && existingProv.digest === provenance.digest;
+    if (!provenanceEqual) {
+      upsertWorkItem(project, {
+        ...item,
+        id: item.id,
+        change,
+        status: item.status,
+        attemptId: item.attemptId,
+        provenance,
+      });
+    }
+    skipped += 1;
+  }
+  return finishSync(project, change, created, skipped);
+}
+
+function applyTitleUpdates(project, change, tasks, itemById) {
+  let created = 0;
+  let skipped = 0;
+  for (const task of tasks) {
+    const item = itemById.get(task.id);
     const classified = classifyTask({
       id: task.id,
       title: task.title,
@@ -61,23 +155,155 @@ export function syncTasks(project, change, _env) {
       factory: task.factory,
     });
     upsertWorkItem(project, {
-      id: task.id,
+      ...item,
+      id: item.id,
       change,
       title: task.title,
-      status: 'todo',
+      status: item.status,
+      attemptId: item.attemptId,
       dependencies: classified.dependencies,
       acceptanceCriteria: defaultAcceptanceCriteria(task.title, task.acceptanceCriteria),
       factory: classified,
-      attemptId: null,
+      provenance: provenanceForTitle(task.title),
     });
-    created += 1;
+    skipped += 1;
   }
+  return finishSync(project, change, created, skipped);
+}
+
+function applyRenumbers(project, change, tasks, pairs) {
+  const planned = pairs.map(({ task, item }) => ({
+    ...item,
+    id: task.id,
+    change,
+    title: task.title,
+    status: item.status,
+    attemptId: item.attemptId,
+    factory: item.factory || {},
+    acceptanceCriteria: Array.isArray(item.acceptanceCriteria) ? item.acceptanceCriteria : [],
+    provenance: item.provenance || provenanceForTitle(task.title),
+  }));
+
+  // Replace the matched set atomically enough to avoid id-swap collisions.
+  for (const item of listWorkItems(project, change)) {
+    const file = itemPath(project, change, item.id);
+    if (fs.existsSync(file)) fs.unlinkSync(file);
+  }
+  for (const next of planned) {
+    upsertWorkItem(project, next);
+  }
+  for (const { task, item } of pairs) {
+    if (task.id !== item.id) {
+      retargetAttempts(project, change, item.id, task.id);
+    }
+  }
+  return finishSync(project, change, 0, tasks.length);
+}
+
+function writeNewWorkItem(project, change, task) {
+  const classified = classifyTask({
+    id: task.id,
+    title: task.title,
+    body: task.title,
+    factory: task.factory,
+  });
+  upsertWorkItem(project, {
+    id: task.id,
+    change,
+    title: task.title,
+    status: 'todo',
+    dependencies: classified.dependencies,
+    acceptanceCriteria: defaultAcceptanceCriteria(task.title, task.acceptanceCriteria),
+    factory: classified,
+    attemptId: null,
+    provenance: provenanceForTitle(task.title),
+  });
+}
+
+function finishSync(project, change, created, skipped) {
   writeText(
     path.join(project, '.factory', 'active-change.json'),
     JSON.stringify({ change, updatedAt: new Date().toISOString() }, null, 2),
   );
   ledger(project, 'sync-tasks', { change, created, skipped });
   return { created, skipped, change };
+}
+
+function itemNormalizedText(item) {
+  if (item?.provenance?.text != null) return normalizeTaskText(item.provenance.text);
+  return normalizeTaskText(item?.title || '');
+}
+
+function hasDuplicateNormalizedTitles(titles) {
+  const seen = new Set();
+  for (const title of titles) {
+    const key = normalizeTaskText(title);
+    if (seen.has(key)) return true;
+    seen.add(key);
+  }
+  return false;
+}
+
+function oneToOneTextMatch(tasks, existing) {
+  const itemsByText = new Map();
+  for (const item of existing) {
+    const key = itemNormalizedText(item);
+    if (itemsByText.has(key)) return null;
+    itemsByText.set(key, item);
+  }
+  const taskTexts = new Set();
+  const pairs = [];
+  for (const task of tasks) {
+    const key = normalizeTaskText(task.title);
+    if (taskTexts.has(key)) return null;
+    taskTexts.add(key);
+    const item = itemsByText.get(key);
+    if (!item) return null;
+    pairs.push({ task, item });
+  }
+  if (taskTexts.size !== itemsByText.size) return null;
+  return pairs;
+}
+
+function unmatchedPreviousIds(tasks, existing) {
+  const currentTexts = new Set(tasks.map((task) => normalizeTaskText(task.title)));
+  return existing
+    .filter((item) => !currentTexts.has(itemNormalizedText(item)))
+    .map((item) => item.id);
+}
+
+function unmatchedCurrentIds(tasks, existing) {
+  const previousTexts = new Set(existing.map((item) => itemNormalizedText(item)));
+  return tasks
+    .filter((task) => !previousTexts.has(normalizeTaskText(task.title)))
+    .map((task) => task.id);
+}
+
+function reconciliationError(change, previousIds, currentIds) {
+  const prev = [...new Set(previousIds)].sort().join(', ') || '(none)';
+  const curr = [...new Set(currentIds)].sort().join(', ') || '(none)';
+  return new Error(
+    `Reconciliation failed for change ${change}: `
+    + `unmatched previous checkbox ids: ${prev}; `
+    + `unmatched current checkbox ids: ${curr}`,
+  );
+}
+
+function retargetAttempts(project, change, oldTaskId, newTaskId) {
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return;
+  for (const name of fs.readdirSync(root)) {
+    if (!name.endsWith('.json')) continue;
+    const attemptId = name.slice(0, -'.json'.length);
+    const attempt = getAttempt(project, attemptId);
+    if (!attempt || attempt.change !== change || attempt.taskId !== oldTaskId) continue;
+    const next = {
+      ...attempt,
+      taskId: newTaskId,
+      updatedAt: new Date().toISOString(),
+    };
+    writeText(path.join(root, name), JSON.stringify(next, null, 2));
+  }
 }
 
 export function buildPacket(project, env, changeName) {
