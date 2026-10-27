@@ -148,6 +148,38 @@ test('pr open records one pull request per change; second open updates the same 
   }
 });
 
+test('pr open accepts the URL emitted by released gh pr create without --json', async () => {
+  const dir = tempProject();
+  const change = 'demo-released-gh';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    ensureCleanGitCommit(dir);
+
+    const result = await idefactory(dir, ['pr', 'open', change], {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+    });
+    assert.equal(result.code, 0, result.err || result.out);
+
+    const record = JSON.parse(fs.readFileSync(
+      path.join(dir, '.factory', 'pull-requests', `${change}.json`),
+      'utf8',
+    ));
+    assert.equal(record.pullRequest.number, 1);
+    assert.equal(record.pullRequest.url, 'https://github.com/example/test/pull/1');
+
+    const [create] = readArgvLog(logPath)
+      .filter((argv) => argv[0] === 'pr' && argv[1] === 'create');
+    assert.ok(create, 'pr open must invoke gh pr create');
+    assert.ok(!create.includes('--json'), 'released gh pr create does not accept --json');
+  } finally {
+    cleanup(dir);
+  }
+});
+
 function bodyFromCreateArgv(argvLists) {
   const create = argvLists.find((argv) => argv[0] === 'pr' && argv[1] === 'create');
   assert.ok(create, 'expected a forge pr create argv');

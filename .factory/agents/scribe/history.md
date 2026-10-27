@@ -331,3 +331,11 @@ Attempt: 6f94841a-22e0-4f19-8082-8d7a73360b80
 ## 2026-10-27 finalized stabilize-openspec-artifact-workflow/1.2
 
 Attempt: 0ccbced1-8bcd-4280-a22a-615979c3a4f4
+
+## 2026-10-27 finalized require-pr-open-for-delivery/1.1
+
+Attempt: e9c6f0fa-dd21-40b3-9c55-aea083ed3686
+
+## 2026-10-27 finalized require-pr-open-for-delivery/1.2
+
+Attempt: 299c323b-60da-4261-be98-f1f5bc10f377

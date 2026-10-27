@@ -47,22 +47,17 @@ export function openPullRequest(project, change, env = process.env) {
     if (result.status !== 0) {
       throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
     }
-    let created;
-    try {
-      created = JSON.parse(result.stdout);
-    } catch {
-      throw new Error('forge create returned invalid JSON');
-    }
-    const number = Number(created?.number);
+    const url = parseCreatedPullRequestUrl(result.stdout);
+    const number = Number(url.split('/').at(-1));
     if (!Number.isInteger(number) || number <= 0) {
-      throw new Error('forge create did not return a pull request number');
+      throw new Error('forge create returned an invalid pull request URL');
     }
     const record = {
       change: name,
       branch,
       pullRequest: {
         number,
-        url: typeof created.url === 'string' ? created.url : '',
+        url,
       },
       bodyDigest,
       postedVerdicts: [],
@@ -274,6 +269,37 @@ export function readPullRequestRecord(project, change) {
   }
 }
 
+/**
+ * A change is deliverable only when pr open wrote a factory-branch record
+ * that names a positive pull request number and a non-empty URL.
+ * @param {string} project
+ * @param {string} change
+ * @returns {boolean}
+ */
+export function isDeliverableChange(project, change) {
+  const record = readPullRequestRecord(project, change);
+  if (!record) return false;
+  if (record.branch !== `factory/${change}`) return false;
+  const number = record.pullRequest?.number;
+  const url = record.pullRequest?.url;
+  if (!Number.isInteger(number) || number <= 0) return false;
+  if (typeof url !== 'string' || url.length === 0) return false;
+  return true;
+}
+
+/**
+ * Stage 1 exit record check. The result follows isDeliverableChange.
+ * @param {string} project
+ * @param {string} change
+ * @returns {{ change: string, result: 'pass' | 'fail' }}
+ */
+export function stage1ExitRecordCheck(project, change) {
+  return {
+    change,
+    result: isDeliverableChange(project, change) ? 'pass' : 'fail',
+  };
+}
+
 function writePullRequestRecord(project, record) {
   writeText(pullRequestRecordPath(project, record.change), `${JSON.stringify(record, null, 2)}\n`);
 }
@@ -415,4 +441,12 @@ function assertSafeForgeArgv(argv) {
     || /api\.github\.com/i.test(joined)) {
     throw new Error('forge argv must not call the forge admin API');
   }
+}
+
+function parseCreatedPullRequestUrl(stdout) {
+  const url = String(stdout || '').trim();
+  if (!/^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/[1-9]\d*$/.test(url)) {
+    throw new Error('forge create did not return a pull request URL');
+  }
+  return url;
 }

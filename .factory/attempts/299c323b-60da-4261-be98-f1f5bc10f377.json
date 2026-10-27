@@ -1,0 +1,109 @@
+{
+  "id": "299c323b-60da-4261-be98-f1f5bc10f377",
+  "change": "require-pr-open-for-delivery",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-require-pr-open",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T19:07:47.873Z",
+      "finishedAt": "2026-10-27T19:10:19.324Z",
+      "logDigest": "sha256:3f75d60748da87408f34a75fa2aa1c88774f28bb78b25585f37aec7638bad9ca",
+      "artifactDigests": [],
+      "attemptId": "299c323b-60da-4261-be98-f1f5bc10f377",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "9de7123d68ff3cf8ad115417e83916d3064f7ae9"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T19:11:05.506Z",
+        "finishedAt": "2026-10-27T19:13:36.795Z",
+        "logDigest": "sha256:222b0d323261fa7a79dcaf0bf2b03cec6bf065f2725fd281d51bfd2b8f6a02b1",
+        "artifactDigests": [],
+        "attemptId": "299c323b-60da-4261-be98-f1f5bc10f377",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "84f285e7f6f69d89161c416c45b730ea3395087e"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Distinct reviewer bc-a1b04951-ff03-516c-88ef-77d090fada0a accepted task 1.2. One predicate rejects a missing, incomplete, or non-factory record. Red 9de7123, green 84f285e.",
+      "at": "2026-10-27T19:14:47.725Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T19:07:43.222Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T19:07:43.231Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T19:07:43.290Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T19:10:55.189Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T19:14:47.652Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T19:14:47.690Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T19:14:47.725Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T19:14:47.792Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T19:07:43.222Z",
+  "updatedAt": "2026-10-27T19:14:47.792Z"
+}

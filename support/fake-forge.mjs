@@ -34,8 +34,8 @@ if (command === 'pr' && sub === 'create') {
   const number = db.nextNumber;
   db.nextNumber += 1;
   saveDb(db);
-  const url = `https://example.test/pull/${number}`;
-  process.stdout.write(JSON.stringify({ number, url }));
+  const url = `https://github.com/example/test/pull/${number}`;
+  process.stdout.write(`${url}\n`);
   process.exit(0);
 }
 

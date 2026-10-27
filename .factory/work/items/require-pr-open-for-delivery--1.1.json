@@ -1,0 +1,33 @@
+{
+  "id": "1.1",
+  "change": "require-pr-open-for-delivery",
+  "title": "Add a failing test that a temporary init installs a Cursor factory rule and a factory-run skill which name `idefactory pr open`, `idefactory pr comment`, and `idefactory pr capture` as the only legal pull-request steps, say the agent never merges, and say `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks. The installed text does not name the Cursor pull-request tool or `gh pr create` as a legal step. Verify the test fails with `node --test test/pr-guidance.test.mjs` before the template edit. Then add that text to `templates/skills/factory-coordinator/SKILL.md`, `templates/skills/factory-run/SKILL.md`, `templates/skills/factory-openspec/SKILL.md`, `templates/skills/factory-governance/SKILL.md`, `templates/cursor/rules/factory.mdc`, `templates/cline/rules/factory.md`, and `templates/copilot/factory.agent.md`. Verify the same test passes.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "Installed factory guidance allows only the three pull-request commands, never merges, and waits for the human before the named commands."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "e9c6f0fa-dd21-40b3-9c55-aea083ed3686",
+  "provenance": {
+    "algorithm": "sha256",
+    "text": "Add a failing test that a temporary init installs a Cursor factory rule and a factory-run skill which name `idefactory pr open`, `idefactory pr comment`, and `idefactory pr capture` as the only legal pull-request steps, say the agent never merges, and say `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks. The installed text does not name the Cursor pull-request tool or `gh pr create` as a legal step. Verify the test fails with `node --test test/pr-guidance.test.mjs` before the template edit. Then add that text to `templates/skills/factory-coordinator/SKILL.md`, `templates/skills/factory-run/SKILL.md`, `templates/skills/factory-openspec/SKILL.md`, `templates/skills/factory-governance/SKILL.md`, `templates/cursor/rules/factory.mdc`, `templates/cline/rules/factory.md`, and `templates/copilot/factory.agent.md`. Verify the same test passes.",
+    "digest": "bdc724d862abc4cc30168a293af6be168d008dfdcefc2e1a1bd36d89e2233a83"
+  },
+  "updatedAt": "2026-10-27T19:06:48.384Z"
+}

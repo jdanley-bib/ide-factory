@@ -39,6 +39,15 @@ Independent work items may run together only after a shared design exists. The l
 
 The scribe runs last. Prefer `idefactory complete` for finalization. The scribe does not implement product code.
 
+## Pull requests
+
+The only legal pull-request steps are `idefactory pr open <change>`, `idefactory pr comment <attemptId>`, and `idefactory pr capture <change>`.
+The agent never merges. It does not open or edit a pull request through the Cursor pull-request tool or a hand-written `gh pr create` or `gh pr edit`.
+
+`sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.
+
+When the human asks to archive, run `isDeliverableChange` first. If it is false, stop and do not move `openspec/changes/<change>/`. Spec sync stays human-gated and does not itself require the pull-request record.
+
 ## What you never do
 
 - Do not start an unattended loop. `/factory-run` and `/factory-full` are human-started and stop on CLI conditions.

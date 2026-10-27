@@ -1,0 +1,109 @@
+{
+  "id": "e9c6f0fa-dd21-40b3-9c55-aea083ed3686",
+  "change": "require-pr-open-for-delivery",
+  "taskId": "1.1",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-require-pr-open",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T18:59:21.500Z",
+      "finishedAt": "2026-10-27T19:01:52.834Z",
+      "logDigest": "sha256:0e827ecb1e3d4e88df302dfbb74311333a44b7b0ca51f1be5b2c4b7e65effeb5",
+      "artifactDigests": [],
+      "attemptId": "e9c6f0fa-dd21-40b3-9c55-aea083ed3686",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "b279de0fc46b8bfb0fa78629941c51d471e67051"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T19:02:47.078Z",
+        "finishedAt": "2026-10-27T19:05:18.560Z",
+        "logDigest": "sha256:8cce631fab3baa937e5a567b9905ef793642b99dcd072b627dc0e84ddd6dbc3f",
+        "artifactDigests": [],
+        "attemptId": "e9c6f0fa-dd21-40b3-9c55-aea083ed3686",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "8e936258bd1e62cd5b8054a595eece078427ec5b"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Distinct reviewer bc-ba4e8cea-606c-5151-8b30-096e48f7ba08 accepted task 1.1. Installed guidance names only pr open, pr comment, and pr capture, never merges, and waits for the human. Red b279de0, green 8e93625.",
+      "at": "2026-10-27T19:06:48.311Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T18:59:08.868Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T18:59:08.875Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T18:59:11.286Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T19:02:09.904Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T19:05:43.008Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T19:05:43.048Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T19:06:48.311Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T19:06:48.384Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T18:59:08.868Z",
+  "updatedAt": "2026-10-27T19:06:48.384Z"
+}

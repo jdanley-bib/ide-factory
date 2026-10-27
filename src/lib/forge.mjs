@@ -21,8 +21,6 @@ export function buildCreatePullRequestArgv({ branch, title, body }) {
     title,
     '--body',
     body,
-    '--json',
-    'number,url',
   ];
 }
 
