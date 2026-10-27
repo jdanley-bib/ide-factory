@@ -47,22 +47,17 @@ export function openPullRequest(project, change, env = process.env) {
     if (result.status !== 0) {
       throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
     }
-    let created;
-    try {
-      created = JSON.parse(result.stdout);
-    } catch {
-      throw new Error('forge create returned invalid JSON');
-    }
-    const number = Number(created?.number);
+    const url = parseCreatedPullRequestUrl(result.stdout);
+    const number = Number(url.split('/').at(-1));
     if (!Number.isInteger(number) || number <= 0) {
-      throw new Error('forge create did not return a pull request number');
+      throw new Error('forge create returned an invalid pull request URL');
     }
     const record = {
       change: name,
       branch,
       pullRequest: {
         number,
-        url: typeof created.url === 'string' ? created.url : '',
+        url,
       },
       bodyDigest,
       postedVerdicts: [],
@@ -415,4 +410,12 @@ function assertSafeForgeArgv(argv) {
     || /api\.github\.com/i.test(joined)) {
     throw new Error('forge argv must not call the forge admin API');
   }
+}
+
+function parseCreatedPullRequestUrl(stdout) {
+  const url = String(stdout || '').trim();
+  if (!/^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/[1-9]\d*$/.test(url)) {
+    throw new Error('forge create did not return a pull request URL');
+  }
+  return url;
 }

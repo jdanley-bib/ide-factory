@@ -169,12 +169,12 @@ test('pr open accepts the URL emitted by released gh pr create without --json', 
       'utf8',
     ));
     assert.equal(record.pullRequest.number, 1);
-    assert.equal(record.pullRequest.url, 'https://example.test/pull/1');
+    assert.equal(record.pullRequest.url, 'https://github.com/example/test/pull/1');
 
     const [create] = readArgvLog(logPath)
       .filter((argv) => argv[0] === 'pr' && argv[1] === 'create');
     assert.ok(create, 'pr open must invoke gh pr create');
-    assert.doesNotInclude(create, '--json');
+    assert.ok(!create.includes('--json'), 'released gh pr create does not accept --json');
   } finally {
     cleanup(dir);
   }
