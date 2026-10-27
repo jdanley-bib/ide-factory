@@ -587,3 +587,11 @@ Implementer: engineer-security-verdict
 Red: `node src/cli.mjs verify run a752125e-1a82-42fd-82b5-41e3193a4559 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 9f6527c07076d8a423517bd043857229866c3add).
 Green: `node src/cli.mjs verify run a752125e-1a82-42fd-82b5-41e3193a4559 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 4499dcada153b417d7e854a5233247ce6ecc749e).
 Scope: security-checking can go to rejected only for security-stage work, with verdict REJECT and a securityReviewerId distinct from the implementer. evidence.review is written only from awaiting-review. No posted reviewer line or push.
+
+## 2026-10-27 produce-security-review-verdict/1.3
+
+Attempt: b160dc32-e1cb-4933-bcfb-6332851200ca
+Implementer: engineer-security-verdict
+Red: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0abd2c9ab41ef13083edd9cc30c02918372cc091).
+Green: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 76c6acf96be999efa9471a7b7776ad1a53722f6b).
+Scope: evidence.securityReview stores the supplied securityReviewerId, and the existing comment post names that reviewer. No new forge client or push.

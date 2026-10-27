@@ -22,7 +22,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.3 Add a failing test that the stored security verdict keeps the reviewer identity that produced it, and that the pull-request comment for that verdict names that reviewer when a pull request record exists, the same way an accept or reject comment already does. Then thread the identity into the stored evidence and the forge post. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.3 Add a failing test that the stored security verdict keeps the reviewer identity that produced it, and that the pull-request comment for that verdict names that reviewer when a pull request record exists, the same way an accept or reject comment already does. Then thread the identity into the stored evidence and the forge post. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
   - The posted security verdict comment names the security reviewer, the same way an accept or reject comment already does.
   factory:
     kind: general
