@@ -5,10 +5,18 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { getAttempt } from '../src/lib/attempt.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
-import { cleanup, idefactory, tempProject } from './helpers.mjs';
+import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const IMPLEMENTER = 'bc-engineer-1';
 const SECURITY_REVIEWER = 'bc-security-reviewer-1';
+const fakeForge = path.join(repoRoot, 'support/fake-forge.mjs');
+const FORBIDDEN_ARGV = [
+  /\bmerge\b/i,
+  /\brulesets\b/i,
+  /branches\/.+\/protection/i,
+  /api\.github\.com/i,
+  /\bgh\s+api\b/i,
+];
 
 function git(cwd, args) {
   const result = spawnSync('git', args, {
@@ -270,6 +278,101 @@ test('distinct security reviewer REJECT transitions directly to rejected', async
     const attempt = getAttempt(dir, attemptId);
     assert.equal(attempt.state, 'rejected');
     assert.notEqual(attempt.evidence.review?.role, 'reviewer');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function readArgvLog(logPath) {
+  if (!fs.existsSync(logPath)) return [];
+  return fs.readFileSync(logPath, 'utf8')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => JSON.parse(line));
+}
+
+function commentBodies(argvLists) {
+  return argvLists
+    .filter((argv) => argv[0] === 'pr' && argv[1] === 'comment')
+    .map((argv) => {
+      const index = argv.indexOf('--body');
+      return index >= 0 ? argv[index + 1] : '';
+    });
+}
+
+function assertSafeForgeArgv(argvLists) {
+  assert.ok(argvLists.length > 0, 'stub forge must record at least one argv');
+  for (const argv of argvLists) {
+    assert.ok(Array.isArray(argv), 'each stub log entry must be an argv array');
+    const joined = argv.join(' ');
+    for (const pattern of FORBIDDEN_ARGV) {
+      assert.doesNotMatch(
+        joined,
+        pattern,
+        `stub argv must not merge or call forge admin API: ${joined}`,
+      );
+    }
+  }
+}
+
+test('stored security reviewer identity is kept and named on the pull request comment', async () => {
+  const dir = tempProject();
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  const forgeEnv = {
+    IDEFACTORY_FORGE: fakeForge,
+    IDEFACTORY_FORGE_LOG: logPath,
+    IDEFACTORY_FORGE_DB: dbPath,
+  };
+  try {
+    await seedSecurityStageChange(dir, {
+      taskId: '1.3',
+      securityProfile: 'security-sensitive',
+      verificationProfile: 'frontend-low',
+      checks: ['unit'],
+    });
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.3']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const attemptId = JSON.parse(started.out).id;
+    await advanceToSecurityChecking(dir, attemptId);
+
+    // Pull-request records are not factory run-state. Open and commit one
+    // before the threat-review pass so that pass stays bound to a clean HEAD.
+    const opened = await idefactory(dir, ['pr', 'open', 'demo'], forgeEnv);
+    assert.equal(opened.code, 0, opened.err + opened.out);
+    assert.equal(
+      fs.existsSync(path.join(dir, '.factory', 'pull-requests', 'demo.json')),
+      true,
+    );
+    ensureCleanGitCommit(dir);
+
+    const afterVerify = await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
+    const security = afterVerify.evidence.security || [];
+    assert.equal(security.length, 1);
+    assert.equal(security[0].kind, 'threat-review');
+    assert.equal(security[0].issuer, 'cli');
+    assert.equal(security[0].passed, true);
+    assert.equal(security[0].worktreeClean, true);
+
+    const handedOff = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({
+        verdict: 'ACCEPT',
+        securityReviewerId: SECURITY_REVIEWER,
+      }),
+    ], forgeEnv);
+    assert.equal(handedOff.code, 0, handedOff.err + handedOff.out);
+
+    const stored = getAttempt(dir, attemptId);
+    assert.equal(stored.state, 'awaiting-review');
+    assert.equal(stored.evidence.securityReview?.verdict, 'ACCEPT');
+    assert.equal(stored.evidence.securityReview?.role, 'security-reviewer');
+    const bodies = commentBodies(readArgvLog(logPath));
+    assert.equal(bodies.length, 1);
+    assertSafeForgeArgv(readArgvLog(logPath));
+    assert.equal(stored.evidence.securityReview?.reviewerId, SECURITY_REVIEWER);
+    assert.match(bodies[0], new RegExp(`^Reviewer: ${SECURITY_REVIEWER}$`, 'm'));
   } finally {
     cleanup(dir);
   }
