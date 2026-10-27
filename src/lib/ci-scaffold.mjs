@@ -5,8 +5,9 @@ import { halted, writeText } from './layout.mjs';
 export const CONSUMER_WORKFLOW_RELATIVE = '.github/workflows/factory-consumer.yml';
 
 /**
- * Consumer baseline only. Not installed by init or upgrade, and never written
- * over this repository's ci.yml or release.yml.
+ * Consumer baseline only. Not installed by upgrade, and never written
+ * over this repository's ci.yml or release.yml. Init writes it when absent
+ * via writeConsumerWorkflowIfAbsent.
  */
 export const CONSUMER_WORKFLOW = `name: factory-consumer
 
@@ -33,6 +34,25 @@ jobs:
 `;
 
 /**
+ * Write the consumer workflow only when it is absent. Does not consult HALT.
+ * @param {string} project
+ * @returns {{ created: boolean, path: string }} whether the file was created
+ */
+export function writeConsumerWorkflowIfAbsent(project) {
+  const file = path.join(project, CONSUMER_WORKFLOW_RELATIVE);
+  if (fs.existsSync(file)) {
+    return { created: false, path: file };
+  }
+  const resolved = path.resolve(file);
+  const workflows = path.resolve(project, '.github', 'workflows');
+  if (resolved !== path.join(workflows, 'factory-consumer.yml')) {
+    throw new Error('ci scaffold refuses to write outside the consumer workflow path');
+  }
+  writeText(file, CONSUMER_WORKFLOW);
+  return { created: true, path: file };
+}
+
+/**
  * Write the consumer workflow only when it is absent.
  * @param {string} project
  * @returns {string} absolute path written
@@ -41,15 +61,9 @@ export function scaffoldConsumerCi(project) {
   if (halted(project)) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
-  const file = path.join(project, CONSUMER_WORKFLOW_RELATIVE);
-  if (fs.existsSync(file)) {
+  const result = writeConsumerWorkflowIfAbsent(project);
+  if (!result.created) {
     throw new Error(`consumer workflow already exists: ${CONSUMER_WORKFLOW_RELATIVE}`);
   }
-  const resolved = path.resolve(file);
-  const workflows = path.resolve(project, '.github', 'workflows');
-  if (resolved !== path.join(workflows, 'factory-consumer.yml')) {
-    throw new Error('ci scaffold refuses to write outside the consumer workflow path');
-  }
-  writeText(file, CONSUMER_WORKFLOW);
-  return file;
+  return result.path;
 }

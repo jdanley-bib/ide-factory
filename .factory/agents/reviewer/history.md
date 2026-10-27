@@ -550,3 +550,29 @@ Reviewer: jason-danley
 Implementer: engineer-security-verdict
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at 0abd2c9) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 76c6acf). Re-ran `node --test test/security-review-verdict.test.mjs` exit 0, 5 pass. Product: the stored security verdict keeps the reviewer id and the stub comment names that reviewer. No merge or forge admin API.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.1
+
+Attempt: 56e6e0d7-25cb-438f-a6a9-471fe8a5205b
+Reviewer: jason-danley
+Implementer: engineer-consumer-ci
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at b6b367e) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at d582596). Product: init writes the absent consumer workflow; ci scaffold still refuses an existing file and still stops on HALT. No Semgrep, consumer SAST, or forge admin API.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
+Reviewer: jason-danley
+Implementer: engineer-consumer-ci
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 0c56888) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 33d011d). Product: init names `.github/workflows/factory-consumer.yml` only when it creates that file. No Semgrep, consumer SAST, or forge admin API.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.3
+
+Attempt: 5539df8c-9932-45ec-9c23-c3526aee9fa0
+Reviewer: jason-danley
+Implementer: engineer-consumer-ci
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 7e4cc50) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at f360388). Product: a positional `ci scaffold` path selects that checkout instead of the working directory. No Semgrep, consumer SAST, or forge admin API.
+
+

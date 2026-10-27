@@ -1,0 +1,32 @@
+{
+  "id": "1.3",
+  "change": "scaffold-consumer-ci-on-init",
+  "title": "Add a failing test that `idefactory ci scaffold <checkout>` run from a different working directory writes `.github/workflows/factory-consumer.yml` into the checkout that already has `.factory/team.md`, and does not write that file into the working directory or into this repository. The command does not call the forge, and this repository's `ci.yml` and `release.yml` stay byte-for-byte unchanged. Then select that checkout path. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "1.2"
+  ],
+  "acceptanceCriteria": [
+    "A checkout path passed to ci scaffold receives the workflow even when it is not the working directory."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.2"
+    ]
+  },
+  "attemptId": "5539df8c-9932-45ec-9c23-c3526aee9fa0",
+  "updatedAt": "2026-10-27T16:05:03.398Z"
+}

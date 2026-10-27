@@ -595,3 +595,35 @@ Implementer: engineer-security-verdict
 Red: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0abd2c9ab41ef13083edd9cc30c02918372cc091).
 Green: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 76c6acf96be999efa9471a7b7776ad1a53722f6b).
 Scope: evidence.securityReview stores the supplied securityReviewerId, and the existing comment post names that reviewer. No new forge client or push.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.1
+
+Attempt: 56e6e0d7-25cb-438f-a6a9-471fe8a5205b
+Implementer: engineer-consumer-ci
+Red: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b6b367ea56c1b9d4fb1372a5792c550886a4704b).
+Green: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision d582596c112ca65ab186cc84175703646adcce6c).
+Scope: init writes the absent consumer workflow through writeConsumerWorkflowIfAbsent. ci scaffold still stops on HALT and still throws when the file exists. No Semgrep, consumer SAST, pull_request_target, or push.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
+Implementer: engineer-consumer-ci
+Red: `node src/cli.mjs verify run 7328599f-2208-4fcf-8a20-99e7e40692e8 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0c56888c6c7771d8d7cbc0e8606ed87f64b44c1a).
+Green: `node src/cli.mjs verify run 7328599f-2208-4fcf-8a20-99e7e40692e8 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 33d011d99137caf9ed57e15f1b064e26b045dcc1).
+Scope: init's created list names `.github/workflows/factory-consumer.yml` only when that file is created, including a re-init that only creates the missing workflow. An existing file stays unnamed and unchanged. No Semgrep or consumer SAST.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.3
+
+Attempt: 5539df8c-9932-45ec-9c23-c3526aee9fa0
+Implementer: engineer-consumer-ci
+Red: `node src/cli.mjs verify run 5539df8c-9932-45ec-9c23-c3526aee9fa0 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 7e4cc505ef5f4e5515ff0125492b34e4d3a13491).
+Green: `node src/cli.mjs verify run 5539df8c-9932-45ec-9c23-c3526aee9fa0 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision f36038850263ad33fd3431ec3069349714360389).
+Scope: `ci scaffold <checkout>` writes the consumer workflow into that checkout when the working directory is different. `--path` still wins. No Semgrep, consumer SAST, or forge admin API.
+
+
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.2
+
+Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
+Implementer: engineer-consumer-ci
+Test commit: 61e27f66e002a1f46321304fe5f0d305cf185496 adds init-on-custom-bytes, init with a root HALT file and an existing workflow, upgrade-does-not-create, and scaffold-refuses-overwrite. `node --test test/consumer-ci-scaffold.test.mjs` exited 0 (2 tests). `verify run --check unit --red` ran `npm test` at that commit and exited 0, so no evidence.red was stored. No production change. No Semgrep or consumer SAST. Not finalized.

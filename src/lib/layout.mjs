@@ -26,6 +26,9 @@ export function projectDir(flags, rest, cwd, cmd) {
   if (['init', 'upgrade', 'doctor', 'status', 'halt', 'resume'].includes(cmd) && rest[0]) {
     return path.resolve(cwd, rest[0]);
   }
+  if (cmd === 'ci' && rest[0] === 'scaffold' && rest[1]) {
+    return path.resolve(cwd, rest[1]);
+  }
   return path.resolve(cwd);
 }
 
