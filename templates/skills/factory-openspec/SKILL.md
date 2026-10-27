@@ -52,4 +52,6 @@ The agent never merges. It does not open or edit a pull request through the Curs
 
 `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.
 
+When the human asks to archive, run `isDeliverableChange` first. If it is false, stop and do not move `openspec/changes/<change>/`. Spec sync stays human-gated and does not itself require the pull-request record.
+
 The IDE session model does the work.

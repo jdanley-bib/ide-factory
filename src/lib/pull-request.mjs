@@ -269,6 +269,37 @@ export function readPullRequestRecord(project, change) {
   }
 }
 
+/**
+ * A change is deliverable only when pr open wrote a factory-branch record
+ * that names a positive pull request number and a non-empty URL.
+ * @param {string} project
+ * @param {string} change
+ * @returns {boolean}
+ */
+export function isDeliverableChange(project, change) {
+  const record = readPullRequestRecord(project, change);
+  if (!record) return false;
+  if (record.branch !== `factory/${change}`) return false;
+  const number = record.pullRequest?.number;
+  const url = record.pullRequest?.url;
+  if (!Number.isInteger(number) || number <= 0) return false;
+  if (typeof url !== 'string' || url.length === 0) return false;
+  return true;
+}
+
+/**
+ * Stage 1 exit record check. The result follows isDeliverableChange.
+ * @param {string} project
+ * @param {string} change
+ * @returns {{ change: string, result: 'pass' | 'fail' }}
+ */
+export function stage1ExitRecordCheck(project, change) {
+  return {
+    change,
+    result: isDeliverableChange(project, change) ? 'pass' : 'fail',
+  };
+}
+
 function writePullRequestRecord(project, record) {
   writeText(pullRequestRecordPath(project, record.change), `${JSON.stringify(record, null, 2)}\n`);
 }
