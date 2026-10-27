@@ -101,12 +101,48 @@ function runSteps(jobBody) {
   return steps;
 }
 
-test('baseline CI job runs the four Phase 0 commands on pull_request and push with Node 24', () => {
-  const yaml = readWorkflow();
+/** Top-level keys under `on:`. Nested mappings stay on the current key. */
+function workflowOnEntries(yaml) {
+  const lines = yaml.split('\n');
+  const start = lines.findIndex((line) => line === 'on:');
+  assert.notEqual(start, -1, 'workflow must declare on triggers');
+  const entries = [];
+  let current = null;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (line.trim() === '' || line.trim().startsWith('#')) continue;
+    if (!line.startsWith('  ')) break;
+    const key = line.match(/^  ([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (key && !line.startsWith('   ')) {
+      current = { name: key[1], rest: key[2].trim(), body: [] };
+      entries.push(current);
+      continue;
+    }
+    assert.ok(current, `unexpected trigger detail: ${line}`);
+    current.body.push(line);
+  }
+  return entries;
+}
 
-  assert.match(yaml, /^\s*on\s*:/m, 'workflow must declare on triggers');
-  assert.match(yaml, /\bpull_request\b/, 'workflow must trigger on pull_request');
-  assert.match(yaml, /\bpush\b/, 'workflow must trigger on push');
+test('baseline CI job runs the four Phase 0 commands on pull requests and pushes to main with Node 24', () => {
+  const yaml = readWorkflow();
+  const triggers = workflowOnEntries(yaml);
+
+  assert.deepEqual(
+    triggers.map((entry) => entry.name),
+    ['pull_request', 'push'],
+    'CI must run on pull requests and on pushes, with no other trigger',
+  );
+  assert.deepEqual(
+    triggers[0],
+    { name: 'pull_request', rest: '', body: [] },
+    'pull_request must stay unfiltered so required checks still run on pull requests',
+  );
+  assert.deepEqual(
+    triggers[1],
+    { name: 'push', rest: '', body: ['    branches:', '      - main'] },
+    'push must be limited to main so a push to an open pull request branch starts CI once',
+  );
 
   const job = baselineJobBlock(yaml);
   assert.match(job, /\bnode-version\s*:\s*['"]?24['"]?\b/, 'baseline job must use Node 24');
