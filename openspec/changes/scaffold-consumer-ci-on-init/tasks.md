@@ -22,7 +22,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.3 Add a failing test that `idefactory ci scaffold <checkout>` run from a different working directory writes `.github/workflows/factory-consumer.yml` into the checkout that already has `.factory/team.md`, and does not write that file into the working directory or into this repository. The command does not call the forge, and this repository's `ci.yml` and `release.yml` stay byte-for-byte unchanged. Then select that checkout path. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.3 Add a failing test that `idefactory ci scaffold <checkout>` run from a different working directory writes `.github/workflows/factory-consumer.yml` into the checkout that already has `.factory/team.md`, and does not write that file into the working directory or into this repository. The command does not call the forge, and this repository's `ci.yml` and `release.yml` stay byte-for-byte unchanged. Then select that checkout path. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
   - A checkout path passed to ci scaffold receives the workflow even when it is not the working directory.
   factory:
     kind: general

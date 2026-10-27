@@ -612,6 +612,15 @@ Red: `node src/cli.mjs verify run 7328599f-2208-4fcf-8a20-99e7e40692e8 --check u
 Green: `node src/cli.mjs verify run 7328599f-2208-4fcf-8a20-99e7e40692e8 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 33d011d99137caf9ed57e15f1b064e26b045dcc1).
 Scope: init's created list names `.github/workflows/factory-consumer.yml` only when that file is created, including a re-init that only creates the missing workflow. An existing file stays unnamed and unchanged. No Semgrep or consumer SAST.
 
+## 2026-10-27 scaffold-consumer-ci-on-init/1.3
+
+Attempt: 5539df8c-9932-45ec-9c23-c3526aee9fa0
+Implementer: engineer-consumer-ci
+Red: `node src/cli.mjs verify run 5539df8c-9932-45ec-9c23-c3526aee9fa0 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 7e4cc505ef5f4e5515ff0125492b34e4d3a13491).
+Green: `node src/cli.mjs verify run 5539df8c-9932-45ec-9c23-c3526aee9fa0 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision f36038850263ad33fd3431ec3069349714360389).
+Scope: `ci scaffold <checkout>` writes the consumer workflow into that checkout when the working directory is different. `--path` still wins. No Semgrep, consumer SAST, or forge admin API.
+
+
 
 ## 2026-10-27 scaffold-consumer-ci-on-init/1.2
 
