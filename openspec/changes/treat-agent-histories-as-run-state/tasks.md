@@ -12,8 +12,8 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.2 Treat `.factory/agents/<role>/history.md` as factory run-state inside the existing clean-HEAD check, for any single role directory. Do not add `.factory/agents/` as a prefix, do not gitignore history files, and do not change the `git status --porcelain` invocation. Verify with `node --test test/agent-history-run-state.test.mjs` and `node --test test/approval-run-state.test.mjs`.
-  - History files stay on the current HEAD, and approval run-state behavior stays as it is.
+- [ ] 1.2 Add a failing test that a brand-new role directory, which `git status --porcelain` collapses to `?? .factory/agents/<role>/` when `status.showUntrackedFiles` is `normal`, leaves `resolveGitBinding` clean at that HEAD when the directory's only file is `history.md`, and `verify run` records `passed` true with that source revision. When that collapsed directory also contains `charter.md` or any other file, the worktree stays dirty and verify does not record a pass. Do not change the `git status --porcelain` invocation and do not add `.factory/agents/` as a prefix. Then treat that collapsed directory as run-state only when its only file is `history.md`. Verify the test fails with `node --test test/agent-history-run-state.test.mjs` before that directory rule, and passes with the same command and `node --test test/approval-run-state.test.mjs` after it.
+  - A new role directory that porcelain collapses stays on the current HEAD when it contains only `history.md`, and stays dirty when it contains anything else.
   factory:
     kind: general
     risk: medium

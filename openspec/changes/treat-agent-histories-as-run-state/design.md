@@ -30,7 +30,7 @@ Extend the existing path check so a normalized path matches `.factory/agents/<ro
 
 A rename line stays clean only when every path on it matches, which is the rule already implemented. Renaming a history file to a charter, or the reverse, stays dirty.
 
-`git status --porcelain` can collapse a brand-new untracked role directory to `?? .factory/agents/<role>/`. That directory path is not a history file, so it stays dirty. The notes that block accept and complete today are edits to history files that already exist, and those show up as the file path.
+`git status --porcelain` can collapse a brand-new untracked role directory to `?? .factory/agents/<role>/`. Do not change that invocation and do not pass `-u` or `-uall`. When the status line is that directory, read it. If its only file is `history.md`, the line is run-state. If it also contains a charter or any other file, the line stays dirty. Edits to a history file that is already tracked still show up as the file path and use the direct match.
 
 Alternatives considered:
 
@@ -45,7 +45,7 @@ Alternatives considered:
 - [A history edit alone no longer blocks verification, the gate, or complete] → Product source, tests, OpenSpec, `checks.json`, charters, and `.factory/identity/now.md` still do. A history file next to any of those still fails.
 - [`.factory/identity/now.md` is still dirty] → Complete writes that file while finalizing. An uncommitted identity note still blocks the next clean-HEAD check. That stays out of scope.
 - [Scribe history is both run-state and a finalization target] → The journal still hashes the bytes it writes. Classifying the path as run-state does not skip the journal or change the allowlist.
-- [An untracked new role directory stays dirty] → The porcelain collapse is unchanged. Do not switch the status command to untracked-file mode to paper over it.
+- [A collapsed role directory hides a charter] → Read the directory. Only a directory whose sole file is `history.md` is run-state. Any other file in that directory stays dirty. Do not switch `git status` to untracked-file mode.
 
 ## Migration Plan
 
