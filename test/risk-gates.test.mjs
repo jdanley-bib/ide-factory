@@ -14,6 +14,7 @@ import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const IMPLEMENTER = 'bc-engineer-1';
 const APPROVER = 'bc-approver-9';
+const SECURITY_REVIEWER = 'bc-security-reviewer-1';
 const HOUR_MS = 60 * 60 * 1000;
 
 function validApproval(overrides = {}) {
@@ -871,7 +872,10 @@ test('passing CLI security record bound to attempt and clean revision allows awa
 
     const ok = await idefactory(dir, [
       'attempt', 'transition', attemptId, 'awaiting-review',
-      '--evidence', JSON.stringify({}),
+      '--evidence', JSON.stringify({
+        verdict: 'ACCEPT',
+        securityReviewerId: SECURITY_REVIEWER,
+      }),
     ]);
     assert.equal(ok.code, 0, ok.err + ok.out);
     assert.equal(getAttempt(dir, attemptId).state, 'awaiting-review');
@@ -1010,7 +1014,10 @@ test('default required security kind is threat-review when no security-patterned
     await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
     const ok = await idefactory(dir, [
       'attempt', 'transition', attemptId, 'awaiting-review',
-      '--evidence', JSON.stringify({}),
+      '--evidence', JSON.stringify({
+        verdict: 'ACCEPT',
+        securityReviewerId: SECURITY_REVIEWER,
+      }),
     ]);
     assert.equal(ok.code, 0, ok.err + ok.out);
     assert.equal(getAttempt(dir, attemptId).state, 'awaiting-review');
@@ -1038,7 +1045,10 @@ test('complete refuses security-required work lacking CLI security evidence', as
     await recordPassingSecurityCheck(dir, attemptId, 'threat-review');
     assert.equal((await idefactory(dir, [
       'attempt', 'transition', attemptId, 'awaiting-review',
-      '--evidence', JSON.stringify({}),
+      '--evidence', JSON.stringify({
+        verdict: 'ACCEPT',
+        securityReviewerId: SECURITY_REVIEWER,
+      }),
     ])).code, 0);
     assert.equal((await idefactory(dir, [
       'attempt', 'transition', attemptId, 'accepted',

@@ -186,6 +186,29 @@ function validateEvidence(project, attempt, nextState, evidence) {
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
     assertPassingCliSecurityEvidence(project, attempt, item);
+    if (requiresSecurityStage(item)) {
+      const verdict = typeof evidence?.verdict === 'string'
+        ? evidence.verdict.trim().toUpperCase()
+        : '';
+      if (verdict !== 'ACCEPT') {
+        throw new Error(
+          'security-stage work requires verdict ACCEPT to leave security-checking',
+        );
+      }
+      const securityReviewerId = typeof evidence?.securityReviewerId === 'string'
+        ? evidence.securityReviewerId.trim()
+        : '';
+      if (!securityReviewerId) {
+        throw new Error(
+          'security-stage work requires evidence.securityReviewerId to leave security-checking',
+        );
+      }
+      if (securityReviewerId === attempt.implementerId) {
+        throw new Error(
+          'securityReviewerId must differ from implementerId',
+        );
+      }
+    }
   }
   if (nextState === 'accepted') {
     if (!evidence.reviewerId && !attempt.reviewerId) {
