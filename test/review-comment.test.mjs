@@ -170,3 +170,138 @@ test('accept stores reviewer role and posts one stub comment with role, verdict,
     cleanup(dir);
   }
 });
+
+function securityCheckingAttempt(id, change) {
+  return {
+    id,
+    change,
+    taskId: '1.2',
+    state: 'security-checking',
+    implementerRole: 'engineer',
+    implementerId: 'engineer-review-comment',
+    reviewerId: null,
+    modelProfile: 'coding-standard',
+    evidence: {
+      red: null,
+      verification: [],
+      security: [],
+      review: null,
+      changedFiles: [],
+      baseRev: null,
+    },
+    history: [],
+    createdAt: '2026-10-27T00:00:00.000Z',
+    updatedAt: '2026-10-27T00:00:00.000Z',
+  };
+}
+
+async function openRecordedPullRequest(dir, change, forgeEnv) {
+  assert.equal((await idefactory(dir, ['init'])).code, 0);
+  ensureCleanGitCommit(dir);
+  const opened = await idefactory(dir, ['pr', 'open', change], forgeEnv);
+  assert.equal(opened.code, 0, opened.err || opened.out);
+  assert.ok(
+    fs.existsSync(path.join(dir, '.factory', 'pull-requests', `${change}.json`)),
+    'pull request record must exist before the security-reviewer handoff',
+  );
+}
+
+test('security-reviewer handoff stores securityReview and posts one stub comment', async () => {
+  const dir = tempProject();
+  const change = 'demo-security-review-comment';
+  const attemptId = 'cccccccc-dddd-4eee-8fff-000000000002';
+  const verdict = 'ACCEPT';
+  const role = 'security-reviewer';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  try {
+    const forgeEnv = {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+    };
+    await openRecordedPullRequest(dir, change, forgeEnv);
+    writeAttempt(dir, securityCheckingAttempt(attemptId, change));
+
+    const commentsBefore = commentBodies(readArgvLog(logPath)).length;
+    const handedOff = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({ verdict }),
+    ], forgeEnv);
+    assert.equal(handedOff.code, 0, handedOff.err || handedOff.out);
+
+    const stored = JSON.parse(fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    ));
+    assert.equal(stored.state, 'awaiting-review');
+    assert.equal(
+      stored.evidence.review ?? null,
+      null,
+      'security verdict must stay off evidence.review',
+    );
+    assert.equal(stored.evidence.securityReview?.verdict, verdict);
+    assert.equal(
+      stored.evidence.securityReview?.role,
+      role,
+      'handoff must store evidence.securityReview.role as security-reviewer',
+    );
+
+    const bodies = commentBodies(readArgvLog(logPath));
+    assert.equal(
+      bodies.length,
+      commentsBefore + 1,
+      'security-reviewer verdict with a pull request record must post exactly one comment',
+    );
+    assert.match(bodies.at(-1), new RegExp(role));
+    assert.match(bodies.at(-1), new RegExp(verdict));
+    assert.match(bodies.at(-1), new RegExp(attemptId));
+    assertSafeForgeArgv(readArgvLog(logPath));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('security-reviewer handoff with no verdict writes nothing and posts nothing', async () => {
+  const dir = tempProject();
+  const change = 'demo-security-review-missing';
+  const attemptId = 'dddddddd-eeee-4fff-8000-111111111111';
+  const logPath = path.join(dir, 'forge-argv.log');
+  const dbPath = path.join(dir, 'forge-db.json');
+  try {
+    const forgeEnv = {
+      IDEFACTORY_FORGE: fakeForge,
+      IDEFACTORY_FORGE_LOG: logPath,
+      IDEFACTORY_FORGE_DB: dbPath,
+    };
+    await openRecordedPullRequest(dir, change, forgeEnv);
+    writeAttempt(dir, securityCheckingAttempt(attemptId, change));
+
+    const commentsBefore = commentBodies(readArgvLog(logPath)).length;
+    const handedOff = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ], forgeEnv);
+    assert.equal(handedOff.code, 0, handedOff.err || handedOff.out);
+
+    const stored = JSON.parse(fs.readFileSync(
+      path.join(dir, '.factory', 'attempts', `${attemptId}.json`),
+      'utf8',
+    ));
+    assert.equal(stored.state, 'awaiting-review');
+    assert.equal(stored.evidence.review ?? null, null);
+    assert.equal(
+      stored.evidence.securityReview ?? null,
+      null,
+      'a handoff with no verdict must not invent a security-reviewer verdict',
+    );
+    assert.equal(
+      commentBodies(readArgvLog(logPath)).length,
+      commentsBefore,
+      'a handoff with no verdict must not post to the forge',
+    );
+    assertSafeForgeArgv(readArgvLog(logPath));
+  } finally {
+    cleanup(dir);
+  }
+});
