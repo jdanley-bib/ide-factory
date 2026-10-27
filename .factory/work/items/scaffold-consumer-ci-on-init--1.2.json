@@ -1,13 +1,13 @@
 {
   "id": "1.2",
   "change": "scaffold-consumer-ci-on-init",
-  "title": "Add a test that `idefactory init` exits 0 and leaves an existing consumer workflow byte-for-byte unchanged, that `idefactory upgrade` still does not create a missing workflow, and that `idefactory ci scaffold` still exits non-zero and leaves existing bytes unchanged. Then keep that exists-path on the write-if-absent helper so init does not use the throwing scaffold command. Verify with `node --test test/consumer-ci-scaffold.test.mjs`. The exists and upgrade assertions pass on current main; they must still pass after task 1.1.",
+  "title": "Add a failing test that when `idefactory init` creates `.github/workflows/factory-consumer.yml`, the command output names that path, including when factory state already exists and only the workflow is missing. When the file already exists, init still exits 0, leaves the bytes unchanged, and does not name that path. Then add the path to init's created list only when the write-if-absent helper creates the file. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.",
   "status": "in_progress",
   "dependencies": [
     "1.1"
   ],
   "acceptanceCriteria": [
-    "Init keeps an existing workflow, upgrade does not write one, and ci scaffold still refuses to overwrite."
+    "Init names the consumer workflow only when it creates that file."
   ],
   "factory": {
     "kind": "general",

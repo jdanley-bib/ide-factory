@@ -38,6 +38,14 @@ The user asked for init, then `ci scaffold` on a consumer checkout. `upgradeProj
 
 The helper writes only `CONSUMER_WORKFLOW` at `CONSUMER_WORKFLOW_RELATIVE`. It does not write `ci.yml` or `release.yml`. Tests keep using `tempProject()` as the consumer checkout and compare this repository's `ci.yml` and `release.yml` bytes before and after. The consumer-checkout test builds a temporary directory that already has `.factory/team.md` and no workflow, then runs `ci scaffold`. It does not use init to produce that absence, because init will create the file.
 
+### Init names a workflow it actually creates
+
+`initProject` returns the relative paths it created, and the CLI prints those paths. The workflow write currently happens after that list is built, so a fresh init omits `.github/workflows/factory-consumer.yml`, and a later init that only creates the missing workflow says team state is already present. Append `CONSUMER_WORKFLOW_RELATIVE` to that list only when `writeConsumerWorkflowIfAbsent` returns `created: true`. An existing file stays off the list and its bytes stay unchanged.
+
+### A scaffold path argument selects the checkout
+
+`idefactory init <dir>` uses the positional directory. `idefactory ci scaffold <checkout>` currently ignores that argument and writes into the process working directory, so a command aimed at a consumer checkout can write the workflow somewhere else. `projectDir` must resolve a positional path after `scaffold` the same way `--path` is already resolved, and `--path` still wins when both are present. The workflow bytes and the no-overwrite rule stay on the existing helper.
+
 ### Tests stay local
 
 The existing test already stubs `gh` and the forge and asserts no forge argv. Keep that. `npm test` does not call GitHub. Each task sets `checks: [unit]`, `verificationProfile: frontend-low`, and `securityProfile: dependency-basic`. The task text mentions `release.yml`; the explicit `risk: medium` keeps the classifier from treating the word "release" as high risk.
