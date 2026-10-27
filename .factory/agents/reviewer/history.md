@@ -518,3 +518,11 @@ Reviewer: jason-danley
 Implementer: engineer-review-comments
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at 435ae88) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at ecb659b). Re-ran `node --test test/review-comment.test.mjs` exit 0, 3 pass. Product: a security-reviewer verdict is stored on evidence.securityReview and posted once; a missing verdict is not invented. No merge or forge admin API.
+
+## 2026-10-27 post-stored-review-comments/1.3
+
+Attempt: 5c15a23a-079b-495c-9efa-0b35050b1923
+Reviewer: jason-danley
+Implementer: engineer-review-comments
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at 791fedc) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 0b042b8). Re-ran `node --test test/review-comment.test.mjs` exit 0, 6 pass. Product: a second store of the same attempt and role does not post again. A missing pull request record still stores the verdict and does not call the forge. No merge or forge admin API.

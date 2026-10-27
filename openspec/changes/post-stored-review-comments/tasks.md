@@ -22,7 +22,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.3 Add a failing test that storing the same attempt and role again does not post a second comment, and that storing a verdict with no pull request record leaves the verdict stored and does not call the forge. Then implement that behavior. Verify the test fails with `node --test test/review-comment.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.3 Add a failing test that storing the same attempt and role again does not post a second comment, and that storing a verdict with no pull request record leaves the verdict stored and does not call the forge. Then implement that behavior. Verify the test fails with `node --test test/review-comment.test.mjs` before the edit, and passes with the same command after it.
   - Repeat posts and a missing pull request record do not call the forge again.
   factory:
     kind: general
