@@ -2,7 +2,7 @@
 
 ## 1. Require and post a security review verdict
 
-- [ ] 1.1 Add a failing test that security-stage work (a work item whose `factory.securityProfile` is `security-sensitive`) cannot move from `security-checking` to `awaiting-review` without a stored `ACCEPT` verdict and a distinct security reviewer identity, and that a stored `ACCEPT` verdict with a distinct identity lets the transition succeed. Then implement that validation. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.1 Add a failing test that security-stage work (a work item whose `factory.securityProfile` is `security-sensitive`) cannot move from `security-checking` to `awaiting-review` without a stored `ACCEPT` verdict and a distinct security reviewer identity, and that a stored `ACCEPT` verdict with a distinct identity lets the transition succeed. Then implement that validation. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
   - Security-stage work cannot advance to awaiting-review without an accepted verdict from a distinct security reviewer.
   factory:
     kind: general

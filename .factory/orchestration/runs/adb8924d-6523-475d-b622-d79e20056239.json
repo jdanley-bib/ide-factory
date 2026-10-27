@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "adb8924d-6523-475d-b622-d79e20056239",
+  "change": "produce-security-review-verdict",
+  "status": "open",
+  "startedAt": "2026-10-27T14:23:30.319Z",
+  "lastObservedAt": "2026-10-27T14:34:25.524Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 4,
+  "completedTasks": 0,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "complete",
+    "role": "scribe",
+    "taskId": "1.1",
+    "attemptId": "d023b268-b03e-4d1c-8517-e10a5d70839c",
+    "attemptState": "accepted",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

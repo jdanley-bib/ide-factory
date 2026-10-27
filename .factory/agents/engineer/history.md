@@ -571,3 +571,11 @@ Implementer: engineer-review-comments
 Red: `node src/cli.mjs verify run 5c15a23a-079b-495c-9efa-0b35050b1923 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 791fedcaf47d513c5cbd575ff668528dde901eea).
 Green: `node src/cli.mjs verify run 5c15a23a-079b-495c-9efa-0b35050b1923 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0b042b85d12b2aeb05704e9e7a55e3806d3d3d0b).
 Scope: postVerdictComment skips a second post when postedVerdicts already has that attempt id and role. A missing pull request record still stores the verdict and does not call the forge. No push.
+
+## 2026-10-27 produce-security-review-verdict/1.1
+
+Attempt: d023b268-b03e-4d1c-8517-e10a5d70839c
+Implementer: engineer-security-verdict
+Red: `node src/cli.mjs verify run d023b268-b03e-4d1c-8517-e10a5d70839c --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 1b557805be1c86c3de6ab739c36f154c6c7cd3a2).
+Green: `node src/cli.mjs verify run d023b268-b03e-4d1c-8517-e10a5d70839c --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 3aa15b32b6d1a0390cfe2ba353b33b9ba62fae0d).
+Scope: security-stage work cannot leave security-checking for awaiting-review without verdict ACCEPT and a securityReviewerId distinct from the implementer. Existing security-evidence check stays first. Ad-hoc attempts with no work item stay optional. No reject transition, posted reviewer line, or push.
