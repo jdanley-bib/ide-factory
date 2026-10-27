@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "treat-agent-histories-as-run-state",
+  "title": "Treat `.factory/agents/<role>/history.md` as factory run-state inside the existing clean-HEAD check, for any single role directory. Do not add `.factory/agents/` as a prefix, do not gitignore history files, and do not change the `git status --porcelain` invocation. Verify with `node --test test/agent-history-run-state.test.mjs` and `node --test test/approval-run-state.test.mjs`.",
+  "status": "todo",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "History files stay on the current HEAD, and approval run-state behavior stays as it is."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-27T16:35:20.623Z"
+}
