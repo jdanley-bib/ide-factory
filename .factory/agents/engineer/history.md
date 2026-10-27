@@ -635,3 +635,9 @@ Implementer: engineer-agent-histories
 Red: `node src/cli.mjs verify run de5fea2b-210d-4cfa-b628-c5ffaaac1d05 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8c3cb1804bd67f9e2646140aa47df520dccc38f1).
 Green: `node src/cli.mjs verify run de5fea2b-210d-4cfa-b628-c5ffaaac1d05 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision be738a398fe2e08b477881e05c4a537d15a68d9b).
 Scope: uncommitted `.factory/agents/<role>/history.md` is factory run-state. Charters, `.factory/identity/now.md`, nested history files, and product source stay dirty. History files stay tracked. No item 5.
+
+## 2026-10-27 treat-agent-histories-as-run-state/1.2
+
+Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
+Implementer: engineer-agent-histories
+`node --test test/agent-history-run-state.test.mjs` exited 0 (10 pass). `node --test test/approval-run-state.test.mjs` exited 0 (1 pass). The matcher is already in be738a3 from task 1.1, because that task could not record a passing unit check while the new test failed. No separate failing behavior remains. No evidence.red stored. No production change. Not finalized.

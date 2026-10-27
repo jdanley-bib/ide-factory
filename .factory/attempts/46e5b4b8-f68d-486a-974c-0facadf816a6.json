@@ -1,0 +1,30 @@
+{
+  "id": "46e5b4b8-f68d-486a-974c-0facadf816a6",
+  "change": "treat-agent-histories-as-run-state",
+  "taskId": "1.2",
+  "state": "assigned",
+  "implementerRole": "engineer",
+  "implementerId": null,
+  "reviewerId": null,
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": null,
+    "verification": [],
+    "security": [],
+    "review": null,
+    "changedFiles": [],
+    "baseRev": null
+  },
+  "history": [
+    {
+      "at": "2026-10-27T16:51:39.573Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T16:51:39.575Z",
+      "state": "assigned"
+    }
+  ],
+  "createdAt": "2026-10-27T16:51:39.573Z",
+  "updatedAt": "2026-10-27T16:51:39.575Z"
+}

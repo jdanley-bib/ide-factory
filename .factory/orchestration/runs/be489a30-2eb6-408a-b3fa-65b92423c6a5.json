@@ -4,25 +4,25 @@
   "change": "treat-agent-histories-as-run-state",
   "status": "open",
   "startedAt": "2026-10-27T16:35:26.672Z",
-  "lastObservedAt": "2026-10-27T16:48:14.760Z",
+  "lastObservedAt": "2026-10-27T16:51:39.575Z",
   "budgets": {
     "maxAgentSteps": 20,
     "maxTasks": 20,
     "maxWallClockMs": 14400000,
     "maxFailures": 5
   },
-  "agentSteps": 3,
-  "completedTasks": 0,
+  "agentSteps": 4,
+  "completedTasks": 1,
   "failureCount": 0,
   "baselineDoneIds": [],
   "baselineFailureIds": [],
   "countedFailureIds": [],
   "lastRequestFingerprint": {
     "action": "agent-step",
-    "role": "reviewer",
-    "taskId": "1.1",
-    "attemptId": "de5fea2b-210d-4cfa-b628-c5ffaaac1d05",
-    "attemptState": "verifying",
+    "role": "engineer",
+    "taskId": "1.2",
+    "attemptId": "46e5b4b8-f68d-486a-974c-0facadf816a6",
+    "attemptState": "assigned",
     "workItemStatus": "in_progress"
   },
   "stopReason": null
