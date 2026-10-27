@@ -303,3 +303,7 @@ Attempt: a752125e-1a82-42fd-82b5-41e3193a4559
 ## 2026-10-27 finalized produce-security-review-verdict/1.3
 
 Attempt: b160dc32-e1cb-4933-bcfb-6332851200ca
+
+## 2026-10-27 finalized scaffold-consumer-ci-on-init/1.1
+
+Attempt: 56e6e0d7-25cb-438f-a6a9-471fe8a5205b

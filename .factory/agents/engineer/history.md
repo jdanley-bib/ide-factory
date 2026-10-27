@@ -595,3 +595,11 @@ Implementer: engineer-security-verdict
 Red: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0abd2c9ab41ef13083edd9cc30c02918372cc091).
 Green: `node src/cli.mjs verify run b160dc32-e1cb-4933-bcfb-6332851200ca --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 76c6acf96be999efa9471a7b7776ad1a53722f6b).
 Scope: evidence.securityReview stores the supplied securityReviewerId, and the existing comment post names that reviewer. No new forge client or push.
+
+## 2026-10-27 scaffold-consumer-ci-on-init/1.1
+
+Attempt: 56e6e0d7-25cb-438f-a6a9-471fe8a5205b
+Implementer: engineer-consumer-ci
+Red: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision b6b367ea56c1b9d4fb1372a5792c550886a4704b).
+Green: `node src/cli.mjs verify run 56e6e0d7-25cb-438f-a6a9-471fe8a5205b --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision d582596c112ca65ab186cc84175703646adcce6c).
+Scope: init writes the absent consumer workflow through writeConsumerWorkflowIfAbsent. ci scaffold still stops on HALT and still throws when the file exists. No Semgrep, consumer SAST, pull_request_target, or push.

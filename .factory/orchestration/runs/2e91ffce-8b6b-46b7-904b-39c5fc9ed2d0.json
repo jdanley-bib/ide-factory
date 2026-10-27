@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "2e91ffce-8b6b-46b7-904b-39c5fc9ed2d0",
+  "change": "scaffold-consumer-ci-on-init",
+  "status": "open",
+  "startedAt": "2026-10-27T15:16:14.782Z",
+  "lastObservedAt": "2026-10-27T15:25:02.888Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 2,
+  "completedTasks": 0,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "agent-step",
+    "role": "reviewer",
+    "taskId": "1.1",
+    "attemptId": "56e6e0d7-25cb-438f-a6a9-471fe8a5205b",
+    "attemptState": "verifying",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

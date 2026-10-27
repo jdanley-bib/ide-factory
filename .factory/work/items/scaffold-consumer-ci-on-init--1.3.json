@@ -1,0 +1,32 @@
+{
+  "id": "1.3",
+  "change": "scaffold-consumer-ci-on-init",
+  "title": "Add a test that `idefactory ci scaffold` in a temporary consumer checkout which already has `.factory/team.md` and no consumer workflow writes `.github/workflows/factory-consumer.yml` there, does not call the forge, does not create the file in this repository, and leaves this repository's `ci.yml` and `release.yml` byte-for-byte unchanged. Do not use init to produce the missing file, because init now creates it. Verify with `node --test test/consumer-ci-scaffold.test.mjs`. The command already writes an absent file; the test must pass without a second writer.",
+  "status": "todo",
+  "dependencies": [
+    "1.2"
+  ],
+  "acceptanceCriteria": [
+    "An existing consumer checkout receives the workflow from ci scaffold."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.2"
+    ]
+  },
+  "attemptId": null,
+  "updatedAt": "2026-10-27T15:15:53.511Z"
+}

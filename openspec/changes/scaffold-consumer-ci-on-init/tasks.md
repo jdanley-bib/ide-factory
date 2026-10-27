@@ -2,7 +2,7 @@
 
 ## 1. Scaffold the consumer workflow from init
 
-- [ ] 1.1 Add a failing test that `idefactory init` in a temporary project with no consumer workflow creates `.github/workflows/factory-consumer.yml`, that the file runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all` on Node 24, and that the file does not mention Semgrep or `pull_request_target`. The test also shows the temporary project does not gain this repository's `ci.yml` or `release.yml`, and that those two files in this repository are byte-for-byte unchanged. Then make init write the workflow through the write-if-absent helper in design.md. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.1 Add a failing test that `idefactory init` in a temporary project with no consumer workflow creates `.github/workflows/factory-consumer.yml`, that the file runs `npm ci`, `npm test`, `npm audit --audit-level=high`, and `npx openspec validate --all` on Node 24, and that the file does not mention Semgrep or `pull_request_target`. The test also shows the temporary project does not gain this repository's `ci.yml` or `release.yml`, and that those two files in this repository are byte-for-byte unchanged. Then make init write the workflow through the write-if-absent helper in design.md. Verify the test fails with `node --test test/consumer-ci-scaffold.test.mjs` before the edit, and passes with the same command after it.
   - Init creates the absent consumer workflow and leaves this repository's CI unchanged.
   factory:
     kind: general
