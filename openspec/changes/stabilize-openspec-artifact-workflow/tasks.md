@@ -2,7 +2,7 @@
 
 ## 1. OpenSpec task identity
 
-- [ ] 1.1 Add a failing test in `test/openspec-pin.test.mjs` that reads `package.json` and asserts `@fission-ai/openspec` is exactly `1.14.3` with no range, and that devDependency names do not include `@bradygaster/squad` or any name starting with `@squad4cursor/`. Verify it fails with `node --test test/openspec-pin.test.mjs` while the manifest still says `^1.14.3`. Then set that root dependency and the matching lockfile declaration to `1.14.3`, leave the resolved tarball at `1.14.3`, and do not fetch packages. Verify the same test passes.
+- [x] 1.1 Add a failing test in `test/openspec-pin.test.mjs` that reads `package.json` and asserts `@fission-ai/openspec` is exactly `1.14.3` with no range, and that devDependency names do not include `@bradygaster/squad` or any name starting with `@squad4cursor/`. Verify it fails with `node --test test/openspec-pin.test.mjs` while the manifest still says `^1.14.3`. Then set that root dependency and the matching lockfile declaration to `1.14.3`, leave the resolved tarball at `1.14.3`, and do not fetch packages. Verify the same test passes.
   - The manifest pins the installed OpenSpec version and does not gain a Squad or Squad4Cursor package.
   factory:
     kind: general

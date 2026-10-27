@@ -649,3 +649,11 @@ Implementer: engineer-agent-histories
 Red: `node src/cli.mjs verify run 46e5b4b8-f68d-486a-974c-0facadf816a6 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 4a935338924a1b23176d85b71c71693ff4f82be1).
 Green: `node src/cli.mjs verify run 46e5b4b8-f68d-486a-974c-0facadf816a6 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0ca3bc48ff6885ae5095c1661c1fac728c9c0e48).
 Scope: a porcelain-collapsed new role directory is run-state only when its sole entry is `history.md`. A charter or any other file in that directory stays dirty. `git status --porcelain` is unchanged. No item 5.
+
+## 2026-10-27 stabilize-openspec-artifact-workflow/1.1
+
+Attempt: 6f94841a-22e0-4f19-8082-8d7a73360b80
+Implementer: engineer-openspec-workflow
+Red: `node src/cli.mjs verify run 6f94841a-22e0-4f19-8082-8d7a73360b80 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision abed83befb51c800c883cd78887fc243c0afa7f2).
+Green: `node src/cli.mjs verify run 6f94841a-22e0-4f19-8082-8d7a73360b80 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision c9e81fb04f6f6ebd0309e0ab7f5607c503551a1b).
+Scope: pin @fission-ai/openspec to exact 1.14.3 in package.json and the lockfile root declaration. Resolved tarball stays 1.14.3. No Squad or Squad4Cursor package. Existing backlog.md devDependency stays.

@@ -592,3 +592,11 @@ Reviewer: jason-danley
 Implementer: engineer-agent-histories
 Verdict: ACCEPT
 CLI red unit (issuer cli, exitCode 1, passed false at 4a93533) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at 0ca3bc4). Product: a collapsed new role directory stays clean only when it contains just history.md. A charter in that directory stays dirty. git status invocation unchanged.
+
+## 2026-10-27 stabilize-openspec-artifact-workflow/1.1
+
+Attempt: 6f94841a-22e0-4f19-8082-8d7a73360b80
+Reviewer: jason-danley
+Implementer: engineer-openspec-workflow
+Verdict: ACCEPT
+CLI red unit (issuer cli, exitCode 1, passed false at abed83b) before CLI green unit (issuer cli, exitCode 0, passed true, worktreeClean true at c9e81fb). Product: exact OpenSpec pin 1.14.3. Resolved tarball unchanged. No Squad package added.

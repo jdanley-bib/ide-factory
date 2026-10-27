@@ -323,3 +323,7 @@ Attempt: de5fea2b-210d-4cfa-b628-c5ffaaac1d05
 ## 2026-10-27 finalized treat-agent-histories-as-run-state/1.2
 
 Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
+
+## 2026-10-27 finalized stabilize-openspec-artifact-workflow/1.1
+
+Attempt: 6f94841a-22e0-4f19-8082-8d7a73360b80
