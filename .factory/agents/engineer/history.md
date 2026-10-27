@@ -555,3 +555,11 @@ Implementer: engineer-review-comments
 Red: `node src/cli.mjs verify run 4bb283ff-4db5-4448-bda8-c7f86b09af8b --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 4717ebf6965357af8df8e932167e311cd66de893).
 Green: `node src/cli.mjs verify run 4bb283ff-4db5-4448-bda8-c7f86b09af8b --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision be4f244bf4ebe5fc9260b42dd09aee9e84bd1a2e).
 Scope: accept and reject store `evidence.review.role` as `reviewer` and post one comment through the existing forge port when a pull request record exists. No security-reviewer store, dedupe, missing-record behavior, capture, scaffold, or push.
+
+## 2026-10-27 post-stored-review-comments/1.2
+
+Attempt: 9db45ef7-e006-458c-bd75-994b48509cb8
+Implementer: engineer-review-comments
+Red: `node src/cli.mjs verify run 9db45ef7-e006-458c-bd75-994b48509cb8 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 435ae88e0ad015ae0b5d5eb4689cdc4b0ad90cf6).
+Green: `node src/cli.mjs verify run 9db45ef7-e006-458c-bd75-994b48509cb8 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision ecb659ba0b8e583d84721545f5ab1ae7cb27992b).
+Scope: security-checking to awaiting-review stores a supplied verdict on evidence.securityReview with role security-reviewer and posts it once when a pull request record exists. A handoff with no verdict writes nothing and posts nothing. No dedupe, missing-record case, or push.
