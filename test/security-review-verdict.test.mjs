@@ -231,3 +231,46 @@ test('ACCEPT verdict with distinct securityReviewerId advances security-stage wo
     cleanup(dir);
   }
 });
+
+test('security reviewer cannot match implementer for ACCEPT or REJECT', async () => {
+  for (const verdict of ['ACCEPT', 'REJECT']) {
+    const dir = tempProject();
+    try {
+      const attemptId = await seedSecurityCheckingWithPassingEvidence(dir, '1.2');
+
+      const rejected = await idefactory(dir, [
+        'attempt', 'transition', attemptId, verdict === 'ACCEPT' ? 'awaiting-review' : 'rejected',
+        '--evidence', JSON.stringify({
+          verdict,
+          securityReviewerId: IMPLEMENTER,
+        }),
+      ]);
+      assert.notEqual(rejected.code, 0, rejected.err + rejected.out);
+      assert.equal(getAttempt(dir, attemptId).state, 'security-checking');
+    } finally {
+      cleanup(dir);
+    }
+  }
+});
+
+test('distinct security reviewer REJECT transitions directly to rejected', async () => {
+  const dir = tempProject();
+  try {
+    const attemptId = await seedSecurityCheckingWithPassingEvidence(dir, '1.2');
+
+    const rejected = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'rejected',
+      '--evidence', JSON.stringify({
+        verdict: 'REJECT',
+        securityReviewerId: SECURITY_REVIEWER,
+      }),
+    ]);
+    assert.equal(rejected.code, 0, rejected.err + rejected.out);
+
+    const attempt = getAttempt(dir, attemptId);
+    assert.equal(attempt.state, 'rejected');
+    assert.notEqual(attempt.evidence.review?.role, 'reviewer');
+  } finally {
+    cleanup(dir);
+  }
+});
