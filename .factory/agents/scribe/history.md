@@ -279,3 +279,15 @@ Attempt: 0ca9be2d-9ad6-42de-991d-ca0e47ebe521
 ## 2026-10-23 finalized establish-pr-outer-loop/2.2
 
 Attempt: b04b6ee2-4f24-498e-beba-dcfa1473350e
+
+## 2026-10-27 finalized post-stored-review-comments/1.1
+
+Attempt: 4bb283ff-4db5-4448-bda8-c7f86b09af8b
+
+## 2026-10-27 finalized post-stored-review-comments/1.2
+
+Attempt: 9db45ef7-e006-458c-bd75-994b48509cb8
+
+## 2026-10-27 finalized post-stored-review-comments/1.3
+
+Attempt: 5c15a23a-079b-495c-9efa-0b35050b1923

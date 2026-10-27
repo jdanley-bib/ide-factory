@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "post-stored-review-comments",
+  "title": "Add a failing test that a security-reviewer verdict is stored with the role `security-reviewer` and posted once, and that a handoff with no verdict writes nothing and posts nothing. Then implement that store. Verify the test fails with `node --test test/review-comment.test.mjs` before the edit, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "A stored security-reviewer verdict is posted and a missing one is not invented."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "9db45ef7-e006-458c-bd75-994b48509cb8",
+  "updatedAt": "2026-10-27T13:43:38.011Z"
+}

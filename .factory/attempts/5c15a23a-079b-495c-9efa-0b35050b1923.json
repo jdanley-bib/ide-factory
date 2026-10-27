@@ -1,0 +1,109 @@
+{
+  "id": "5c15a23a-079b-495c-9efa-0b35050b1923",
+  "change": "post-stored-review-comments",
+  "taskId": "1.3",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-review-comments",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T13:46:09.086Z",
+      "finishedAt": "2026-10-27T13:48:10.217Z",
+      "logDigest": "sha256:0f26176f9af554a982c699314cc1ba9e54894f722b3b875b018ac5c3d65c0f21",
+      "artifactDigests": [],
+      "attemptId": "5c15a23a-079b-495c-9efa-0b35050b1923",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "791fedcaf47d513c5cbd575ff668528dde901eea"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T13:49:17.271Z",
+        "finishedAt": "2026-10-27T13:51:18.407Z",
+        "logDigest": "sha256:61da74c24c454b68de11a228498c760768b78129fbbbc4890a7a20b5f2158976",
+        "artifactDigests": [],
+        "attemptId": "5c15a23a-079b-495c-9efa-0b35050b1923",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "0b042b85d12b2aeb05704e9e7a55e3806d3d3d0b"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Task 1.3 skips a second post of the same attempt and role, and a missing pull request record still stores the verdict.",
+      "at": "2026-10-27T13:52:52.683Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T13:44:13.499Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T13:44:13.501Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T13:46:05.878Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T13:48:14.744Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T13:51:21.590Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T13:52:19.175Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T13:52:52.683Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T13:53:03.562Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T13:44:13.499Z",
+  "updatedAt": "2026-10-27T13:53:03.562Z"
+}

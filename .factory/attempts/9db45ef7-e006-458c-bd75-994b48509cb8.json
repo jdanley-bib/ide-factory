@@ -1,0 +1,109 @@
+{
+  "id": "9db45ef7-e006-458c-bd75-994b48509cb8",
+  "change": "post-stored-review-comments",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-review-comments",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T13:35:44.290Z",
+      "finishedAt": "2026-10-27T13:37:45.371Z",
+      "logDigest": "sha256:7effdccaa553c681025539fa10ec4442749382a2bc8806ac8805b255a79cf1bb",
+      "artifactDigests": [],
+      "attemptId": "9db45ef7-e006-458c-bd75-994b48509cb8",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "435ae88e0ad015ae0b5d5eb4689cdc4b0ad90cf6"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T13:39:56.330Z",
+        "finishedAt": "2026-10-27T13:41:57.371Z",
+        "logDigest": "sha256:7572be169aea9f634cb3951b5def0909229771a0a551b48a234aa5d5ad7e7b9e",
+        "artifactDigests": [],
+        "attemptId": "9db45ef7-e006-458c-bd75-994b48509cb8",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "ecb659ba0b8e583d84721545f5ab1ae7cb27992b"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Task 1.2 stores a security-reviewer verdict on evidence.securityReview and posts it once when a pull request record exists.",
+      "at": "2026-10-27T13:43:34.218Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T13:32:42.737Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T13:32:42.739Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T13:35:42.456Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T13:37:50.916Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T13:42:05.641Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T13:43:07.713Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T13:43:34.218Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T13:43:38.011Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T13:32:42.737Z",
+  "updatedAt": "2026-10-27T13:43:38.011Z"
+}

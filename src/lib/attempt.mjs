@@ -3,6 +3,11 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { ledger, writeText } from './layout.mjs';
 import {
+  commentOnPullRequest,
+  postVerdictComment,
+  readPullRequestRecord,
+} from './pull-request.mjs';
+import {
   assertPassingCliSecurityEvidence,
   requiresSecurityStage,
 } from './risk-gates.mjs';
@@ -86,7 +91,11 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   });
 }
 
-export function transitionAttempt(project, attemptId, nextState, { evidence = {}, actorId = null } = {}) {
+export function transitionAttempt(project, attemptId, nextState, {
+  evidence = {},
+  actorId = null,
+  env = process.env,
+} = {}) {
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
   const allowed = TRANSITIONS[attempt.state] || [];
@@ -102,9 +111,17 @@ export function transitionAttempt(project, attemptId, nextState, { evidence = {}
     attempt.reviewerId = evidence.reviewerId || actorId || attempt.reviewerId;
     attempt.evidence.review = {
       verdict: nextState === 'accepted' ? 'ACCEPT' : 'REJECT',
+      role: 'reviewer',
       reviewerId: attempt.reviewerId,
       notes: evidence.notes || '',
       at: new Date().toISOString(),
+    };
+  }
+  const securityVerdict = securityHandoffVerdict(attempt, nextState, evidence);
+  if (securityVerdict) {
+    attempt.evidence.securityReview = {
+      verdict: securityVerdict,
+      role: 'security-reviewer',
     };
   }
   mergeEvidence(attempt, nextState, evidence);
@@ -113,7 +130,29 @@ export function transitionAttempt(project, attemptId, nextState, { evidence = {}
   attempt.history.push({ at: attempt.updatedAt, state: nextState });
   writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
   ledger(project, 'attempt-transition', { attemptId, state: nextState });
+
+  // Task 1.1: post the stored accept/reject verdict once a pull request record exists.
+  // Missing-record and dedupe behavior are covered by later tasks; skip when absent.
+  if (nextState === 'accepted' || nextState === 'rejected') {
+    if (readPullRequestRecord(project, attempt.change)) {
+      commentOnPullRequest(project, attemptId, env);
+    }
+  }
+  if (securityVerdict && readPullRequestRecord(project, attempt.change)) {
+    postVerdictComment(project, {
+      attemptId,
+      verdict: securityVerdict,
+      role: 'security-reviewer',
+    }, env);
+  }
+
   return attempt;
+}
+
+function securityHandoffVerdict(attempt, nextState, evidence) {
+  if (attempt.state !== 'security-checking' || nextState !== 'awaiting-review') return '';
+  if (typeof evidence?.verdict !== 'string') return '';
+  return evidence.verdict.trim();
 }
 
 function rejectCallerSuppliedCheckResults(evidence) {

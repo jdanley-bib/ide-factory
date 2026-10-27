@@ -1,0 +1,28 @@
+{
+  "id": "1.1",
+  "change": "post-stored-review-comments",
+  "title": "Add a failing test that accepting an attempt stores the role `reviewer` with the verdict, and that a change with a pull request record gets one stub comment containing that role, verdict, and attempt id. Then store the role and post. Verify the test fails with `node --test test/review-comment.test.mjs` before the edit, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [],
+  "acceptanceCriteria": [
+    "An accept verdict is posted once with the reviewer role."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": []
+  },
+  "attemptId": "4bb283ff-4db5-4448-bda8-c7f86b09af8b",
+  "updatedAt": "2026-10-27T13:31:56.661Z"
+}
