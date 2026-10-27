@@ -12,7 +12,7 @@
     verificationProfile: frontend-low
     securityProfile: dependency-basic
 
-- [ ] 1.2 Add a failing test that a security reviewer identity equal to the implementer identity is rejected, and that a stored `REJECT` verdict with a distinct security reviewer identity transitions the attempt directly to `rejected`. Then implement the `security-checking` to `rejected` transition and the distinct-identity check. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
+- [x] 1.2 Add a failing test that a security reviewer identity equal to the implementer identity is rejected, and that a stored `REJECT` verdict with a distinct security reviewer identity transitions the attempt directly to `rejected`. Then implement the `security-checking` to `rejected` transition and the distinct-identity check. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.
   - A security reviewer who matches the implementer cannot produce a verdict, and a REJECT verdict ends the attempt.
   factory:
     kind: general

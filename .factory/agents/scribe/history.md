@@ -295,3 +295,7 @@ Attempt: 5c15a23a-079b-495c-9efa-0b35050b1923
 ## 2026-10-27 finalized produce-security-review-verdict/1.1
 
 Attempt: d023b268-b03e-4d1c-8517-e10a5d70839c
+
+## 2026-10-27 finalized produce-security-review-verdict/1.2
+
+Attempt: a752125e-1a82-42fd-82b5-41e3193a4559

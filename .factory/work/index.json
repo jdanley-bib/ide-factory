@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updatedAt": "2026-10-27T14:34:29.391Z",
+  "updatedAt": "2026-10-27T14:45:11.646Z",
   "items": [
     {
       "change": "add-cline-ide-adapter",
@@ -345,7 +345,7 @@
     {
       "change": "produce-security-review-verdict",
       "id": "1.2",
-      "status": "todo"
+      "status": "done"
     },
     {
       "change": "produce-security-review-verdict",
