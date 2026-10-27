@@ -10,7 +10,10 @@ import {
   writeIfMissing,
   writeText,
 } from './layout.mjs';
-import { writeConsumerWorkflowIfAbsent } from './ci-scaffold.mjs';
+import {
+  CONSUMER_WORKFLOW_RELATIVE,
+  writeConsumerWorkflowIfAbsent,
+} from './ci-scaffold.mjs';
 import { runOpenspec } from './openspec-cli.mjs';
 
 const STATE_FILES = [
@@ -65,7 +68,9 @@ export function initProject(project, options = {}) {
     // Deprecated: Backlog.md is no longer required. Kept for one release as a no-op hint.
     created.push('(deprecated --with-backlog ignored; use .factory/work)');
   }
-  writeConsumerWorkflowIfAbsent(project);
+  if (writeConsumerWorkflowIfAbsent(project).created) {
+    created.push(CONSUMER_WORKFLOW_RELATIVE);
+  }
   ledger(project, 'init', { created });
   return created;
 }
