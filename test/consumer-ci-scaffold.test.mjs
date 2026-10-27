@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
+import { run } from '../src/lib/run.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const fakeForge = path.join(repoRoot, 'support/fake-forge.mjs');
 const consumerRelative = path.join('.github', 'workflows', 'factory-consumer.yml');
 const repoCi = path.join(repoRoot, '.github', 'workflows', 'ci.yml');
 const repoRelease = path.join(repoRoot, '.github', 'workflows', 'release.yml');
+const repoConsumer = path.join(repoRoot, consumerRelative);
 
 const REQUIRED_COMMANDS = [
   'npm ci',
@@ -48,6 +50,68 @@ function assertConsumerWorkflow(yaml) {
     assert.doesNotMatch(yaml, pattern, `workflow must not match ${pattern}`);
   }
 }
+
+test('ci scaffold positional checkout receives the workflow outside cwd', async () => {
+  const checkout = tempProject();
+  const cwd = tempProject();
+  const logPath = path.join(cwd, 'forge-argv.log');
+  const ciBefore = fs.readFileSync(repoCi);
+  const releaseBefore = fs.readFileSync(repoRelease);
+  const repoHadConsumer = fs.existsSync(repoConsumer);
+  try {
+    fs.mkdirSync(path.join(checkout, '.factory'), { recursive: true });
+    fs.writeFileSync(path.join(checkout, '.factory', 'team.md'), '# team\n');
+    assert.equal(fs.existsSync(workflowPath(checkout)), false);
+
+    let out = '';
+    let err = '';
+    const code = await run(['ci', 'scaffold', checkout], {
+      cwd,
+      env: {
+        ...process.env,
+        IDEFACTORY_FORGE: fakeForge,
+        IDEFACTORY_FORGE_LOG: logPath,
+      },
+      stdout: {
+        write(chunk) {
+          out += chunk;
+          return true;
+        },
+      },
+      stderr: {
+        write(chunk) {
+          err += chunk;
+          return true;
+        },
+      },
+    });
+    assert.equal(code, 0, err || out);
+    assert.ok(
+      fs.existsSync(workflowPath(checkout)),
+      'positional checkout must receive the consumer workflow',
+    );
+    assertConsumerWorkflow(fs.readFileSync(workflowPath(checkout), 'utf8'));
+    assert.equal(
+      fs.existsSync(workflowPath(cwd)),
+      false,
+      'working directory must not gain the consumer workflow',
+    );
+    assert.equal(
+      fs.existsSync(repoConsumer),
+      repoHadConsumer,
+      'this repository must not gain factory-consumer.yml',
+    );
+    assert.deepEqual(fs.readFileSync(repoCi), ciBefore);
+    assert.deepEqual(fs.readFileSync(repoRelease), releaseBefore);
+    assert.equal(fs.existsSync(logPath) ? fs.readFileSync(logPath, 'utf8').trim() : '', '');
+  } finally {
+    cleanup(checkout);
+    cleanup(cwd);
+    assert.equal(fs.existsSync(repoConsumer), repoHadConsumer);
+    assert.deepEqual(fs.readFileSync(repoCi), ciBefore);
+    assert.deepEqual(fs.readFileSync(repoRelease), releaseBefore);
+  }
+});
 
 test('init names the consumer workflow only when it creates that file', async () => {
   const namedPath = '.github/workflows/factory-consumer.yml';
