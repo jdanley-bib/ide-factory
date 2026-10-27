@@ -1,0 +1,109 @@
+{
+  "id": "a752125e-1a82-42fd-82b5-41e3193a4559",
+  "change": "produce-security-review-verdict",
+  "taskId": "1.2",
+  "state": "finalized",
+  "implementerRole": "engineer",
+  "implementerId": "engineer-security-verdict",
+  "reviewerId": "jason-danley",
+  "modelProfile": "coding-standard",
+  "evidence": {
+    "red": {
+      "schemaVersion": 1,
+      "kind": "unit",
+      "runner": {
+        "name": "idefactory",
+        "version": "0.2.0"
+      },
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+      "exitCode": 1,
+      "startedAt": "2026-10-27T14:35:59.425Z",
+      "finishedAt": "2026-10-27T14:38:00.988Z",
+      "logDigest": "sha256:efc6606cf85bdcfe57863d879b6eaabe29a01c34cf92a362ed150e40fd3da248",
+      "artifactDigests": [],
+      "attemptId": "a752125e-1a82-42fd-82b5-41e3193a4559",
+      "passed": false,
+      "issuer": "cli",
+      "timedOut": false,
+      "worktreeClean": true,
+      "sourceRevision": "9f6527c07076d8a423517bd043857229866c3add"
+    },
+    "verification": [
+      {
+        "schemaVersion": 1,
+        "kind": "unit",
+        "runner": {
+          "name": "idefactory",
+          "version": "0.2.0"
+        },
+        "argv": [
+          "npm",
+          "test"
+        ],
+        "commandDigest": "sha256:527c484bcc3bb219e92ed61f99ff968f31143f89e53fda93d09b74c0ce3177d4",
+        "exitCode": 0,
+        "startedAt": "2026-10-27T14:41:34.275Z",
+        "finishedAt": "2026-10-27T14:43:35.905Z",
+        "logDigest": "sha256:54a766156d3ae2aba0fa760b42b66deacdeaf4499e272044809c4bf3c80e1e4c",
+        "artifactDigests": [],
+        "attemptId": "a752125e-1a82-42fd-82b5-41e3193a4559",
+        "passed": true,
+        "issuer": "cli",
+        "timedOut": false,
+        "worktreeClean": true,
+        "sourceRevision": "4499dcada153b417d7e854a5233247ce6ecc749e"
+      }
+    ],
+    "security": [],
+    "review": {
+      "verdict": "ACCEPT",
+      "role": "reviewer",
+      "reviewerId": "jason-danley",
+      "notes": "Task 1.2 lets a distinct security reviewer reject from security-checking.",
+      "at": "2026-10-27T14:45:09.088Z"
+    },
+    "changedFiles": [],
+    "baseRev": null,
+    "completed": true
+  },
+  "history": [
+    {
+      "at": "2026-10-27T14:34:50.674Z",
+      "state": "planned"
+    },
+    {
+      "at": "2026-10-27T14:34:50.676Z",
+      "state": "assigned"
+    },
+    {
+      "at": "2026-10-27T14:35:55.695Z",
+      "state": "implementing"
+    },
+    {
+      "at": "2026-10-27T14:38:03.530Z",
+      "state": "red-confirmed"
+    },
+    {
+      "at": "2026-10-27T14:43:40.447Z",
+      "state": "verifying"
+    },
+    {
+      "at": "2026-10-27T14:44:53.259Z",
+      "state": "awaiting-review"
+    },
+    {
+      "at": "2026-10-27T14:45:09.088Z",
+      "state": "accepted"
+    },
+    {
+      "at": "2026-10-27T14:45:11.646Z",
+      "state": "finalized"
+    }
+  ],
+  "createdAt": "2026-10-27T14:34:50.674Z",
+  "updatedAt": "2026-10-27T14:45:11.646Z"
+}

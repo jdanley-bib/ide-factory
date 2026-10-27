@@ -1,0 +1,32 @@
+{
+  "id": "1.2",
+  "change": "produce-security-review-verdict",
+  "title": "Add a failing test that a security reviewer identity equal to the implementer identity is rejected, and that a stored `REJECT` verdict with a distinct security reviewer identity transitions the attempt directly to `rejected`. Then implement the `security-checking` to `rejected` transition and the distinct-identity check. Verify the test fails with `node --test test/security-review-verdict.test.mjs` before the edit, and passes with the same command after it.",
+  "status": "done",
+  "dependencies": [
+    "1.1"
+  ],
+  "acceptanceCriteria": [
+    "A security reviewer who matches the implementer cannot produce a verdict, and a REJECT verdict ends the attempt."
+  ],
+  "factory": {
+    "kind": "general",
+    "risk": "medium",
+    "roles": [
+      "engineer",
+      "reviewer",
+      "scribe"
+    ],
+    "checks": [
+      "unit"
+    ],
+    "modelProfile": "coding-standard",
+    "securityProfile": "dependency-basic",
+    "verificationProfile": "frontend-low",
+    "dependencies": [
+      "1.1"
+    ]
+  },
+  "attemptId": "a752125e-1a82-42fd-82b5-41e3193a4559",
+  "updatedAt": "2026-10-27T14:45:11.646Z"
+}

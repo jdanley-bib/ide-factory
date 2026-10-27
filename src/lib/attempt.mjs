@@ -33,7 +33,7 @@ const TRANSITIONS = {
   implementing: ['red-confirmed'],
   'red-confirmed': ['verifying'],
   verifying: ['security-checking', 'awaiting-review'],
-  'security-checking': ['awaiting-review'],
+  'security-checking': ['awaiting-review', 'rejected'],
   'awaiting-review': ['accepted', 'rejected'],
   accepted: ['finalized', 'finalize-failed'],
   rejected: [],
@@ -107,7 +107,9 @@ export function transitionAttempt(project, attemptId, nextState, {
   validateEvidence(project, attempt, nextState, evidence);
 
   if (nextState === 'implementing' && actorId) attempt.implementerId = actorId;
-  if (nextState === 'accepted' || nextState === 'rejected') {
+  const mainReviewerVerdict = attempt.state === 'awaiting-review'
+    && (nextState === 'accepted' || nextState === 'rejected');
+  if (mainReviewerVerdict) {
     attempt.reviewerId = evidence.reviewerId || actorId || attempt.reviewerId;
     attempt.evidence.review = {
       verdict: nextState === 'accepted' ? 'ACCEPT' : 'REJECT',
@@ -118,10 +120,12 @@ export function transitionAttempt(project, attemptId, nextState, {
     };
   }
   const securityVerdict = securityHandoffVerdict(attempt, nextState, evidence);
+  const securityReviewerId = securityReviewerIdFrom(evidence);
   if (securityVerdict) {
     attempt.evidence.securityReview = {
       verdict: securityVerdict,
       role: 'security-reviewer',
+      ...(securityReviewerId ? { reviewerId: securityReviewerId } : {}),
     };
   }
   mergeEvidence(attempt, nextState, evidence);
@@ -133,7 +137,7 @@ export function transitionAttempt(project, attemptId, nextState, {
 
   // Task 1.1: post the stored accept/reject verdict once a pull request record exists.
   // Missing-record and dedupe behavior are covered by later tasks; skip when absent.
-  if (nextState === 'accepted' || nextState === 'rejected') {
+  if (mainReviewerVerdict) {
     if (readPullRequestRecord(project, attempt.change)) {
       commentOnPullRequest(project, attemptId, env);
     }
@@ -143,6 +147,7 @@ export function transitionAttempt(project, attemptId, nextState, {
       attemptId,
       verdict: securityVerdict,
       role: 'security-reviewer',
+      ...(securityReviewerId ? { reviewerId: securityReviewerId } : {}),
     }, env);
   }
 
@@ -150,9 +155,17 @@ export function transitionAttempt(project, attemptId, nextState, {
 }
 
 function securityHandoffVerdict(attempt, nextState, evidence) {
-  if (attempt.state !== 'security-checking' || nextState !== 'awaiting-review') return '';
+  if (
+    attempt.state !== 'security-checking'
+    || !['awaiting-review', 'rejected'].includes(nextState)
+  ) return '';
   if (typeof evidence?.verdict !== 'string') return '';
   return evidence.verdict.trim();
+}
+
+function securityReviewerIdFrom(evidence) {
+  if (typeof evidence?.securityReviewerId !== 'string') return '';
+  return evidence.securityReviewerId.trim();
 }
 
 function rejectCallerSuppliedCheckResults(evidence) {
@@ -186,6 +199,18 @@ function validateEvidence(project, attempt, nextState, evidence) {
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
     assertPassingCliSecurityEvidence(project, attempt, item);
+    if (requiresSecurityStage(item)) {
+      assertSecurityReviewerVerdict(attempt, evidence, 'ACCEPT');
+    }
+  }
+  if (nextState === 'rejected' && attempt.state === 'security-checking') {
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    if (!requiresSecurityStage(item)) {
+      throw new Error(
+        'only security-stage work can transition security-checking → rejected',
+      );
+    }
+    assertSecurityReviewerVerdict(attempt, evidence, 'REJECT');
   }
   if (nextState === 'accepted') {
     if (!evidence.reviewerId && !attempt.reviewerId) {
@@ -195,8 +220,35 @@ function validateEvidence(project, attempt, nextState, evidence) {
       throw new Error('accepted requires verdict ACCEPT');
     }
   }
-  if (nextState === 'rejected' && !evidence.reviewerId && !attempt.reviewerId) {
+  if (
+    nextState === 'rejected'
+    && attempt.state === 'awaiting-review'
+    && !evidence.reviewerId
+    && !attempt.reviewerId
+  ) {
     throw new Error('rejected requires evidence.reviewerId');
+  }
+}
+
+function assertSecurityReviewerVerdict(attempt, evidence, requiredVerdict) {
+  const verdict = typeof evidence?.verdict === 'string'
+    ? evidence.verdict.trim().toUpperCase()
+    : '';
+  if (verdict !== requiredVerdict) {
+    throw new Error(
+      `security-stage work requires verdict ${requiredVerdict} to leave security-checking`,
+    );
+  }
+  const securityReviewerId = typeof evidence?.securityReviewerId === 'string'
+    ? evidence.securityReviewerId.trim()
+    : '';
+  if (!securityReviewerId) {
+    throw new Error(
+      'security-stage work requires evidence.securityReviewerId to leave security-checking',
+    );
+  }
+  if (securityReviewerId === attempt.implementerId) {
+    throw new Error('securityReviewerId must differ from implementerId');
   }
 }
 
