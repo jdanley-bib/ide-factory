@@ -141,6 +141,12 @@ export function postVerdictComment(project, stored, env = process.env) {
     throw new Error(`No pull request record for ${attempt.change}`);
   }
 
+  const postedVerdicts = Array.isArray(record.postedVerdicts) ? record.postedVerdicts : [];
+  const alreadyPosted = postedVerdicts.some(
+    (item) => item?.attemptId === attempt.id && item?.role === stored.role,
+  );
+  if (alreadyPosted) return { record };
+
   const lines = [
     `Role: ${stored.role}`,
     `Verdict: ${stored.verdict}`,
@@ -168,7 +174,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   };
   const next = {
     ...record,
-    postedVerdicts: [...(Array.isArray(record.postedVerdicts) ? record.postedVerdicts : []), posted],
+    postedVerdicts: [...postedVerdicts, posted],
     capturedComments: Array.isArray(record.capturedComments) ? record.capturedComments : [],
   };
   writePullRequestRecord(project, next);
