@@ -627,3 +627,25 @@ Scope: `ci scaffold <checkout>` writes the consumer workflow into that checkout 
 Attempt: 7328599f-2208-4fcf-8a20-99e7e40692e8
 Implementer: engineer-consumer-ci
 Test commit: 61e27f66e002a1f46321304fe5f0d305cf185496 adds init-on-custom-bytes, init with a root HALT file and an existing workflow, upgrade-does-not-create, and scaffold-refuses-overwrite. `node --test test/consumer-ci-scaffold.test.mjs` exited 0 (2 tests). `verify run --check unit --red` ran `npm test` at that commit and exited 0, so no evidence.red was stored. No production change. No Semgrep or consumer SAST. Not finalized.
+
+## 2026-10-27 treat-agent-histories-as-run-state/1.1
+
+Attempt: de5fea2b-210d-4cfa-b628-c5ffaaac1d05
+Implementer: engineer-agent-histories
+Red: `node src/cli.mjs verify run de5fea2b-210d-4cfa-b628-c5ffaaac1d05 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 8c3cb1804bd67f9e2646140aa47df520dccc38f1).
+Green: `node src/cli.mjs verify run de5fea2b-210d-4cfa-b628-c5ffaaac1d05 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision be738a398fe2e08b477881e05c4a537d15a68d9b).
+Scope: uncommitted `.factory/agents/<role>/history.md` is factory run-state. Charters, `.factory/identity/now.md`, nested history files, and product source stay dirty. History files stay tracked. No item 5.
+
+## 2026-10-27 treat-agent-histories-as-run-state/1.2
+
+Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
+Implementer: engineer-agent-histories
+`node --test test/agent-history-run-state.test.mjs` exited 0 (10 pass). `node --test test/approval-run-state.test.mjs` exited 0 (1 pass). The matcher is already in be738a3 from task 1.1, because that task could not record a passing unit check while the new test failed. No separate failing behavior remains. No evidence.red stored. No production change. Not finalized.
+
+## 2026-10-27 treat-agent-histories-as-run-state/1.2
+
+Attempt: 46e5b4b8-f68d-486a-974c-0facadf816a6
+Implementer: engineer-agent-histories
+Red: `node src/cli.mjs verify run 46e5b4b8-f68d-486a-974c-0facadf816a6 --check unit --red` stored exitCode 1 / passed:false (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 4a935338924a1b23176d85b71c71693ff4f82be1).
+Green: `node src/cli.mjs verify run 46e5b4b8-f68d-486a-974c-0facadf816a6 --check unit` stored exitCode 0 / passed:true (issuer=cli, kind=unit, worktreeClean:true, sourceRevision 0ca3bc48ff6885ae5095c1661c1fac728c9c0e48).
+Scope: a porcelain-collapsed new role directory is run-state only when its sole entry is `history.md`. A charter or any other file in that directory stays dirty. `git status --porcelain` is unchanged. No item 5.

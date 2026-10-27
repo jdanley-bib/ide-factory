@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "runId": "be489a30-2eb6-408a-b3fa-65b92423c6a5",
+  "change": "treat-agent-histories-as-run-state",
+  "status": "open",
+  "startedAt": "2026-10-27T16:35:26.672Z",
+  "lastObservedAt": "2026-10-27T17:07:38.881Z",
+  "budgets": {
+    "maxAgentSteps": 20,
+    "maxTasks": 20,
+    "maxWallClockMs": 14400000,
+    "maxFailures": 5
+  },
+  "agentSteps": 6,
+  "completedTasks": 2,
+  "failureCount": 0,
+  "baselineDoneIds": [],
+  "baselineFailureIds": [],
+  "countedFailureIds": [],
+  "lastRequestFingerprint": {
+    "action": "agent-step",
+    "role": "reviewer",
+    "taskId": "1.2",
+    "attemptId": "46e5b4b8-f68d-486a-974c-0facadf816a6",
+    "attemptState": "verifying",
+    "workItemStatus": "in_progress"
+  },
+  "stopReason": null
+}

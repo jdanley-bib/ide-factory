@@ -485,9 +485,33 @@ function porcelainPaths(line) {
   return [normalizeGitPath(unquoteGitPath(rest))];
 }
 
-function isFactoryRunStatePath(relPath) {
+const AGENT_HISTORY_RUN_STATE = /^\.factory\/agents\/[^/]+\/history\.md$/;
+const AGENT_ROLE_DIR_RUN_STATE = /^\.factory\/agents\/([^/]+)\/?$/;
+
+function isHistoryOnlyRoleDirectory(projectCwd, relPath) {
+  const normalized = normalizeGitPath(relPath);
+  const match = AGENT_ROLE_DIR_RUN_STATE.exec(normalized);
+  if (!match) return false;
+  const role = match[1];
+  if (!role || role === '.' || role === '..') return false;
+
+  const roleDir = path.join(projectCwd, '.factory', 'agents', role);
+  let entries;
+  try {
+    entries = fs.readdirSync(roleDir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  if (entries.length !== 1) return false;
+  const [only] = entries;
+  return only.isFile() && only.name === 'history.md';
+}
+
+function isFactoryRunStatePath(relPath, projectCwd) {
   const normalized = normalizeGitPath(relPath);
   if (FACTORY_RUN_STATE_FILES.has(normalized)) return true;
+  if (AGENT_HISTORY_RUN_STATE.test(normalized)) return true;
+  if (isHistoryOnlyRoleDirectory(projectCwd, normalized)) return true;
   return FACTORY_RUN_STATE_PREFIXES.some(
     (prefix) => normalized === prefix.slice(0, -1) || normalized.startsWith(prefix),
   );
@@ -522,7 +546,7 @@ export function resolveGitBinding(cwd) {
   const lines = (statusResult.stdout || '').split('\n').filter((line) => line.length > 0);
   const worktreeClean = lines.every((line) => {
     const paths = porcelainPaths(line);
-    return paths.length > 0 && paths.every(isFactoryRunStatePath);
+    return paths.length > 0 && paths.every((p) => isFactoryRunStatePath(p, cwd));
   });
   return { sourceRevision: sha, worktreeClean };
 }
