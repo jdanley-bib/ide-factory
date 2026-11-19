@@ -62,7 +62,7 @@ The agent never merges. It does not open or edit a pull request through the Curs
 
 ## Never
 
-- Do not start this loop unattended or on a timer.
+- Do not start this loop unattended or on a timer. A cloud run follows `factory-cloud`, where a human's board move and a `start` or `resume` claim begin the loop.
 - Do not wrap `s4c watch` or any Ralph execute loop.
 - Do not modify `.squad/` if present.
 - Do not invent an OpenSpec product change.
