@@ -16,6 +16,7 @@ import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
+import { configureForge } from './forge-config.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -41,6 +42,7 @@ Usage:
   idefactory pr open <change> [--path dir]
   idefactory pr comment <attemptId> [--path dir]
   idefactory pr capture <change> [--path dir]
+  idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>] [--path dir]
   idefactory ci scaffold [path] [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
@@ -182,6 +184,14 @@ async function dispatchCommand(cmd, ctx) {
       return handlePr(project, parsed, env, out);
     case 'ci':
       return handleCi(project, parsed, out);
+    case 'forge': {
+      if (parsed.rest[0] !== 'configure') {
+        throw new Error('Usage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>]');
+      }
+      const forge = configureForge(project, parsed.flags);
+      out(JSON.stringify(forge, null, 2));
+      return 0;
+    }
     case 'approve': {
       const file = approve(project, parsed.rest[0], parsed.flags.note || '', {
         change: parsed.flags.change,

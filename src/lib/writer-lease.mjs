@@ -26,6 +26,7 @@ const MUTATING = new Set([
   'pr comment',
   'pr capture',
   'ci scaffold',
+  'forge configure',
   'approve',
   'reject',
   'lockout create',
@@ -80,6 +81,10 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     const sub = String(rest[0] || '').trim();
     if (sub === 'scaffold') return 'ci scaffold';
     return sub ? `ci ${sub}` : 'ci';
+  }
+  if (head === 'forge') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `forge ${sub}` : 'forge';
   }
   if (head === 'setup' && flags.detect) return 'setup detect';
   return head;
