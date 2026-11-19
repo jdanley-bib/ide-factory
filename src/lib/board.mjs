@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { runAzJson } from './azure-cli.mjs';
+import { appendControlEvent } from './event-log.mjs';
 import { hasActiveLockout } from './govern.mjs';
 import { readBoardConfig } from './integration-config.mjs';
 import { halted, readText, writeText } from './layout.mjs';
@@ -270,6 +271,139 @@ export function reportBoard(project, change, env = process.env) {
     writeBoardRecord(project, record);
   }
   return { record, posted, state: record.state };
+}
+
+const SKIP_STATES = new Set(['in-progress', 'in-review', 'ready-for-human-review']);
+const RESUME_STATES = new Set(['waiting', 'blocked']);
+
+function storyTags(fields) {
+  return String(fields?.['System.Tags'] || '')
+    .split(';')
+    .map((tag) => tag.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Decide whether a cloud run begins for a story a human moved to the ready state.
+ * `not-ready` and `duplicate` write nothing.
+ * @param {string} project
+ * @param {string} change
+ * @param {{ workItem: string|number, revision?: string|number, runUrl?: string }} options
+ * @param {NodeJS.ProcessEnv} env
+ * @returns {{ decision: string, reason: string, change: string, workItemId: number, revision: number, next: string|null }}
+ */
+export function claimBoard(project, change, { workItem, revision, runUrl } = {}, env = process.env) {
+  const usage = 'Usage: idefactory board claim <change> --work-item <id> [--revision N] [--run-url <url>] [--json]';
+  const board = requireBoardConfig(project);
+  const name = assertChangeName(change, usage);
+  const workItemId = Number(workItem);
+  if (!Number.isInteger(workItemId) || workItemId <= 0) throw new Error(usage);
+  if (!fs.existsSync(changeDir(project, name))) {
+    throw new Error(`OpenSpec change not found: openspec/changes/${name}/`);
+  }
+  let record = readBoardRecord(project, name);
+  if (record && record.workItem.id !== workItemId) {
+    throw new Error(`${name} is published as work item ${record.workItem.id}, not ${workItemId}`);
+  }
+
+  const item = showWorkItem(project, board, workItemId, env);
+  const fields = item?.fields || {};
+  const named = String(fields[board.changeField] || '').trim();
+  if (named !== name) {
+    throw new Error(`work item ${workItemId} ${board.changeField} is "${named}", not ${name}`);
+  }
+  if (!storyTags(fields).includes(String(board.tag).toLowerCase())) {
+    throw new Error(`work item ${workItemId} is missing the ${board.tag} tag`);
+  }
+  const claimedRevision = revision !== undefined && revision !== true && String(revision).trim() !== ''
+    ? Number(revision)
+    : Number(item?.rev);
+  if (!Number.isInteger(claimedRevision) || claimedRevision <= 0) {
+    throw new Error(`work item ${workItemId} has no usable revision`);
+  }
+  const result = (decision, reason, next = null) => ({
+    decision,
+    reason,
+    change: name,
+    workItemId,
+    revision: claimedRevision,
+    next,
+  });
+
+  if (fields['System.State'] !== board.states.ready) {
+    return result('not-ready', `Work item state is "${fields['System.State'] || ''}", not "${board.states.ready}".`);
+  }
+  if (record?.claims.some((entry) => entry.revision === claimedRevision)) {
+    return result('duplicate', `Revision ${claimedRevision} was already claimed.`);
+  }
+
+  if (!record) {
+    record = {
+      schemaVersion: 1,
+      change: name,
+      provider: board.provider,
+      workItem: { id: workItemId, url: workItemUrl(board, workItemId) },
+      state: 'new',
+      descriptionDigest: null,
+      comments: [],
+      claims: [],
+      linkedPullRequests: [],
+    };
+    writeBoardRecord(project, record);
+  }
+
+  const priorState = record.state;
+  let outcome;
+  if (halted(project)) {
+    outcome = result('halted', 'HALT is present. A human must remove it with idefactory resume.');
+    transitionBoard(project, name, {
+      to: 'blocked',
+      note: `Factory did not begin ${name}: HALT is present. A human must remove it with idefactory resume, then move this story to ${board.states.ready}.`,
+    }, env);
+  } else if (SKIP_STATES.has(priorState)) {
+    outcome = result('skip', `The factory already recorded ${priorState} for this change.`);
+    transitionBoard(project, name, {
+      to: priorState,
+      note: `Factory is already working on ${name} (${priorState}). This move to ${board.states.ready} was ignored. To resume after a stop, move the story to ${board.states.waiting} first.`,
+    }, env);
+  } else {
+    const resume = RESUME_STATES.has(priorState);
+    const next = `idefactory run --change ${name} --until human-gate${resume ? ' --new-run' : ''}`;
+    outcome = result(resume ? 'resume' : 'start', resume
+      ? `A human returned the story to ${board.states.ready} after ${priorState}.`
+      : 'First claim for this change.', next);
+    const lines = [
+      `Factory ${resume ? 'resumed' : 'claimed'} ${name}.`,
+      `Branch: factory/${name}`,
+    ];
+    if (runUrl) lines.push(`Run: ${runUrl}`);
+    transitionBoard(project, name, {
+      to: 'in-progress',
+      note: lines.join('\n'),
+      fields: {
+        [board.branchField]: `factory/${name}`,
+        ...(runUrl ? { [board.runUrlField]: runUrl } : {}),
+      },
+    }, env);
+  }
+
+  record = readBoardRecord(project, name);
+  record.claims = [...record.claims, {
+    revision: claimedRevision,
+    decision: outcome.decision,
+    at: new Date().toISOString(),
+    ...(runUrl ? { runUrl } : {}),
+  }];
+  writeBoardRecord(project, record);
+  appendControlEvent(project, {
+    type: 'board-claim',
+    time: new Date().toISOString(),
+    change: name,
+    workItemId,
+    revision: claimedRevision,
+    decision: outcome.decision,
+  });
+  return outcome;
 }
 
 /**

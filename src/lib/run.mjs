@@ -17,7 +17,7 @@ import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-leas
 import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { configureBoard, configureForge } from './integration-config.mjs';
-import { commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
+import { claimBoard, commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -384,6 +384,21 @@ function handleBoard(project, parsed, env, out) {
     const result = publishBoard(project, change, env);
     const verb = result.created ? 'Created' : (result.updated ? 'Updated' : 'Unchanged');
     out(`${verb} work item ${result.record.workItem.id} for ${result.record.change}: ${result.record.workItem.url}`);
+    return 0;
+  }
+  if (sub === 'claim') {
+    const result = claimBoard(project, change, {
+      workItem: parsed.flags['work-item'],
+      revision: parsed.flags.revision,
+      runUrl: text(parsed.flags['run-url']),
+    }, env);
+    if (parsed.flags.json) {
+      out(JSON.stringify(result, null, 2));
+      return 0;
+    }
+    out(`Decision: ${result.decision}`);
+    out(`Reason: ${result.reason}`);
+    out(`Next: ${result.next || '(stop; do not run the factory)'}`);
     return 0;
   }
   if (sub === 'comment') {

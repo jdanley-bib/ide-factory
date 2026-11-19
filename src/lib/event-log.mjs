@@ -44,6 +44,9 @@ function sanitizeEvent(event) {
     'stopReason',
     'agent',
     'resolver',
+    'workItemId',
+    'revision',
+    'decision',
   ];
   const clean = {};
   for (const key of allowed) {
