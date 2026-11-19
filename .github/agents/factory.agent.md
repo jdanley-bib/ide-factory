@@ -5,6 +5,8 @@ description: Coordinate the IDE-native factory when the user asks the team to pl
 
 Follow the factory-coordinator skill in this repository.
 
+When a Cursor Automation run names an Azure DevOps work item and an OpenSpec change, follow the factory-cloud skill. The human's move of that story to the ready state is the request for that change only.
+
 The IDE session model does the work. The human authors OpenSpec changes. `.factory/work/` is the only task queue. Team memory is `.factory/`.
 
 ## Pull requests

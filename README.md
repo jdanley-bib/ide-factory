@@ -159,6 +159,22 @@ flowchart TD
 | `idefactory approve` / `reject` | Record a human decision. Does not publish or spend |
 | `idefactory lockout` | Create or resolve a reviewer lockout |
 | `idefactory halt` / `resume` | Set or clear the kill switch |
+| `idefactory forge configure` | Choose `github` (default) or `azure-devops` for `idefactory pr` |
+| `idefactory board …` | Optional Azure DevOps board mirror: `configure`, `publish`, `claim`, `report`, `comment`, `transition` |
+
+## Cloud runs from an Azure DevOps board
+
+Local use is the default and needs none of this. With no `board` entry in `.factory/config.json`, every `board` command refuses and nothing talks to Azure DevOps.
+
+To let the factory pick up work by itself:
+
+1. A human authors an OpenSpec change, runs `idefactory sync-tasks <change>` and `idefactory board publish <change>`, and pushes. Publish creates one User Story per change, tagged `factory`, with `Custom.OpenSpecChange` set to the change name.
+2. Moving that story to `Ready for Factory` is the request. An Azure DevOps service hook posts to the reference filter in [`tools/ado-bridge/`](tools/ado-bridge/README.md), which forwards only that transition to a Cursor Automation webhook.
+3. The Automation's cloud agent follows the `factory-cloud` skill. `idefactory board claim` decides `start`, `resume`, `skip`, `duplicate`, `not-ready`, or `halted`, so a repeated delivery does not run twice.
+4. The agent runs `idefactory run --until human-gate` on `factory/<change>`, mirrors progress with `idefactory board report`, and opens the pull request with `idefactory pr open`.
+5. A gate, lockout, or rejected review moves the story to `Waiting on Human` or `Blocked`. The human decides, then moves the story back to `Ready for Factory` to resume.
+
+The agent never merges, never approves, never clears `HALT`, and never moves a story to the ready state or a done state. `ADO_TOKEN` is a runtime secret passed to the Azure CLI through its environment, never on argv. `idefactory` itself never launches a model and never polls the board.
 
 ## What gets installed
 

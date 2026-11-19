@@ -1,15 +1,21 @@
 import { createHash } from 'node:crypto';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
 import {
+  azurePullRequestUrl,
+  buildAzureCreatePullRequestArgv,
+  buildAzureThreadsArgv,
+  buildAzureUpdatePullRequestArgv,
   buildCommentPullRequestArgv,
   buildCreatePullRequestArgv,
   buildListCommentsArgv,
   buildUpdatePullRequestArgv,
   runForge,
 } from './forge.mjs';
+import { forgeConfigErrors, readForgeConfig } from './integration-config.mjs';
 import { halted, writeText } from './layout.mjs';
 
 const CHANGE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
@@ -34,26 +40,14 @@ export function openPullRequest(project, change, env = process.env) {
   const existing = readPullRequestRecord(project, name);
   const body = buildPullRequestBody(project, name);
   const bodyDigest = digestBody(body);
+  const forge = forgePort(project);
 
   if (!existing) {
     ensureBranch(project, branch);
-    const argv = buildCreatePullRequestArgv({
-      branch,
-      title: name,
-      body,
-    });
-    assertSafeForgeArgv(argv);
-    const result = runForge(project, argv, env);
-    if (result.status !== 0) {
-      throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
-    }
-    const url = parseCreatedPullRequestUrl(result.stdout);
-    const number = Number(url.split('/').at(-1));
-    if (!Number.isInteger(number) || number <= 0) {
-      throw new Error('forge create returned an invalid pull request URL');
-    }
+    const { number, url } = forge.create(project, { branch, title: name, body }, env);
     const record = {
       change: name,
+      provider: forge.provider,
       branch,
       pullRequest: {
         number,
@@ -67,15 +61,7 @@ export function openPullRequest(project, change, env = process.env) {
     return { record, created: true };
   }
 
-  const argv = buildUpdatePullRequestArgv({
-    number: existing.pullRequest.number,
-    body,
-  });
-  assertSafeForgeArgv(argv);
-  const result = runForge(project, argv, env);
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
-  }
+  forge.update(project, { number: existing.pullRequest.number, body }, env);
   const record = {
     ...existing,
     change: name,
@@ -151,15 +137,7 @@ export function postVerdictComment(project, stored, env = process.env) {
     lines.push(`Reviewer: ${stored.reviewerId}`);
   }
   const body = `${lines.join('\n')}\n`;
-  const argv = buildCommentPullRequestArgv({
-    number: record.pullRequest.number,
-    body,
-  });
-  assertSafeForgeArgv(argv);
-  const result = runForge(project, argv, env);
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
-  }
+  forgePort(project).comment(project, { number: record.pullRequest.number, body }, env);
 
   const posted = {
     attemptId: attempt.id,
@@ -197,19 +175,10 @@ export function capturePullRequestComments(project, change, env = process.env) {
     throw new Error(`No pull request record for ${name}`);
   }
 
-  const argv = buildListCommentsArgv({ number: record.pullRequest.number });
-  assertSafeForgeArgv(argv);
-  const result = runForge(project, argv, env);
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
-  }
-  let parsed;
-  try {
-    parsed = JSON.parse(result.stdout);
-  } catch {
-    throw new Error('forge comment list returned invalid JSON');
-  }
-  const incoming = Array.isArray(parsed?.comments) ? parsed.comments : [];
+  const incoming = forgePort(project).listComments(project, {
+    number: record.pullRequest.number,
+    url: record.pullRequest.url,
+  }, env);
   const captured = Array.isArray(record.capturedComments) ? [...record.capturedComments] : [];
   const seen = new Set(captured.map((item) => String(item.id)));
   for (const raw of incoming) {
@@ -440,21 +409,113 @@ function ensureBranch(project, branch) {
   }
 }
 
-function assertSafeForgeArgv(argv) {
-  const joined = argv.join(' ');
-  if (/\bmerge\b/i.test(joined)) {
-    throw new Error('forge argv must not merge');
-  }
-  if (/\brulesets\b/i.test(joined) || /branches\/.+\/protection/i.test(joined)
-    || /api\.github\.com/i.test(joined)) {
-    throw new Error('forge argv must not call the forge admin API');
-  }
-}
-
 function parseCreatedPullRequestUrl(stdout) {
   const url = String(stdout || '').trim();
   if (!/^https:\/\/github\.com\/[^/\s]+\/[^/\s]+\/pull\/[1-9]\d*$/.test(url)) {
     throw new Error('forge create did not return a pull request URL');
   }
   return url;
+}
+
+function runChecked(project, argv, env) {
+  const result = runForge(project, argv, env);
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || result.stdout.trim() || `forge exited ${result.status}`);
+  }
+  return result.stdout;
+}
+
+function parseForgeJson(stdout, what) {
+  try {
+    return JSON.parse(stdout);
+  } catch {
+    throw new Error(`forge ${what} returned invalid JSON`);
+  }
+}
+
+const githubPort = {
+  provider: 'github',
+  create(project, { branch, title, body }, env) {
+    const url = parseCreatedPullRequestUrl(runChecked(project, buildCreatePullRequestArgv({ branch, title, body }), env));
+    const number = Number(url.split('/').at(-1));
+    if (!Number.isInteger(number) || number <= 0) {
+      throw new Error('forge create returned an invalid pull request URL');
+    }
+    return { number, url };
+  },
+  update(project, { number, body }, env) {
+    runChecked(project, buildUpdatePullRequestArgv({ number, body }), env);
+  },
+  comment(project, { number, body }, env) {
+    runChecked(project, buildCommentPullRequestArgv({ number, body }), env);
+  },
+  listComments(project, { number }, env) {
+    const parsed = parseForgeJson(runChecked(project, buildListCommentsArgv({ number }), env), 'comment list');
+    return Array.isArray(parsed?.comments) ? parsed.comments : [];
+  },
+};
+
+function azurePort(forge) {
+  return {
+    provider: 'azure-devops',
+    create(project, { branch, title, body }, env) {
+      const parsed = parseForgeJson(runChecked(project, buildAzureCreatePullRequestArgv({
+        ...forge,
+        branch,
+        title,
+        body,
+      }), env), 'create');
+      const number = Number(parsed?.pullRequestId);
+      if (!Number.isInteger(number) || number <= 0) {
+        throw new Error('forge create did not return a pull request id');
+      }
+      return { number, url: azurePullRequestUrl(forge, number) };
+    },
+    update(project, { number, body }, env) {
+      runChecked(project, buildAzureUpdatePullRequestArgv({
+        organization: forge.organization,
+        number,
+        body,
+      }), env);
+    },
+    comment(project, { number, body }, env) {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'idefactory-thread-'));
+      const file = path.join(dir, 'thread.json');
+      try {
+        fs.writeFileSync(file, JSON.stringify({
+          comments: [{ parentCommentId: 0, content: body, commentType: 1 }],
+          status: 1,
+        }));
+        runChecked(project, buildAzureThreadsArgv({ ...forge, number, file }), env);
+      } finally {
+        fs.rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    listComments(project, { number, url }, env) {
+      const parsed = parseForgeJson(runChecked(project, buildAzureThreadsArgv({ ...forge, number }), env), 'comment list');
+      const threads = Array.isArray(parsed?.value) ? parsed.value : [];
+      const comments = [];
+      for (const thread of threads) {
+        for (const comment of Array.isArray(thread?.comments) ? thread.comments : []) {
+          if (comment?.commentType === 'system' || comment?.commentType === 3) continue;
+          if (thread.id === undefined || comment.id === undefined) continue;
+          comments.push({
+            id: `${thread.id}:${comment.id}`,
+            author: comment.author?.uniqueName || comment.author?.displayName || '',
+            url: url ? `${url}?discussionId=${thread.id}` : '',
+            createdAt: comment.publishedDate || '',
+            body: typeof comment.content === 'string' ? comment.content : '',
+          });
+        }
+      }
+      return comments;
+    },
+  };
+}
+
+function forgePort(project) {
+  const forge = readForgeConfig(project);
+  const errors = forgeConfigErrors(forge);
+  if (errors.length) throw new Error(errors.join('\n'));
+  return forge.provider === 'azure-devops' ? azurePort(forge) : githubPort;
 }

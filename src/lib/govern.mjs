@@ -8,6 +8,7 @@ import { setupReadinessErrors } from './setup.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
 import { resolveGitBinding } from './verification-evidence.mjs';
 import { listWorkItems, workCounts } from './work.mjs';
+import { boardConfigErrors, forgeConfigErrors } from './integration-config.mjs';
 
 const REQUIRED = [
   '.factory/team.md',
@@ -43,6 +44,8 @@ export function doctor(project) {
       const config = JSON.parse(readText(configPath));
       if (config.runtime !== 'ide') errors.push('config.json runtime must be "ide"');
       if (config.ideation !== false) errors.push('config.json ideation must be false');
+      for (const item of forgeConfigErrors(config.forge)) errors.push(item);
+      for (const item of boardConfigErrors(config.board)) errors.push(item);
     } catch {
       errors.push('config.json is not valid JSON');
     }
