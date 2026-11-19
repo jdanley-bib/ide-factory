@@ -15,7 +15,7 @@ import {
   buildUpdatePullRequestArgv,
   runForge,
 } from './forge.mjs';
-import { forgeConfigErrors, readForgeConfig } from './forge-config.mjs';
+import { forgeConfigErrors, readForgeConfig } from './integration-config.mjs';
 import { halted, writeText } from './layout.mjs';
 
 const CHANGE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;

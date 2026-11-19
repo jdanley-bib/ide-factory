@@ -27,7 +27,7 @@ The factory runs only when a human opens an IDE session and starts `/factory-run
 
 ## Impact
 
-- New `src/lib/board.mjs`, `src/lib/azure-cli.mjs`, and `src/lib/forge-config.mjs`; changes to `src/lib/forge.mjs`, `src/lib/pull-request.mjs`, `src/lib/run.mjs`, `src/lib/writer-lease.mjs`, `src/lib/event-log.mjs`, and `src/lib/govern.mjs`.
+- New `src/lib/board.mjs`, `src/lib/azure-cli.mjs`, and `src/lib/integration-config.mjs`; changes to `src/lib/forge.mjs`, `src/lib/pull-request.mjs`, `src/lib/run.mjs`, `src/lib/writer-lease.mjs`, `src/lib/event-log.mjs`, and `src/lib/govern.mjs`.
 - New `templates/skills/factory-cloud/SKILL.md`, coordinator and run skill text, and the Cursor, Cline, and Copilot rule templates.
 - New `tools/ado-bridge/` reference filter with no runtime dependency.
 - New stub `support/fake-az.mjs`. `npm test` does not call Azure DevOps or GitHub.

@@ -16,7 +16,8 @@ import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
-import { configureForge } from './forge-config.mjs';
+import { configureBoard, configureForge } from './integration-config.mjs';
+import { commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -42,6 +43,12 @@ Usage:
   idefactory pr open <change> [--path dir]
   idefactory pr comment <attemptId> [--path dir]
   idefactory pr capture <change> [--path dir]
+  idefactory board configure --organization <url> --project <name> [--work-item-type <type>] [--tag <tag>] [--change-field <ref>] [--state-<key> <name>] [--path dir]
+  idefactory board publish <change> [--path dir]
+  idefactory board claim <change> --work-item <id> [--revision N] [--run-url <url>] [--json] [--path dir]
+  idefactory board report <change> [--path dir]
+  idefactory board comment <change> --message "text" [--key key] [--path dir]
+  idefactory board transition <change> --to in-progress|waiting|blocked|in-review|ready-for-human-review [--note "text"] [--path dir]
   idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>] [--path dir]
   idefactory ci scaffold [path] [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]
@@ -184,6 +191,8 @@ async function dispatchCommand(cmd, ctx) {
       return handlePr(project, parsed, env, out);
     case 'ci':
       return handleCi(project, parsed, out);
+    case 'board':
+      return handleBoard(project, parsed, env, out);
     case 'forge': {
       if (parsed.rest[0] !== 'configure') {
         throw new Error('Usage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>]');
@@ -352,6 +361,53 @@ function handlePr(project, parsed, env, out) {
     + '       idefactory pr comment <attemptId>\n'
     + '       idefactory pr capture <change>',
   );
+}
+
+const BOARD_USAGE = [
+  'Usage: idefactory board configure --organization <url> --project <name>',
+  '       idefactory board publish <change>',
+  '       idefactory board claim <change> --work-item <id> [--revision N] [--run-url <url>] [--json]',
+  '       idefactory board report <change>',
+  '       idefactory board comment <change> --message "text" [--key key]',
+  '       idefactory board transition <change> --to <state> [--note "text"]',
+].join('\n');
+
+function handleBoard(project, parsed, env, out) {
+  const sub = parsed.rest[0];
+  const change = parsed.rest[1];
+  const text = (value) => (typeof value === 'string' ? value : '');
+  if (sub === 'configure') {
+    out(JSON.stringify(configureBoard(project, parsed.flags), null, 2));
+    return 0;
+  }
+  if (sub === 'publish') {
+    const result = publishBoard(project, change, env);
+    const verb = result.created ? 'Created' : (result.updated ? 'Updated' : 'Unchanged');
+    out(`${verb} work item ${result.record.workItem.id} for ${result.record.change}: ${result.record.workItem.url}`);
+    return 0;
+  }
+  if (sub === 'comment') {
+    const result = commentBoard(project, change, {
+      message: text(parsed.flags.message),
+      key: text(parsed.flags.key),
+    }, env);
+    out(result.posted ? 'Comment posted.' : 'Comment already posted for that key.');
+    return 0;
+  }
+  if (sub === 'transition') {
+    const result = transitionBoard(project, change, {
+      to: text(parsed.flags.to),
+      note: text(parsed.flags.note),
+    }, env);
+    out(`Work item ${result.record.workItem.id} is ${result.record.state}.`);
+    return 0;
+  }
+  if (sub === 'report') {
+    const result = reportBoard(project, change, env);
+    out(`Work item ${result.record.workItem.id} is ${result.state}. Reported tasks: ${result.posted.join(', ') || '(none)'}.`);
+    return 0;
+  }
+  throw new Error(BOARD_USAGE);
 }
 
 async function handleVerify(project, parsed, out) {
