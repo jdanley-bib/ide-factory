@@ -1,10 +1,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  MARKER,
   ROLES,
   ledger,
-  mergeMarked,
   readText,
   templatesRoot,
   writeIfMissing,
@@ -14,6 +12,7 @@ import {
   CONSUMER_WORKFLOW_RELATIVE,
   writeConsumerWorkflowIfAbsent,
 } from './ci-scaffold.mjs';
+import { syncAdapters } from './adapter-sync.mjs';
 import { runOpenspec } from './openspec-cli.mjs';
 
 const STATE_FILES = [
@@ -30,42 +29,18 @@ const STATE_FILES = [
   'identity/wisdom.md',
 ];
 
-const COMMANDS = [
-  {
-    name: 'factory-status',
-    description: 'Show factory team, OpenSpec, and work queue status',
-  },
-  {
-    name: 'factory-plan',
-    description: 'Staff a human-authored OpenSpec change into .factory/work',
-  },
-  {
-    name: 'factory-build',
-    description: 'Implement the next factory work item with the factory-build skill',
-  },
-  {
-    name: 'factory-run',
-    description: 'Bounded multi-task factory orchestration until a stop condition',
-  },
-  {
-    name: 'factory-full',
-    description: 'One-stop factory: explore, propose if needed, plan, and run',
-  },
-  {
-    name: 'factory-review',
-    description: 'Review the current factory task as a different role',
-  },
-  {
-    name: 'factory-setup',
-    description: 'Confirm the test command and governance mode, then record them',
-  },
-];
+function syncOptions(options) {
+  return { force: Boolean(options.force), replace: options.replace || [] };
+}
 
 export function initProject(project, options = {}) {
+  if (options.dryRun) {
+    const sync = syncAdapters(project, { command: 'init', ...syncOptions(options), dryRun: true });
+    return { created: plannedState(project), sync };
+  }
   fs.mkdirSync(project, { recursive: true });
   const created = writeState(project, options);
-  writeAdapters(project);
-  mergeInstructions(project);
+  const sync = syncAdapters(project, { command: 'init', ...syncOptions(options) });
   ensureWorkScaffold(project);
   if (options.withOpenspec) ensureOpenspec(project, options.env || process.env);
   if (options.withBacklog) {
@@ -75,17 +50,31 @@ export function initProject(project, options = {}) {
   if (writeConsumerWorkflowIfAbsent(project).created) {
     created.push(CONSUMER_WORKFLOW_RELATIVE);
   }
-  ledger(project, 'init', { created });
-  return created;
+  ledger(project, 'init', { created, adapters: sync.report.summary });
+  return { created, sync };
 }
 
-export function upgradeProject(project) {
+export function upgradeProject(project, options = {}) {
   if (!fs.existsSync(path.join(project, '.factory', 'team.md'))) {
     throw new Error('No .factory/ team state. Run idefactory init first.');
   }
-  writeAdapters(project);
-  mergeInstructions(project);
-  ledger(project, 'upgrade', {});
+  const sync = syncAdapters(project, { command: 'upgrade', ...syncOptions(options), dryRun: Boolean(options.dryRun) });
+  if (options.dryRun) return { sync };
+  ledger(project, 'upgrade', { adapters: sync.report.summary });
+  return { sync };
+}
+
+function plannedState(project) {
+  const factory = path.join(project, '.factory');
+  const missing = [];
+  const consider = (rel) => {
+    if (!fs.existsSync(path.join(factory, rel))) missing.push(rel);
+  };
+  for (const rel of STATE_FILES) consider(rel);
+  for (const role of ROLES) {
+    for (const leaf of ['charter.md', 'history.md']) consider(path.join('agents', role, leaf));
+  }
+  return missing;
 }
 
 function writeState(project, options) {
@@ -126,70 +115,6 @@ function ensureWorkScaffold(project) {
   writeIfMissing(path.join(work, 'index.json'), JSON.stringify({ version: 1, items: [] }, null, 2));
   writeIfMissing(path.join(work, 'items', '.gitkeep'), '');
   writeIfMissing(path.join(project, '.factory', 'attempts', '.gitkeep'), '');
-}
-
-function writeAdapters(project) {
-  const skills = path.join(templatesRoot, 'skills');
-  const destinations = [
-    '.cursor/skills',
-    '.claude/skills',
-    '.github/skills',
-    '.agents/skills',
-    '.cline/skills',
-  ];
-  for (const name of fs.readdirSync(skills)) {
-    const from = path.join(skills, name);
-    if (!fs.statSync(from).isDirectory()) continue;
-    for (const dest of destinations) {
-      fs.cpSync(from, path.join(project, dest, name), { recursive: true });
-    }
-  }
-  for (const command of COMMANDS) {
-    const body = readText(path.join(templatesRoot, 'commands', `${command.name}.md`)).trim();
-    const owned = `${body}\n\n${MARKER}\n`;
-    writeText(
-      path.join(project, '.cursor/commands', `${command.name}.md`),
-      `---\ndescription: ${command.description}\n---\n\n${owned}`,
-    );
-    writeText(
-      path.join(project, '.claude/commands', `${command.name}.md`),
-      `---\ndescription: ${command.description}\n---\n\n${owned}`,
-    );
-    writeText(
-      path.join(project, '.github/prompts', `${command.name}.prompt.md`),
-      `---\ndescription: ${command.description}\nagent: factory\n---\n\n${owned}`,
-    );
-    writeText(
-      path.join(project, '.cline/workflows', `${command.name}.md`),
-      owned,
-    );
-  }
-  writeText(
-    path.join(project, '.cursor/rules/factory.mdc'),
-    readText(path.join(templatesRoot, 'cursor/rules/factory.mdc')),
-  );
-  writeText(
-    path.join(project, '.github/agents/factory.agent.md'),
-    readText(path.join(templatesRoot, 'copilot/factory.agent.md')),
-  );
-  writeText(
-    path.join(project, '.cline/rules/factory.md'),
-    readText(path.join(templatesRoot, 'cline/rules/factory.md')),
-  );
-}
-
-function mergeInstructions(project) {
-  const section = readText(path.join(templatesRoot, 'fragments/instructions.md'));
-  const targets = [
-    'AGENTS.md',
-    'CLAUDE.md',
-    path.join('.github', 'copilot-instructions.md'),
-  ];
-  for (const rel of targets) {
-    const file = path.join(project, rel);
-    const existing = fs.existsSync(file) ? readText(file) : '';
-    writeText(file, mergeMarked(existing, section));
-  }
 }
 
 function ensureOpenspec(project, env) {

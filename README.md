@@ -16,7 +16,7 @@ idefactory setup
 idefactory doctor
 ```
 
-`init` works in a new directory or an existing repo. It creates `.factory/` and the Cursor, Copilot, Claude, and Cline adapters. It does not delete application files, and it does not copy this repository's GitHub workflows. A second run keeps `decisions.md`, agent histories, charters, and the roster. Text already in `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` stays; the factory inserts a marked section. A `.squad/` directory is left untouched.
+`init` works in a new directory or an existing repo. It creates `.factory/` and the Cursor, Copilot, Claude, and Cline adapters. It does not delete application files, and it does not copy this repository's GitHub workflows. A second run keeps `decisions.md`, agent histories, charters, and the roster, and it never overwrites a generated adapter file you have edited (see [Upgrading adapters](#upgrading-adapters)). Text already in `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md` stays; the factory inserts a marked section. A `.squad/` directory is left untouched.
 
 `idefactory setup` records the test command and the governance mode. The default is lightweight governance: policy version 1 and no principal verifier. In a terminal it asks for the test command and the mode. From a script, pass the answers as flags:
 
@@ -42,11 +42,51 @@ idefactory init --with-openspec
 
 `--with-backlog` is ignored (deprecated). The execution queue is `.factory/work/`.
 
-Refresh adapter files after you pull a newer factory, without rewriting decisions:
+Refresh adapter files after you pull a newer factory, without rewriting decisions or your edits:
 
 ```bash
 idefactory upgrade
 ```
+
+## Upgrading adapters
+
+`init` and `upgrade` share one planner. Each generated file is a skill, a command, a rule, an agent file, or a marked section of `AGENTS.md`, `CLAUDE.md`, or `.github/copilot-instructions.md`. For each one the planner compares three things: the file on disk, the rendering this release would write, and the baseline, which is what the factory last wrote. The baseline comes from `.factory/adapters.json`, a committed manifest of content digests (line endings and a trailing newline do not matter). An install that predates the manifest has none, so the planner falls back to a table of every rendering shipped in past releases, `templates/adapter-history.json`.
+
+| Status | Meaning | Action |
+| --- | --- | --- |
+| `current` | The file already matches this release | None |
+| `create` | The file is missing | Written |
+| `update` | The file is an unmodified copy of an older release | Replaced |
+| `modified` | You edited the file and this release has nothing new for it | Kept, nothing staged |
+| `preserved` | You edited the file and this release also changed it | Kept, incoming copy and diff staged |
+| `pinned` | You pinned the file with `idefactory adapters pin` | Never touched |
+| `malformed` | A marked section in an instruction file has an unpaired, reversed, or repeated marker | Kept, reported |
+| `orphan` | A past release generated the file and this one does not | Reported, never deleted |
+
+The safe files are written together. A file in conflict is never overwritten. The command prints one line per file and exits with code 3 when any file is `preserved` or `malformed`. Every other outcome exits 0, so a pipeline can tell "finished with conflicts to review" from a failure. For a `preserved` file the incoming copy and a unified diff are staged under `.factory/upgrade/<timestamp>/` (`incoming/` and `diffs/`; `backups/` holds files that `--replace` or `--force` overwrote). A run with nothing to stage creates no directory, and a repeated run with no change writes nothing.
+
+```bash
+idefactory upgrade --dry-run                 # print the plan, write nothing (also on init)
+idefactory upgrade --json                    # the same report as one JSON document
+idefactory upgrade --replace <path>          # replace this file with the new rendering; the old one is saved under backups/
+idefactory upgrade --force                   # replace every preserved file, with backups; a modified file needs --replace
+idefactory adapters pin <path>...            # keep this file exactly as it is on every later upgrade
+idefactory adapters unpin <path>...
+```
+
+`--replace` is repeatable and takes a path. `--force` takes no value; use `--path <dir>` to name the project.
+
+To migrate an install made by an earlier release, run `idefactory upgrade --dry-run`, then `idefactory upgrade`. Unmodified files update. For each preserved file, read the staged diff and either edit the file to match, run `upgrade --replace <path>`, or pin it. Text you already lost to an old overwrite can only be recovered from git.
+
+### Project extensions
+
+To change factory behavior without editing a generated file, put your text in `.factory/extensions/`. `upgrade` inlines it into every generated copy, after the factory text and before the ownership marker, in a section headed `## Project extensions` that names its source file and says that your text wins where it conflicts:
+
+- `.factory/extensions/skills/<skill>.md` goes into all five copies of that skill.
+- `.factory/extensions/commands/<command>.md` goes into all four copies of that command.
+- `.factory/extensions/rules/factory.md` goes into the Cursor rule, the Copilot agent, and the Cline rule.
+
+Edit or remove an extension and the next `upgrade` rewrites every unmodified copy. A copy you also edited by hand is preserved like any other edit. `init` and `upgrade` never create or write extension files.
 
 ## How a change gets built
 
@@ -114,6 +154,45 @@ Mutating commands take a single writer lease at `.factory/orchestration/writer.l
 
 `idefactory verify run <attemptId> --check <kind>` stores the check result from the registry command. Completion does not accept a pass/fail flag supplied on the transition.
 
+### Transition evidence
+
+`idefactory attempt transition <attemptId> <state>` takes its evidence JSON from one of two flags. Give only one.
+
+- `--evidence <json>` takes inline JSON.
+- `--evidence-file <path>` takes the path of a file that holds a JSON object. It never takes inline JSON. A relative path resolves from the current directory. The file is read as UTF-8, and a UTF-8 byte-order mark or a UTF-16LE file with a byte-order mark is also accepted. The CLI does not modify or delete the file.
+
+Evidence may contain only these keys. The review text goes in the top-level `notes` key, not nested under `review`:
+
+- `reviewerId`, `implementerId`, and `securityReviewerId` are strings.
+- `verdict` is a string. A reviewer's `accepted` or `rejected` transition refuses a verdict that contradicts it; omit `verdict` or send the matching one.
+- `notes` is a string. It is stored as the review notes for a reviewer's accept or reject.
+- `changedFiles` is an array of strings, and `baseRev` is a string.
+
+Any other key, or a value of the wrong type, fails with an error that names it, and the attempt file is not changed. For example, `{"reviewerId":"reviewer-1","review":{"notes":"..."}}` fails with `unsupported evidence key "review"; put review text in top-level "notes"`.
+
+Windows PowerShell 5.1 strips the quotation marks from JSON passed as a native command argument, which produces `Expected property name or '}' in JSON`. Use the file flag there, and anywhere else you want to avoid shell quoting. Write the file to the operating system temporary directory, not inside the project, because an untracked file in the project makes the worktree dirty and blocks verification and completion. Remove it afterward whether the command succeeds or fails:
+
+```powershell
+$file = Join-Path ([IO.Path]::GetTempPath()) "evidence-$([guid]::NewGuid()).json"
+try {
+  Set-Content -Path $file -Encoding UTF8 -Value '{"reviewerId":"reviewer-1","verdict":"ACCEPT","notes":"looks good"}'
+  idefactory attempt transition <attemptId> accepted --evidence-file $file
+} finally {
+  Remove-Item -Path $file -ErrorAction SilentlyContinue
+}
+```
+
+### Red exceptions
+
+A `code` item needs a recorded failing CLI red before it can move to `verifying`. When a rejected attempt held a genuine red and its replacement already passes, the replacement stops with `vacuous-red` and no new red can run. A human can authorize an audited exception instead of a fake red:
+
+```bash
+idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind unit --note "verification-only retry" --approver <human>
+idefactory red waive <targetAttemptId> --kind unit --note "reason" --approver <human>
+```
+
+`red reuse` binds the rejected attempt's red to the replacement by digest. It needs a clean HEAD, a passing CLI verification on that HEAD, and an approver who is not the implementer. `red waive` records that no red exists. Waiving a red before the system is stuck is discouraged. The command refuses until the attempt has hit `vacuous-red` for that kind, and it proceeds earlier only when the human repeats it with `--acknowledge-not-stuck`. Neither command writes `evidence.reds`, and neither waives clean-revision verification, independent review, or lockouts. Status, the reviewer packet, and the verdict comment say that no red ran and name the exception, approver, and reason.
+
 ```mermaid
 flowchart TD
   start["idefactory run"]
@@ -147,7 +226,8 @@ flowchart TD
 | --- | --- |
 | `idefactory init` | Install `.factory/` and IDE adapters |
 | `idefactory setup` | Record the test command and lightweight or strict governance |
-| `idefactory upgrade` | Refresh factory-owned skills, commands, rules, and workflows |
+| `idefactory upgrade` | Refresh unmodified generated adapters, keep your edits, and report conflicts (exit 3). Takes `--dry-run`, `--json`, `--replace <path>`, `--force` |
+| `idefactory adapters pin <path>` | Keep a generated file as it is on every upgrade. `unpin` reverses it |
 | `idefactory doctor` | Fail if required team state or adapter files are missing |
 | `idefactory status` | Show halt, the active change, the roster, and work queue counts |
 | `idefactory sync-tasks <change>` | Create work items from unchecked OpenSpec boxes |
@@ -155,6 +235,7 @@ flowchart TD
 | `idefactory run` | Resume the persisted run and print the next request or stop reason |
 | `idefactory attempt …` | Start, transition, or show an execution attempt |
 | `idefactory verify run` | Run a registered check and store CLI evidence |
+| `idefactory red reuse` / `waive` | Record an audited red exception for a verification-only retry. Does not write a red |
 | `idefactory complete` | Journal the finalization and mark an accepted attempt done |
 | `idefactory approve` / `reject` | Record a human decision. Does not publish or spend |
 | `idefactory lockout` | Create or resolve a reviewer lockout |

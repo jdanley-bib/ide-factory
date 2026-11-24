@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './layout.mjs';
+import { listAllExceptions } from './red-exceptions.mjs';
 import { runsDir } from './run-session.mjs';
 import { listWorkItems } from './work.mjs';
 
@@ -63,6 +64,7 @@ export function buildStatusDocument(project) {
     halt: fs.existsSync(path.join(project, 'HALT')),
     activeChange: active?.change || null,
     workCounts,
+    redExceptions: listAllExceptions(project),
     metrics: {
       attempts: attemptCounts,
       openRuns,

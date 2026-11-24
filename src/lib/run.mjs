@@ -5,6 +5,8 @@ import { completeWorkItem } from './complete.mjs';
 import { approve, createLockout, doctor, reject, resolveLockout, status } from './govern.mjs';
 import { buildStatusDocument } from './read-model.mjs';
 import { previewChecks } from './checks-preview.mjs';
+import { formatReport } from './adapter-sync.mjs';
+import { setPins } from './adapters.mjs';
 import { initProject, upgradeProject } from './install.mjs';
 import { halted, projectDir } from './layout.mjs';
 import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
@@ -12,6 +14,8 @@ import { buildPacket, syncTasks } from './queue.mjs';
 import { scaffoldConsumerCi } from './ci-scaffold.mjs';
 import { capturePullRequestComments, commentOnPullRequest, openPullRequest } from './pull-request.mjs';
 import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mjs';
+import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
+import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
@@ -26,8 +30,9 @@ the work queue and attempts, and prints orchestration requests. It does not
 launch a model, and it does not invent products.
 
 Usage:
-  idefactory init [path] [--force-roster] [--with-openspec]
-  idefactory upgrade [path]
+  idefactory init [path] [--force-roster] [--with-openspec] [--dry-run] [--json] [--replace <path>] [--force]
+  idefactory upgrade [path] [--dry-run] [--json] [--replace <path>] [--force]
+  idefactory adapters pin <path>... | unpin <path>... [--path dir]
   idefactory doctor [path]
   idefactory status [--json] [path]
   idefactory checks preview [--path dir]
@@ -35,10 +40,12 @@ Usage:
   idefactory next [--change name] [--path dir]
   idefactory run --change <name> [--until human-gate] [--max-tasks N] [--max-agent-steps N] [--new-run] [--accept-baseline] [--path dir]
   idefactory attempt start <change> <taskId> [--path dir]
-  idefactory attempt transition <attemptId> <state> [--evidence json] [--path dir]
+  idefactory attempt transition <attemptId> <state> [--evidence json | --evidence-file path] [--path dir]
   idefactory attempt show <attemptId> [--path dir]
   idefactory verify run <attemptId> --check <kind> [--red]
   idefactory verify import <attemptId> --file <path>
+  idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id> [--principal-provider <id> --principal-subject <id>] [--path dir]
+  idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--principal-provider <id> --principal-subject <id>] [--path dir]
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory pr open <change> [--path dir]
   idefactory pr comment <attemptId> [--path dir]
@@ -87,6 +94,7 @@ export async function run(argv, io = {}) {
     out,
     err,
     isTTY,
+    cwd,
   });
   try {
     // HALT bypasses the writer lease so emergency stop cannot be blocked.
@@ -108,26 +116,60 @@ export async function run(argv, io = {}) {
 }
 
 async function dispatchCommand(cmd, ctx) {
-  const { project, parsed, env, out, err, isTTY } = ctx;
+  const { project, parsed, env, out, err, isTTY, cwd } = ctx;
   switch (cmd) {
     case 'init': {
-      const created = initProject(project, {
+      const dryRun = Boolean(parsed.flags['dry-run']);
+      const { created, sync } = initProject(project, {
         forceRoster: Boolean(parsed.flags['force-roster']),
         withOpenspec: Boolean(parsed.flags['with-openspec']),
         withBacklog: Boolean(parsed.flags['with-backlog']),
+        dryRun,
+        ...adapterOptions(parsed),
         env,
       });
-      out(`Initialized ${project}`);
-      if (created.length) out(`Created: ${created.join(', ')}`);
-      else out('Team state already present. Adapters refreshed.');
-      reportSetupGaps(project, out);
+      if (parsed.flags.json) {
+        out(JSON.stringify(sync.report, null, 2));
+        return sync.report.exitCode;
+      }
+      if (dryRun) {
+        out('Dry run: nothing was written.');
+        if (created.length) out(`Would create: ${created.join(', ')}`);
+      } else {
+        out(`Initialized ${project}`);
+        if (created.length) out(`Created: ${created.join(', ')}`);
+        else out('Team state already present. Adapters refreshed.');
+      }
+      for (const line of formatReport(sync.report)) out(line);
+      if (!dryRun) reportSetupGaps(project, out);
+      return sync.report.exitCode;
+    }
+    case 'upgrade': {
+      const dryRun = Boolean(parsed.flags['dry-run']);
+      const { sync } = upgradeProject(project, { dryRun, ...adapterOptions(parsed) });
+      if (parsed.flags.json) {
+        out(JSON.stringify(sync.report, null, 2));
+        return sync.report.exitCode;
+      }
+      if (dryRun) out('Dry run: nothing was written.');
+      else out(`Upgraded adapters in ${project}`);
+      for (const line of formatReport(sync.report)) out(line);
+      if (!dryRun) reportSetupGaps(project, out);
+      return sync.report.exitCode;
+    }
+    case 'adapters': {
+      const mode = parsed.rest[0];
+      const paths = parsed.rest.slice(1);
+      if ((mode !== 'pin' && mode !== 'unpin') || paths.length === 0) {
+        throw new Error(
+          'Usage: idefactory adapters pin <path>... | idefactory adapters unpin <path>... [--path dir]',
+        );
+      }
+      const { done, notes } = setPins(project, paths, mode);
+      for (const rel of done) out(`${mode === 'pin' ? 'Pinned' : 'Unpinned'} ${rel}`);
+      for (const note of notes) out(`note: ${note}`);
       return 0;
     }
-    case 'upgrade':
-      upgradeProject(project);
-      out(`Upgraded adapters in ${project}`);
-      reportSetupGaps(project, out);
-      return 0;
     case 'setup':
       return handleSetup(project, parsed, out, isTTY);
     case 'doctor':
@@ -174,9 +216,11 @@ async function dispatchCommand(cmd, ctx) {
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
     case 'attempt':
-      return handleAttempt(project, parsed, env, out);
+      return handleAttempt(project, parsed, env, out, cwd);
     case 'verify':
       return await handleVerify(project, parsed, out);
+    case 'red':
+      return handleRed(project, parsed, out);
     case 'complete': {
       const [change, taskId] = parsed.rest;
       const attemptId = parsed.flags.attempt;
@@ -264,7 +308,7 @@ async function dispatchCommand(cmd, ctx) {
   }
 }
 
-function handleAttempt(project, parsed, env, out) {
+function handleAttempt(project, parsed, env, out, cwd) {
   if (halted(project) && parsed.rest[0] !== 'show') {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
@@ -281,20 +325,16 @@ function handleAttempt(project, parsed, env, out) {
     const attemptId = parsed.rest[1];
     const state = parsed.rest[2];
     if (!attemptId || !state) {
-      throw new Error('Usage: idefactory attempt transition <attemptId> <state> [--evidence json]');
+      throw new Error(TRANSITION_USAGE);
     }
-    let evidence = {};
-    if (parsed.flags.evidence) {
-      evidence = typeof parsed.flags.evidence === 'string'
-        ? JSON.parse(parsed.flags.evidence)
-        : parsed.flags.evidence;
-    }
+    const evidence = readTransitionEvidence(parsed.flags, { cwd });
     let attempt;
     try {
       attempt = transitionAttempt(project, attemptId, state, {
         evidence,
         actorId: evidence.implementerId || evidence.reviewerId || null,
         env,
+        supplied: true,
       });
     } catch (error) {
       if (String(error?.message || '').startsWith('retry-cap')) {
@@ -459,6 +499,62 @@ async function handleVerify(project, parsed, out) {
   );
 }
 
+const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
+const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck]';
+const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session stays closed until the human passes --new-run.';
+
+function stringFlag(flags, key) {
+  return typeof flags[key] === 'string' && flags[key].length > 0 ? flags[key] : '';
+}
+
+function handleRed(project, parsed, out) {
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  const sub = parsed.rest[0];
+  if (sub !== 'reuse' && sub !== 'waive') {
+    throw new Error(`${REUSE_USAGE}\n       ${WAIVE_USAGE}`);
+  }
+  const usage = sub === 'reuse' ? REUSE_USAGE : WAIVE_USAGE;
+  const targetAttemptId = parsed.rest[1];
+  const kinds = (parsed.sequence || [])
+    .filter((entry) => entry.key === 'kind' && typeof entry.value === 'string')
+    .map((entry) => entry.value);
+  const reason = stringFlag(parsed.flags, 'note');
+  const approver = stringFlag(parsed.flags, 'approver');
+  const sourceAttemptId = stringFlag(parsed.flags, 'from');
+  if (!targetAttemptId || kinds.length === 0 || !reason || !approver
+    || (sub === 'reuse' && !sourceAttemptId)) {
+    throw new Error(usage);
+  }
+  const common = {
+    targetAttemptId,
+    kinds,
+    approver,
+    reason,
+    principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+    principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+  };
+  const result = sub === 'reuse'
+    ? reuseRed(project, { ...common, sourceAttemptId })
+    : waiveRed(project, {
+      ...common,
+      acknowledgeNotStuck: Boolean(parsed.flags['acknowledge-not-stuck']),
+    });
+  out(JSON.stringify({
+    attemptId: targetAttemptId,
+    exceptions: result.records.map((record, index) => ({
+      id: record.id,
+      type: record.type,
+      kind: record.kind,
+      file: path.relative(project, result.files[index]),
+      ...(record.type === 'waiver' ? { acknowledgedNotStuck: record.acknowledgedNotStuck } : {}),
+    })),
+    note: EXCEPTION_NEW_RUN_NOTE,
+  }, null, 2));
+  return 0;
+}
+
 function reportDoctor(project, out, err) {
   const report = doctor(project);
   if (report.errors.length) {
@@ -499,6 +595,19 @@ function parseArgs(argv) {
     } else rest.push(token);
   }
   return { cmd: rest[0], rest: rest.slice(1), flags, sequence };
+}
+
+function adapterOptions(parsed) {
+  if (typeof parsed.flags.force === 'string') {
+    throw new Error(
+      '--force takes no value. To replace one file use --replace <path>; to name the project use --path <dir>.',
+    );
+  }
+  const replace = parsed.sequence.filter((entry) => entry.key === 'replace').map((entry) => entry.value);
+  if (replace.some((value) => value === true)) {
+    throw new Error('--replace needs a path: --replace <path>.');
+  }
+  return { force: Boolean(parsed.flags.force), replace };
 }
 
 function reportSetupGaps(project, out) {

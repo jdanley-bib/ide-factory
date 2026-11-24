@@ -35,6 +35,7 @@ Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human 
    - Prompt contains only that role's charter, history, the request, and named OpenSpec files.
    - Use `modelProfile` as a host hint when supported; never call a model HTTP API.
    - After the subagent returns, record evidence with `idefactory attempt transition`.
+   - Record transition evidence with `--evidence-file <path>`: write the JSON object to a file in the operating system temporary directory, not inside the project, run `idefactory attempt transition <attemptId> <state> --evidence-file <path>`, and remove that file after the command whether it succeeds or fails. An untracked file inside the project makes the worktree dirty and blocks verification and completion. `--evidence-file` takes only a path. `--evidence` takes inline JSON, which Windows PowerShell 5.1 can mangle. Give only one of the two.
    - If the request action is `complete`, run `idefactory complete <change> <id> --attempt <id>`.
 
 5. Repeat from step 2 until exit `0` or `1`. A `quick` route still requires the reviewer. It does not skip review or complete.

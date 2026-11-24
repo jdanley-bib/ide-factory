@@ -20,3 +20,4 @@ The IDE session model does the work.
 7. Do not put a verification result on an attempt transition. The verification command writes the record.
 8. Stop when the command names `vacuous-red` or `infrastructure-failure`.
 9. Claim ready for review only when required checks passed.
+10. If the red step stopped with `vacuous-red`, ask the human first and use `idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind> --note "reason" --approver <human>` or `idefactory red waive <targetAttemptId> --kind <kind> --note "reason" --approver <human>`. Waiving a red before the system is stuck is discouraged. Warn the human, and pass `--acknowledge-not-stuck` only after the human acknowledges the warning. Do not describe either as a red that ran.

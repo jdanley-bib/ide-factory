@@ -30,19 +30,30 @@ Do not put a verification result on an attempt transition. Stop when the command
 
 If a skill named `test-driven-development` is installed, follow that skill for the test cycle. Otherwise follow `factory-tdd`.
 
-Record red evidence on the attempt, then implement until green. Read the packet's Prior rejections section and address every note before asking for review again.
+Where the packet's `Red required for` line lists kinds, record a failing red for each, or use a red exception as described below, then implement until green. Read the packet's Prior rejections section and address every note before asking for review again.
 
 Run verification profile checks before claiming done. Follow `factory-verify`.
 
 If the command fails, follow `systematic-debugging` when that skill is installed, otherwise `factory-debug`.
 
+## Red exceptions
+
+When a replacement attempt starts with no red and `idefactory verify run <attemptId> --check <kind> --red` stops with `vacuous-red` because the implementation already passes, do not fake a red. Ask the human first, then use one of these:
+
+- `idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind> --note "reason" --approver <human>` reuses the genuine red of a rejected earlier attempt for the same task. Run it on a clean HEAD after a passing `verify run` on that HEAD.
+- `idefactory red waive <targetAttemptId> --kind <kind> --note "reason" --approver <human>` waives the red. Waiving a red before the system is stuck is discouraged. The command refuses until the attempt has hit `vacuous-red` for that kind. Warn the human, recommend reuse or waiting until the system is stuck, and pass `--acknowledge-not-stuck` only after the human acknowledges the warning and chooses to proceed.
+
+Neither command claims a red ran. The record names the approver and reason, and the reviewer sees it. Clean-revision verification, independent review, and lockouts still apply.
+
 ## Review
 
 Review is a different role: the reviewer. The implementer does not approve their own work.
 
-Spawn a reviewer subagent with only the reviewer charter. Acceptance requires red evidence and verification evidence. Rejection uses `idefactory lockout`.
+Spawn a reviewer subagent with only the reviewer charter. The reviewer accepts only when the recorded evidence satisfies the work item: every required verification check has a passing CLI record on the current clean HEAD, and, for a `code` item whose checks include a test kind, each such kind has a recorded failing red or a valid red exception that a human authorized. A red exception is not a red that ran, and the reviewer does not ask for a new failing test where one is recorded. A `lightweight` item, and a `code` item with no test check, need no failing test. Rejection uses `idefactory lockout`.
 
 Transition the attempt to accepted or rejected with distinct implementerId and reviewerId.
+
+Record transition evidence with `--evidence-file <path>`: write the JSON object to a file in the operating system temporary directory, not inside the project, run `idefactory attempt transition <attemptId> <state> --evidence-file <path>`, and remove that file after the command whether it succeeds or fails. An untracked file inside the project makes the worktree dirty and blocks verification and completion. `--evidence-file` takes only a path. `--evidence` takes inline JSON, which Windows PowerShell 5.1 can mangle. Give only one of the two.
 
 ## Finish
 

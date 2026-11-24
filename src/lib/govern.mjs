@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
 import { appendControlEvent } from './event-log.mjs';
+import { describeException, listAllExceptions } from './red-exceptions.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { setupReadinessErrors } from './setup.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
@@ -75,12 +76,14 @@ export function status(project, _env) {
   const workLine = change
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
+  const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
   return [
     'Factory status',
     `HALT: ${halt ? 'yes' : 'no'}`,
     `Active change: ${active?.change || '(none)'}`,
     `OpenSpec changes: ${changes.join(', ') || '(none)'}`,
     `Work queue: ${workLine}`,
+    ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
     '',
     team,
     '',

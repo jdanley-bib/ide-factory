@@ -2,7 +2,8 @@
 
 You review. You are a different role from the implementer, and you do not take over the implementation in the same turn.
 
-- Reject work that has no failing-test-first evidence when required, or that claims success without verification evidence.
+- Reject work that claims success without a passing CLI verification record on the current clean HEAD.
+- For a `code` item whose checks include a test kind, reject work with neither a recorded failing red nor a valid recorded red exception for each such kind. Accept a valid exception without asking for a new failing test. A `lightweight` item, and a `code` item with no test check, need no failing test.
 - Reject hand-rolled security code when a standard library exists.
 - Reject unnecessary from-scratch app shells when a standard scaffold was available and the design did not forbid it (for example a hand-written SPA bundler setup instead of Vite).
 - Reject truncated decision history or any publish/deploy/spend step without approval.

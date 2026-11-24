@@ -588,6 +588,8 @@ test('CLI wraps each mutating command once at top level; read-only stays unlease
       ['attempt', 'transition', '00000000-0000-4000-8000-000000000001', 'implementing'],
       ['verify', 'run', '00000000-0000-4000-8000-000000000001', '--check', 'unit'],
       ['verify', 'import', '00000000-0000-4000-8000-000000000001', '--file', 'missing.json'],
+      ['red', 'reuse', '00000000-0000-4000-8000-000000000002', '--from', '00000000-0000-4000-8000-000000000001', '--kind', 'unit', '--note', 'n', '--approver', 'a1'],
+      ['red', 'waive', '00000000-0000-4000-8000-000000000002', '--kind', 'unit', '--note', 'n', '--approver', 'a1'],
       ['complete', 'demo', '1.1', '--attempt', '00000000-0000-4000-8000-000000000001'],
       ['approve', 'note-1', '--note', 'ok', '--change', 'demo', '--task', '1.1', '--action', 'accept', '--approver', 'a1', '--expiry', '2099-01-01T00:00:00.000Z'],
       ['reject', 'note-1', '--note', 'no'],

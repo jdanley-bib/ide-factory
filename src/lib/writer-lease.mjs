@@ -10,10 +10,20 @@ export const LEASE_HELD = 'LEASE_HELD';
 export const LEASE_RECOVERY = 'LEASE_RECOVERY';
 export const OWNERSHIP_LOST = 'OWNERSHIP_LOST';
 
-const READ_ONLY = new Set(['status', 'doctor', 'help', 'attempt show', 'setup detect']);
+const READ_ONLY = new Set([
+  'status',
+  'doctor',
+  'help',
+  'attempt show',
+  'setup detect',
+  'init dry-run',
+  'upgrade dry-run',
+]);
 const MUTATING = new Set([
   'init',
   'upgrade',
+  'adapters pin',
+  'adapters unpin',
   'sync-tasks',
   'next',
   'run',
@@ -21,6 +31,8 @@ const MUTATING = new Set([
   'attempt transition',
   'verify run',
   'verify import',
+  'red reuse',
+  'red waive',
   'complete',
   'pr open',
   'pr comment',
@@ -71,6 +83,12 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'import') return 'verify import';
     return sub ? `verify ${sub}` : 'verify';
   }
+  if (head === 'red') {
+    const sub = String(rest[0] || '').trim();
+    if (sub === 'reuse') return 'red reuse';
+    if (sub === 'waive') return 'red waive';
+    return sub ? `red ${sub}` : 'red';
+  }
   if (head === 'lockout') {
     const sub = String(rest[0] || '').trim();
     if (sub === 'resolve') return 'lockout resolve';
@@ -82,6 +100,12 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'comment') return 'pr comment';
     if (sub === 'capture') return 'pr capture';
     return sub ? `pr ${sub}` : 'pr';
+  }
+  if (head === 'adapters') {
+    const sub = String(rest[0] || '').trim();
+    if (sub === 'pin') return 'adapters pin';
+    if (sub === 'unpin') return 'adapters unpin';
+    return sub ? `adapters ${sub}` : 'adapters';
   }
   if (head === 'ci') {
     const sub = String(rest[0] || '').trim();
@@ -97,6 +121,7 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     return sub ? `forge ${sub}` : 'forge';
   }
   if (head === 'setup' && flags.detect) return 'setup detect';
+  if ((head === 'init' || head === 'upgrade') && flags['dry-run']) return `${head} dry-run`;
   return head;
 }
 

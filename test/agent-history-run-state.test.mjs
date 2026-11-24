@@ -149,7 +149,7 @@ async function seedCompleteFixture(dir) {
       '  factory:',
       '    kind: general',
       '    checks: [unit]',
-      '    verificationProfile: frontend-low',
+      '    verificationProfile: cli',
       '    roles: [engineer, reviewer, scribe]',
       '',
     ].join('\n'),
@@ -289,7 +289,7 @@ test('complete approval authorizes complete when only an agent history is extra 
   }
 });
 
-test('completeWorkItem finishes with only engineer history dirty on frontend-low', async () => {
+test('completeWorkItem finishes with only engineer history dirty on cli profile', async () => {
   const dir = tempProject();
   try {
     const attempt = await seedCompleteFixture(dir);

@@ -99,7 +99,7 @@ function writeCheckRegistry(dir, exitByKind) {
 async function seedSecurityStageChange(dir, {
   taskId = '1.1',
   securityProfile = 'security-sensitive',
-  verificationProfile = 'frontend-low',
+  verificationProfile = 'cli',
   checks = ['unit'],
   roles = ['engineer', 'security-reviewer', 'reviewer', 'scribe'],
 } = {}) {
@@ -169,8 +169,10 @@ async function recordPassingSecurityCheck(dir, attemptId, kind = 'threat-review'
   writeCheckRegistry(dir, { unit: 0, [kind]: 0 });
   ensureFactoryGitignore(dir);
   ensureCleanGitCommit(dir);
-  const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', kind]);
-  assert.equal(result.code, 0, result.err + result.out);
+  for (const check of new Set(['unit', kind])) {
+    const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', check]);
+    assert.equal(result.code, 0, result.err + result.out);
+  }
   return getAttempt(dir, attemptId);
 }
 
@@ -178,7 +180,7 @@ async function seedSecurityCheckingWithPassingEvidence(dir, taskId = '1.1') {
   await seedSecurityStageChange(dir, {
     taskId,
     securityProfile: 'security-sensitive',
-    verificationProfile: 'frontend-low',
+    verificationProfile: 'cli',
     checks: ['unit'],
   });
   const item = getWorkItem(dir, 'demo', taskId);
@@ -329,7 +331,7 @@ test('stored security reviewer identity is kept and named on the pull request co
     await seedSecurityStageChange(dir, {
       taskId: '1.3',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.3']);

@@ -39,16 +39,21 @@ The Cursor rule SHALL tell the agent to follow factory skills when the human ask
 - **THEN** it states that unrelated requests are left alone
 
 ### Requirement: Upgrade refreshes adapters only
-`idefactory upgrade` SHALL refresh factory-owned adapter files, including the Cline rule, Cline skills, and Cline workflow commands, and SHALL NOT replace an existing decisions log.
+`idefactory upgrade` SHALL refresh factory-owned adapter files, including the Cline rule, Cline skills, and Cline workflow commands, only when they are unmodified relative to a known baseline, and SHALL preserve and report an edited file instead of replacing it. Upgrade SHALL NOT replace an existing decisions log.
 
 #### Scenario: Upgrade keeps decisions
 - **WHEN** `decisions.md` has a custom entry and upgrade runs
 - **THEN** the custom entry remains
 
 #### Scenario: Upgrade refreshes a Cline skill
-- **WHEN** a factory-owned file under `.cline/skills/` has been changed and upgrade runs
+- **WHEN** a factory-owned file under `.cline/skills/` matches an earlier factory rendering and upgrade runs
 - **THEN** that file matches the current factory skill again
 - **AND** the custom decisions entry remains
+
+#### Scenario: Upgrade preserves an edited Cline skill
+- **WHEN** a factory-owned file under `.cline/skills/` holds project edits, its template changed, and upgrade runs
+- **THEN** that file is byte-for-byte unchanged
+- **AND** the upgrade report lists it as preserved
 
 ### Requirement: Cline skill copies
 The system SHALL install the same factory skill directories under `.cline/skills/` that it installs for the other IDEs.
@@ -105,7 +110,7 @@ The installed factory-setup skill SHALL tell the human which test command it pro
 - **THEN** the skill runs `idefactory setup` with those values as flags
 
 ### Requirement: Verify skills name the verification command
-The installed factory-build, factory-tdd, and factory-verify skills SHALL name `idefactory verify run`, including `--red` for a failing test on a `code` item. They SHALL tell the session to stop when the result is `vacuous-red` or `infrastructure-failure`. They SHALL NOT instruct the session to send a pass boolean, a red object, or a verification object on an attempt transition.
+The installed factory-build, factory-tdd, and factory-verify skills SHALL name `idefactory verify run`, including `--red` for a failing test on a `code` item. They SHALL tell the session to stop when the result is `vacuous-red` or `infrastructure-failure`. They SHALL NOT instruct the session to send a pass boolean, a red object, or a verification object on an attempt transition. They SHALL name `idefactory red reuse` and `idefactory red waive` as human-authorized options after a stop, SHALL tell the session to warn the human to prefer reuse and to wait until the system is stuck before a waiver, and SHALL tell the session to run waive with `--acknowledge-not-stuck` only after the human acknowledges that warning.
 
 #### Scenario: Verify skill does not invent a payload
 - **WHEN** the installed factory-verify skill is read
@@ -115,3 +120,46 @@ The installed factory-build, factory-tdd, and factory-verify skills SHALL name `
 #### Scenario: Build skill stops on vacuous red
 - **WHEN** the installed factory-build skill is read
 - **THEN** it tells the session to stop on `vacuous-red` and on `infrastructure-failure`
+
+#### Scenario: Build skill names the exceptions
+- **WHEN** the installed factory-build skill is read
+- **THEN** it names `idefactory red reuse` and `idefactory red waive`
+- **AND** it tells the session to ask the human before running either
+
+#### Scenario: Skill warns before an unstuck waiver
+- **WHEN** the installed factory-build skill is read
+- **THEN** it tells the session to warn that a waiver before the system is stuck is discouraged
+- **AND** it tells the session to pass `--acknowledge-not-stuck` only after the human acknowledges the warning
+
+### Requirement: Skills pass transition evidence by file
+The installed factory-build and factory-run skills SHALL tell the session to record attempt transition evidence with `--evidence-file`, naming a file in the operating system temporary directory and not inside the project, and to remove that file after the command whether it succeeds or fails. They SHALL say that `--evidence` accepts inline JSON, that `--evidence-file` accepts only a path, and that only one may be given.
+
+#### Scenario: Skills name the file option
+- **WHEN** the installed factory-build or factory-run skill is read
+- **THEN** it names `--evidence-file`
+- **AND** it names `--evidence` as the inline alternative and says to give only one
+
+#### Scenario: Skills keep the file out of the project
+- **WHEN** the installed factory-build or factory-run skill is read
+- **THEN** it tells the session to create the evidence file in the operating system temporary directory
+- **AND** it tells the session to remove the file after the command whether it succeeds or fails
+
+#### Scenario: Every shipped copy
+- **WHEN** the factory skills in `templates/skills` and each shipped IDE skill directory are read
+- **THEN** each copy carries the same evidence-file guidance
+
+### Requirement: Adapters carry the conditional review wording
+Every generated factory-review command, in the Cursor, Claude Code, GitHub Copilot, and Cline adapters, and every shipped copy of the factory-build skill SHALL carry the same conditional review and red wording as the source templates. None SHALL tell the reviewer to accept only if a failing test was written first, or say acceptance requires red evidence without conditions.
+
+#### Scenario: Generated review commands
+- **WHEN** init finishes in a new project
+- **THEN** the review command in each of the four adapters names the lightweight and no-test-check cases and the red exception
+- **AND** none contains the unconditional failing-test wording
+
+#### Scenario: Shipped build skill copies
+- **WHEN** the factory-build skill in `templates/skills` and in each shipped IDE skill directory is read
+- **THEN** each carries the same conditional review wording
+
+#### Scenario: Upgrade restores the conditional wording
+- **WHEN** a generated review command holds the old unconditional wording and upgrade runs
+- **THEN** it holds the conditional wording again

@@ -13,5 +13,6 @@ Operational baseline for the IDE factory. Agents may read this file. Prefer appe
 9. **Prefer common tools.** Use maintained scaffolds, frameworks, and libraries before hand-rolling. Examples: `npm create vite@latest` for a SPA, official CLIs for apps, standard test runners. Invent a custom toolchain only when the OpenSpec design explicitly requires it.
 10. **Work queue.** `.factory/work/` is the only execution queue. OpenSpec `tasks.md` is the human plan.
 11. **One writer.** One IDE session writes `.factory/` at a time. Git merges concurrent edits.
+12. **Red exceptions.** A rejected attempt's genuine red may be reused with `idefactory red reuse`, or a red waived with `idefactory red waive`, only when a human authorizes it and the approver is not the implementer. Waiving a red before the system is stuck is discouraged. Prefer reuse, and let the attempt hit `vacuous-red` first. Pass `--acknowledge-not-stuck` only after the human acknowledges that warning. An exception never claims a red ran and never waives clean-revision verification, independent review, or lockouts.
 
 Spend, publishing, deployment, and new accounts require `idefactory approve`. A `HALT` file stops `sync-tasks`, `next`, `run`, attempt mutations, and `complete`.

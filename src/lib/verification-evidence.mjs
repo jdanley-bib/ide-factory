@@ -494,6 +494,7 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/orchestration/',
   '.factory/observability/',
   '.factory/approvals/',
+  '.factory/exceptions/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',

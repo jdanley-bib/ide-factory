@@ -22,5 +22,9 @@
   "release": {
     "checks": ["unit", "build", "integration", "packaging"],
     "humanGate": true
+  },
+  "cli": {
+    "checks": ["unit"],
+    "humanGate": false
   }
 }

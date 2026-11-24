@@ -335,7 +335,7 @@ function plantApproval(dir, id, overrides = {}) {
   return writeScopedApproval(dir, id, record, { implementerId: IMPLEMENTER });
 }
 
-async function advanceToVerifying(dir, attemptId) {
+async function advanceToVerifying(dir, attemptId, checks = ['unit']) {
   await recordRed(dir, attemptId);
   assert.equal((await idefactory(dir, [
     'attempt', 'transition', attemptId, 'implementing',
@@ -345,7 +345,7 @@ async function advanceToVerifying(dir, attemptId) {
     'attempt', 'transition', attemptId, 'red-confirmed',
     '--evidence', JSON.stringify({}),
   ])).code, 0);
-  await recordPassingChecks(dir, attemptId);
+  await recordPassingChecks(dir, attemptId, checks);
   assert.equal((await idefactory(dir, [
     'attempt', 'transition', attemptId, 'verifying',
     '--evidence', JSON.stringify({}),
@@ -376,7 +376,7 @@ function patchProfiles(dir, mutator) {
 }
 
 async function seedGatedChange(dir, {
-  verificationProfile = 'frontend-low',
+  verificationProfile = 'cli',
   taskId = '2.1',
 } = {}) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
@@ -406,13 +406,17 @@ async function recordRed(dir, attemptId) {
   assert.ok(getAttempt(dir, attemptId).evidence.reds?.unit);
 }
 
-async function recordPassingChecks(dir, attemptId) {
-  writeCheckRegistry(dir, { unit: 0 });
+async function recordPassingChecks(dir, attemptId, checks = ['unit']) {
+  writeCheckRegistry(dir, Object.fromEntries(checks.map((kind) => [kind, 0])));
   ensureFactoryGitignore(dir);
   ensureCleanGitCommit(dir);
-  const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit']);
-  assert.equal(result.code, 0, result.err + result.out);
+  for (const kind of checks) {
+    const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', kind]);
+    assert.equal(result.code, 0, result.err + result.out);
+  }
 }
+
+const SECURITY_PROFILE_KINDS = ['unit', 'build', 'dependency-audit', 'secret-scan', 'sast', 'threat-review'];
 
 async function advanceToAwaitingReview(dir, attemptId) {
   await recordRed(dir, attemptId);
@@ -446,9 +450,9 @@ async function acceptViaTransitions(dir, attemptId) {
 test('humanGate true without accept approval stops run with human-gate and open session', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.1' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.1' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = true;
+      profiles['cli'].humanGate = true;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.1']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -476,9 +480,9 @@ test('humanGate true without accept approval stops run with human-gate and open 
 test('complete without complete approval exits non-zero and leaves item undone', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.1' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.1' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = true;
+      profiles['cli'].humanGate = true;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.1']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -497,23 +501,28 @@ test('complete without complete approval exits non-zero and leaves item undone',
   }
 });
 
-test('missing verification profile is treated as humanGate true', async () => {
+test('unknown verification profile is refused at review handoff and never reaches the human gate', async () => {
   const dir = tempProject();
   try {
     await seedGatedChange(dir, { verificationProfile: 'no-such-profile', taskId: '2.1' });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.1']);
     assert.equal(started.code, 0, started.err + started.out);
     const attemptId = JSON.parse(started.out).id;
-    await advanceToAwaitingReview(dir, attemptId);
+    await advanceToVerifying(dir, attemptId);
+
+    const handoff = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'awaiting-review',
+      '--evidence', JSON.stringify({}),
+    ]);
+    assert.notEqual(handoff.code, 0, handoff.out);
+    assert.match(handoff.err, /no-such-profile/);
+    assert.equal(getAttempt(dir, attemptId).state, 'verifying');
 
     const result = await idefactory(dir, [
       'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
     ]);
-    assert.equal(result.code, 0, result.err + result.out);
-    assert.match(result.out, /Run stopped \(human-gate\)/);
-    assert.doesNotMatch(result.out, /# Orchestration request/);
-    const session = readRunSession(listRunSessionFiles(dir)[0]);
-    assert.equal(session.status, 'open');
+    assert.match(`${result.err}\n${result.out}`, /no-such-profile/);
+    assert.doesNotMatch(result.out, /Run stopped \(human-gate\)/);
   } finally {
     cleanup(dir);
   }
@@ -522,9 +531,9 @@ test('missing verification profile is treated as humanGate true', async () => {
 test('non-boolean humanGate is treated as true', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.1' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.1' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = 'yes';
+      profiles['cli'].humanGate = 'yes';
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.1']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -547,9 +556,9 @@ test('non-boolean humanGate is treated as true', async () => {
 test('matching accept approval allows accept transition via run', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.2' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = true;
+      profiles['cli'].humanGate = true;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -572,9 +581,9 @@ test('matching accept approval allows accept transition via run', async () => {
 test('matching complete approval allows completion', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.2' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = true;
+      profiles['cli'].humanGate = true;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -594,9 +603,9 @@ test('matching complete approval allows completion', async () => {
 test('wrong action, wrong task, stale revision, expired, or policy mismatch do not authorize', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.2' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = true;
+      profiles['cli'].humanGate = true;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -638,9 +647,9 @@ test('wrong action, wrong task, stale revision, expired, or policy mismatch do n
 test('humanGate false on non-sensitive work reaches review without approval', async () => {
   const dir = tempProject();
   try {
-    await seedGatedChange(dir, { verificationProfile: 'frontend-low', taskId: '2.2' });
+    await seedGatedChange(dir, { verificationProfile: 'cli', taskId: '2.2' });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = false;
+      profiles['cli'].humanGate = false;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.2']);
     assert.equal(started.code, 0, started.err + started.out);
@@ -664,7 +673,7 @@ test('humanGate false on non-sensitive work reaches review without approval', as
 async function seedSecurityStageChange(dir, {
   taskId = '3.1',
   securityProfile = 'security-sensitive',
-  verificationProfile = 'frontend-low',
+  verificationProfile = 'cli',
   checks = ['unit'],
   roles = ['engineer', 'security-reviewer', 'reviewer', 'scribe'],
 } = {}) {
@@ -693,7 +702,7 @@ test('security-sensitive work rejects verifying to awaiting-review and stays ver
     await seedSecurityStageChange(dir, {
       taskId: '3.1',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const item = getWorkItem(dir, 'demo', '3.1');
@@ -741,7 +750,7 @@ test('verificationProfile alone does not require the security stage', async () =
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.1']);
     assert.equal(started.code, 0, started.err + started.out);
     const attemptId = JSON.parse(started.out).id;
-    await advanceToVerifying(dir, attemptId);
+    await advanceToVerifying(dir, attemptId, SECURITY_PROFILE_KINDS);
 
     const ok = await idefactory(dir, [
       'attempt', 'transition', attemptId, 'awaiting-review',
@@ -760,7 +769,7 @@ test('security-sensitive verifying still requests security-reviewer on next run'
     await seedSecurityStageChange(dir, {
       taskId: '3.1',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.1']);
@@ -801,8 +810,10 @@ async function recordPassingSecurityCheck(dir, attemptId, kind = 'threat-review'
   writeCheckRegistry(dir, { unit: 0, [kind]: 0 });
   ensureFactoryGitignore(dir);
   ensureCleanGitCommit(dir);
-  const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', kind]);
-  assert.equal(result.code, 0, result.err + result.out);
+  for (const check of new Set(['unit', kind])) {
+    const result = await idefactory(dir, ['verify', 'run', attemptId, '--check', check]);
+    assert.equal(result.code, 0, result.err + result.out);
+  }
   return getAttempt(dir, attemptId);
 }
 
@@ -812,7 +823,7 @@ test('security-checking to awaiting-review rejected without passing CLI security
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const shipped = JSON.parse(
@@ -852,7 +863,7 @@ test('passing CLI security record bound to attempt and clean revision allows awa
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
@@ -890,7 +901,7 @@ test('recorded red security result does not authorize awaiting-review', async ()
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
@@ -938,7 +949,7 @@ test('caller-supplied security payload is rejected on security-checking transiti
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
@@ -980,7 +991,7 @@ test('default required security kind is threat-review when no security-patterned
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     const item = getWorkItem(dir, 'demo', '3.2');
@@ -1002,6 +1013,8 @@ test('default required security kind is threat-review when no security-patterned
     const sast = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'sast']);
     assert.equal(sast.code, 0, sast.err + sast.out);
     assert.equal(getAttempt(dir, attemptId).evidence.security?.[0]?.kind, 'sast');
+    const unit = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit']);
+    assert.equal(unit.code, 0, unit.err + unit.out);
 
     const stillBlocked = await idefactory(dir, [
       'attempt', 'transition', attemptId, 'awaiting-review',
@@ -1032,11 +1045,11 @@ test('complete refuses security-required work lacking CLI security evidence', as
     await seedSecurityStageChange(dir, {
       taskId: '3.2',
       securityProfile: 'security-sensitive',
-      verificationProfile: 'frontend-low',
+      verificationProfile: 'cli',
       checks: ['unit'],
     });
     patchProfiles(dir, (profiles) => {
-      profiles['frontend-low'].humanGate = false;
+      profiles['cli'].humanGate = false;
     });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);
     assert.equal(started.code, 0, started.err + started.out);

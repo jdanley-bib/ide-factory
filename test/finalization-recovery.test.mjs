@@ -106,7 +106,7 @@ function seedWorkItem(dir, status = 'in_progress') {
     status,
     dependencies: [],
     acceptanceCriteria: [],
-    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    factory: { checks: ['unit'], verificationProfile: 'cli' },
   });
   return getWorkItem(dir, CHANGE, TASK_ID);
 }
@@ -161,7 +161,7 @@ function seedPlanFixture(dir) {
     status: 'in_progress',
     dependencies: ['1.1'],
     acceptanceCriteria: [],
-    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    factory: { checks: ['unit'], verificationProfile: 'cli' },
     attemptId: PLAN_ATTEMPT_ID,
   });
   return attempt;
@@ -555,7 +555,7 @@ function seedRecoveryFixture(dir, { attemptState = 'accepted' } = {}) {
     status: 'in_progress',
     dependencies: ['1.2'],
     acceptanceCriteria: [],
-    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    factory: { checks: ['unit'], verificationProfile: 'cli' },
     attemptId: RECOVERY_ATTEMPT_ID,
   });
   return attempt;
@@ -916,7 +916,7 @@ function seedFaultFixture(dir) {
     status: 'in_progress',
     dependencies: ['2.1'],
     acceptanceCriteria: [],
-    factory: { checks: ['unit'], verificationProfile: 'frontend-low' },
+    factory: { checks: ['unit'], verificationProfile: 'cli' },
     attemptId: FAULT_ATTEMPT_ID,
   });
   return attempt;
@@ -1185,7 +1185,7 @@ async function seedCompleteFixture(dir) {
       '  factory:',
       '    kind: general',
       '    checks: [unit]',
-      '    verificationProfile: frontend-low',
+      '    verificationProfile: cli',
       '    roles: [engineer, reviewer, scribe]',
       '',
     ].join('\n'),

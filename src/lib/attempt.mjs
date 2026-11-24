@@ -12,7 +12,9 @@ import {
   requiresSecurityStage,
 } from './risk-gates.mjs';
 import { getWorkItem, updateWorkItem } from './work.mjs';
-import { hasAnyFailingRed, isFailingRed, redForKind, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { hasAnyFailingRed, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { redSatisfaction } from './red-exceptions.mjs';
+import { missingChecks } from './required-checks.mjs';
 
 export const ATTEMPT_STATES = [
   'planned',
@@ -92,10 +94,21 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   });
 }
 
+export const SUPPLIED_EVIDENCE_TYPES = {
+  reviewerId: 'string',
+  implementerId: 'string',
+  securityReviewerId: 'string',
+  verdict: 'string',
+  notes: 'string',
+  changedFiles: 'string[]',
+  baseRev: 'string',
+};
+
 export function transitionAttempt(project, attemptId, nextState, {
   evidence = {},
   actorId = null,
   env = process.env,
+  supplied = false,
 } = {}) {
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
@@ -105,6 +118,7 @@ export function transitionAttempt(project, attemptId, nextState, {
   }
   // Reject check-result payloads before any mutation so the attempt file stays unchanged.
   rejectCallerSuppliedCheckResults(evidence);
+  if (supplied) assertSuppliedEvidence(attempt, nextState, evidence);
   validateEvidence(project, attempt, nextState, evidence);
   if (nextState === 'rejected' && (attempt.state === 'awaiting-review' || attempt.state === 'security-checking')) {
     const key = retryKey('review-rejection');
@@ -180,9 +194,41 @@ function securityReviewerIdFrom(evidence) {
   return evidence.securityReviewerId.trim();
 }
 
+/**
+ * Refuse evidence from the command line that the transition would silently ignore:
+ * unsupported keys, values of the wrong type, and a reviewer verdict that contradicts
+ * the transition. Runs before any write.
+ */
+export function assertSuppliedEvidence(attempt, nextState, evidence) {
+  for (const [key, value] of Object.entries(evidence)) {
+    if (!Object.prototype.hasOwnProperty.call(SUPPLIED_EVIDENCE_TYPES, key)) {
+      if (key === 'review') {
+        throw new Error('unsupported evidence key "review"; put review text in top-level "notes"');
+      }
+      throw new Error(`unsupported evidence key "${key}"`);
+    }
+    const type = SUPPLIED_EVIDENCE_TYPES[key];
+    if (type === 'string' && typeof value !== 'string') {
+      throw new Error(`evidence key "${key}" must be a string`);
+    }
+    if (type === 'string[]' && !(Array.isArray(value) && value.every((item) => typeof item === 'string'))) {
+      throw new Error(`evidence key "${key}" must be an array of strings`);
+    }
+  }
+  if (attempt.state === 'awaiting-review' && (nextState === 'accepted' || nextState === 'rejected')) {
+    const expected = nextState === 'accepted' ? 'ACCEPT' : 'REJECT';
+    const verdict = typeof evidence.verdict === 'string' ? evidence.verdict.trim().toUpperCase() : '';
+    if (verdict && verdict !== expected) {
+      throw new Error(
+        `verdict "${evidence.verdict}" conflicts with the ${nextState} transition; send ${expected} or omit verdict`,
+      );
+    }
+  }
+}
+
 function rejectCallerSuppliedCheckResults(evidence) {
   if (!evidence || typeof evidence !== 'object') return;
-  for (const key of ['red', 'verification', 'security']) {
+  for (const key of ['red', 'verification', 'security', 'redExceptions', 'redException']) {
     if (Object.prototype.hasOwnProperty.call(evidence, key)) {
       throw new Error(
         `attempt transition rejects caller-supplied ${key} check results; use idefactory verify run`,
@@ -203,9 +249,12 @@ function validateEvidence(project, attempt, nextState, evidence) {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
     const taskType = item?.factory?.taskType === 'lightweight' ? 'lightweight' : 'code';
     if (taskType !== 'lightweight') {
-      const missing = requiredTestKinds(item?.factory?.checks).filter((kind) => !isFailingRed(redForKind(attempt, kind)));
+      const missing = requiredTestKinds(item?.factory?.checks)
+        .filter((kind) => redSatisfaction(project, attempt, kind) === 'missing');
       if (missing.length) {
-        throw new Error(`verifying requires a recorded failing CLI red for: ${missing.join(', ')}`);
+        throw new Error(
+          `verifying requires a recorded failing CLI red for: ${missing.join(', ')} (or a red exception)`,
+        );
       }
     }
   }
@@ -215,6 +264,16 @@ function validateEvidence(project, attempt, nextState, evidence) {
       throw new Error(
         'security-sensitive work cannot transition verifying → awaiting-review; remain in verifying and use security-checking',
       );
+    }
+  }
+  if (
+    nextState === 'awaiting-review'
+    && (attempt.state === 'verifying' || attempt.state === 'security-checking')
+  ) {
+    const item = getWorkItem(project, attempt.change, attempt.taskId);
+    const missing = item ? missingChecks(project, attempt, item) : [];
+    if (missing.length) {
+      throw new Error(`awaiting-review requires passing check evidence for: ${missing.join(', ')}`);
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {

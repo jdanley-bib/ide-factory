@@ -4,7 +4,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
+import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import {
+  assertSafeForgeArgv,
   azurePullRequestUrl,
   buildAzureCreatePullRequestArgv,
   buildAzureThreadsArgv,
@@ -136,8 +138,17 @@ export function postVerdictComment(project, stored, env = process.env) {
   if (typeof stored.reviewerId === 'string' && stored.reviewerId.length > 0) {
     lines.push(`Reviewer: ${stored.reviewerId}`);
   }
-  const body = `${lines.join('\n')}\n`;
-  forgePort(project).comment(project, { number: record.pullRequest.number, body }, env);
+  const exceptions = listAttemptExceptions(project, attempt);
+  const port = forgePort(project);
+  const build = (withReason) => `${[
+    ...lines,
+    ...exceptions.map((row) => describeException(row, { withReason })),
+  ].join('\n')}\n`;
+  let body = build(true);
+  if (exceptions.length > 0 && !port.acceptsCommentBody(record.pullRequest.number, body)) {
+    body = build(false);
+  }
+  port.comment(project, { number: record.pullRequest.number, body }, env);
 
   const posted = {
     attemptId: attempt.id,
@@ -449,6 +460,14 @@ const githubPort = {
   comment(project, { number, body }, env) {
     runChecked(project, buildCommentPullRequestArgv({ number, body }), env);
   },
+  acceptsCommentBody(number, body) {
+    try {
+      assertSafeForgeArgv(buildCommentPullRequestArgv({ number, body }));
+      return true;
+    } catch {
+      return false;
+    }
+  },
   listComments(project, { number }, env) {
     const parsed = parseForgeJson(runChecked(project, buildListCommentsArgv({ number }), env), 'comment list');
     return Array.isArray(parsed?.comments) ? parsed.comments : [];
@@ -477,6 +496,9 @@ function azurePort(forge) {
         number,
         body,
       }), env);
+    },
+    acceptsCommentBody() {
+      return true;
     },
     comment(project, { number, body }, env) {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'idefactory-thread-'));

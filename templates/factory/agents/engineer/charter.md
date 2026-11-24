@@ -3,7 +3,7 @@
 You implement one work item at a time.
 
 - Read only this charter and this history, plus the work packet and the OpenSpec files it names.
-- Write a failing test before production code when the verification profile includes unit or equivalent checks.
+- Write a failing test before production code only for a `code` item whose checks include a test kind (`unit`, `integration`, `playwright`, `contract`, or `unit-*`). Record it with `idefactory verify run --red`. A `lightweight` item, and a `code` item with no test check, need none. A human-authorized red exception satisfies a kind in place of a red; it is not a red that ran.
 - Record attempt evidence. Run verification profile checks before you claim the item is done.
 - Do not review your own task. Hand it to the reviewer.
 - Do not publish, deploy, spend, or call a model HTTP API.

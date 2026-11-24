@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { validateCheckRegistry } from '../src/lib/verification-evidence.mjs';
+import { currentRendering, legacyRelease } from './adapter-helpers.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 const ROLES = [
@@ -332,26 +333,42 @@ test('installed factory skills state the IDE session model and do not launch a m
   }
 });
 
-test('upgrade refreshes an owned skill and keeps a custom decision', async () => {
+const BUILD_SKILL = '.cursor/skills/factory-build/SKILL.md';
+
+test('upgrade refreshes an unmodified owned skill from an older release and keeps a custom decision', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     fs.appendFileSync(path.join(dir, '.factory/decisions.md'), '\nCUSTOM-DECISION-KEEP\n');
-    fs.writeFileSync(
-      path.join(dir, '.cursor/skills/factory-coordinator/SKILL.md'),
-      '---\nname: factory-coordinator\n---\nOLD-SKILL-BODY\n<!-- idefactory:owned -->\n',
-    );
+    const legacy = legacyRelease().get(BUILD_SKILL);
+    assert.notEqual(legacy, currentRendering(BUILD_SKILL));
+    fs.writeFileSync(path.join(dir, BUILD_SKILL), legacy);
     assert.equal((await idefactory(dir, ['upgrade'])).code, 0);
     assert.match(read(dir, '.factory/decisions.md'), /CUSTOM-DECISION-KEEP/);
-    const skill = read(dir, '.cursor/skills/factory-coordinator/SKILL.md');
-    assert.doesNotMatch(skill, /OLD-SKILL-BODY/);
-    assert.match(skill, /You route work/);
+    assert.equal(read(dir, BUILD_SKILL), currentRendering(BUILD_SKILL));
   } finally {
     cleanup(dir);
   }
 });
 
-test('init and upgrade preserve unrelated Cline files and refresh owned Cline skills', async () => {
+test('upgrade preserves an edited owned skill and keeps a custom decision', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    fs.appendFileSync(path.join(dir, '.factory/decisions.md'), '\nCUSTOM-DECISION-KEEP\n');
+    const edited = '---\nname: factory-coordinator\n---\nPROJECT-SKILL-BODY\n<!-- idefactory:owned -->\n';
+    fs.writeFileSync(path.join(dir, '.cursor/skills/factory-coordinator/SKILL.md'), edited);
+    const result = await idefactory(dir, ['upgrade']);
+    assert.equal(result.code, 0, result.err + result.out);
+    assert.match(result.out, /1 modified/);
+    assert.equal(read(dir, '.cursor/skills/factory-coordinator/SKILL.md'), edited);
+    assert.match(read(dir, '.factory/decisions.md'), /CUSTOM-DECISION-KEEP/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('init and upgrade preserve unrelated Cline files and refresh unmodified owned Cline skills', async () => {
   const dir = tempProject();
   try {
     const appBytes = 'keep-app-cline\n';
@@ -370,15 +387,16 @@ test('init and upgrade preserve unrelated Cline files and refresh owned Cline sk
 
     fs.appendFileSync(path.join(dir, '.factory/decisions.md'), '\nCUSTOM-DECISION-KEEP\n');
     fs.writeFileSync(
-      path.join(dir, '.cline/skills/factory-coordinator/SKILL.md'),
-      '---\nname: factory-coordinator\n---\nOLD-CLINE-SKILL-BODY\n<!-- idefactory:owned -->\n',
+      path.join(dir, '.cline/skills/factory-build/SKILL.md'),
+      legacyRelease().get('.cline/skills/factory-build/SKILL.md'),
     );
 
     assert.equal((await idefactory(dir, ['upgrade'])).code, 0);
     assert.match(read(dir, '.factory/decisions.md'), /CUSTOM-DECISION-KEEP/);
-    const clineSkill = read(dir, '.cline/skills/factory-coordinator/SKILL.md');
-    assert.doesNotMatch(clineSkill, /OLD-CLINE-SKILL-BODY/);
-    assert.match(clineSkill, /You route work/);
+    assert.equal(
+      read(dir, '.cline/skills/factory-build/SKILL.md'),
+      currentRendering('.cline/skills/factory-build/SKILL.md'),
+    );
     assert.equal(fs.readFileSync(path.join(dir, '.cline/rules/team-style.md'), 'utf8'), teamStyleBytes);
     assert.equal(fs.readFileSync(path.join(dir, '.cline/notes/keep.md'), 'utf8'), otherClineBytes);
     assert.equal(fs.existsSync(path.join(dir, 'app.js')), true);
@@ -562,4 +580,12 @@ test('factory-setup waits for confirmation and the README documents setup', asyn
   } finally {
     cleanup(dir);
   }
+});
+
+test('the cli profile is unit only in the shipped template and in this repository', () => {
+  const expected = { checks: ['unit'], humanGate: false };
+  const template = JSON.parse(fs.readFileSync(path.join(repoRoot, 'templates/factory/profiles.json'), 'utf8'));
+  const repo = JSON.parse(fs.readFileSync(path.join(repoRoot, '.factory/profiles.json'), 'utf8'));
+  assert.deepEqual(template.cli, expected);
+  assert.deepEqual(repo.cli, expected);
 });

@@ -47,6 +47,7 @@ function sanitizeEvent(event) {
     'workItemId',
     'revision',
     'decision',
+    'exceptionType',
   ];
   const clean = {};
   for (const key of allowed) {

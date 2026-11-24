@@ -117,7 +117,7 @@ test('a failed event append after completion leaves the work item done and warns
     config.governance.policyVersion = 1;
     fs.writeFileSync(path.join(dir, '.factory/config.json'), JSON.stringify(config, null, 2));
     fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
-    fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), '- [ ] 1.1 Add parser\n');
+    fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), '- [ ] 1.1 Add parser\n  factory:\n    kind: general\n    checks: [unit]\n    verificationProfile: cli\n');
     assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     assert.equal(started.code, 0, started.err);

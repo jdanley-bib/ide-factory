@@ -112,7 +112,7 @@ function demoTaskBlock(id, title) {
     '  factory:',
     '    kind: general',
     '    checks: [unit]',
-    '    verificationProfile: frontend-low',
+    '    verificationProfile: cli',
     '    roles: [engineer, reviewer, scribe]',
     '',
   ].join('\n');

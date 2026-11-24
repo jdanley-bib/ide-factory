@@ -10,16 +10,18 @@ import {
 } from './finalization-recovery.mjs';
 import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText } from './layout.mjs';
-import { isFailingRed, redForKind, requiredTestKinds } from './red-evidence.mjs';
+import { requiredTestKinds } from './red-evidence.mjs';
+import { redSatisfaction } from './red-exceptions.mjs';
 import {
   assertPassingCliSecurityEvidence,
   humanGateAllows,
 } from './risk-gates.mjs';
+import { resolveGitBinding } from './verification-evidence.mjs';
 import {
-  commandDigest,
-  resolveGitBinding,
-  validateCheckRecord,
-} from './verification-evidence.mjs';
+  readCheckRegistry,
+  requiredChecksFor,
+  unpassedChecks,
+} from './required-checks.mjs';
 import { getWorkItem } from './work.mjs';
 
 /**
@@ -65,6 +67,7 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     throw new Error(`Attempt must be accepted before complete (state=${attempt.state})`);
   }
 
+  const requiredChecks = requiredChecksFor(project, item);
   if (!humanGateAllows(project, {
     action: 'complete',
     verificationProfile: item.factory?.verificationProfile,
@@ -93,7 +96,6 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     }
   }
 
-  const requiredChecks = requiredChecksFor(project, item);
   // Partial finalization may dirty allowlisted targets (for example tasks.md).
   // Resume is still safe when a matching journal binds the same clean HEAD.
   let resumeJournal = null;
@@ -162,40 +164,8 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
   }
 }
 
-function requiredChecksFor(project, item) {
-  const profileName = item.factory?.verificationProfile || 'frontend-low';
-  const profilesPath = path.join(project, '.factory', 'profiles.json');
-  let profiles = {};
-  if (fs.existsSync(profilesPath)) {
-    try {
-      profiles = JSON.parse(readText(profilesPath));
-    } catch {
-      profiles = {};
-    }
-  }
-  if (Array.isArray(item.factory?.checks) && item.factory.checks.length) return item.factory.checks;
-  const fromProfile = profiles[profileName]?.checks;
-  if (Array.isArray(fromProfile) && fromProfile.length) return fromProfile;
-  return ['unit'];
-}
-
 function assertChecksPassed(project, attempt, required, options = {}) {
-  const registryPath = path.join(project, '.factory', 'checks.json');
-  if (!fs.existsSync(registryPath)) {
-    throw new Error('missing check registry: .factory/checks.json');
-  }
-  let rawRegistry;
-  try {
-    rawRegistry = JSON.parse(readText(registryPath));
-  } catch {
-    throw new Error('invalid check registry JSON');
-  }
-  if (!rawRegistry || typeof rawRegistry !== 'object' || Array.isArray(rawRegistry)) {
-    throw new Error('invalid check registry');
-  }
-  const rawChecks = rawRegistry.checks && typeof rawRegistry.checks === 'object' && !Array.isArray(rawRegistry.checks)
-    ? rawRegistry.checks
-    : {};
+  const rawChecks = readCheckRegistry(project);
 
   const { sourceRevision: headSha, worktreeClean } = resolveGitBinding(project);
   if (!headSha) {
@@ -212,88 +182,21 @@ function assertChecksPassed(project, attempt, required, options = {}) {
     throw new Error('finalization journal source revision mismatch');
   }
 
-  const results = [
-    ...(attempt.evidence?.verification || []),
-    ...(attempt.evidence?.security || []),
-  ];
-
-  for (const kind of required) {
-    const rawEntry = rawChecks[kind];
-    if (rawEntry === undefined) {
-      throw new Error(`Unknown or unmapped check kind: ${kind}`);
-    }
-    if (!Array.isArray(rawEntry?.argv) || rawEntry.argv.length === 0) {
-      throw new Error(`Check kind has no argv mapping: ${kind}`);
-    }
-    if (!rawEntry.argv.every((part) => typeof part === 'string' && part.length > 0)) {
-      throw new Error(`Check kind has no argv mapping: ${kind}`);
-    }
-    const registryDigest = commandDigest(rawEntry.argv);
-
-    const candidates = results.filter((entry) => entry.kind === kind || entry.check === kind);
-    let passed = false;
-    let failureReason = null;
-    for (const record of candidates) {
-      try {
-        validateCheckRecord(record);
-      } catch (error) {
-        if (/exitCode/i.test(error.message)) {
-          failureReason = failureReason || 'check record requires exitCode';
-        }
-        continue;
-      }
-      const reason = attestationFailureReason(record, {
-        attemptId: attempt.id,
-        registryDigest,
-        headSha,
-      });
-      if (!reason) {
-        passed = true;
-        break;
-      }
-      failureReason = failureReason || reason;
-    }
-    if (!passed) {
-      throw new Error(failureReason || `Missing passing check evidence for: ${kind}`);
-    }
+  const [failure] = unpassedChecks(attempt, required, { rawChecks, headSha, stopAtFirst: true });
+  if (failure) {
+    throw new Error(failure.reason);
   }
 
   const taskType = options.taskType === 'lightweight' ? 'lightweight' : 'code';
   if (taskType === 'code') {
     for (const kind of requiredTestKinds(required)) {
-      if (!isFailingRed(redForKind(attempt, kind))) {
-        throw new Error(`complete requires a recorded failing CLI red for: ${kind}`);
+      if (redSatisfaction(project, attempt, kind) === 'missing') {
+        throw new Error(`complete requires a recorded failing CLI red or red exception for: ${kind}`);
       }
     }
   }
 
   return { sourceRevision: headSha };
-}
-
-/**
- * Return null when the record passes from attestation facts.
- * Ignores any caller-supplied `passed` boolean.
- */
-function attestationFailureReason(record, { attemptId, registryDigest, headSha }) {
-  if (record.issuer !== 'cli' && record.issuer !== 'import') {
-    return 'verification-command attestation requires issuer cli or import';
-  }
-  if (record.exitCode !== 0) {
-    return `attestation exit code must be 0 for: ${record.kind || 'check'}`;
-  }
-  if (record.timedOut !== false) {
-    return 'attestation must not be timedOut';
-  }
-  if (record.commandDigest !== registryDigest) {
-    return 'attestation commandDigest does not match current registry argv';
-  }
-  if (record.attemptId !== attemptId) {
-    return 'attestation attemptId does not match attempt';
-  }
-  if (record.sourceRevision !== headSha) {
-    return 'attestation sourceRevision does not match current clean HEAD';
-  }
-  return null;
 }
 
 function readConfig(project) {

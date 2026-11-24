@@ -414,3 +414,69 @@ test('installed factory skills describe prior rejections and the quick reviewer'
     assert.match(runSkill, /route still requires the reviewer/i);
   }
 });
+
+test('the engineer packet names the evidence file option for transitions', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, '- [ ] 1.1 Add parser\n');
+    assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
+    const packet = renderWorkPacket(dir, getWorkItem(dir, 'demo', '1.1'), 'engineer');
+    assert.match(packet, /idefactory attempt transition/);
+    assert.match(packet, /--evidence-file/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function redRequirementTasks() {
+  const block = (id, title, extra) => [
+    `- [ ] ${id} ${title}`,
+    '  factory:',
+    '    kind: general',
+    ...extra.map((line) => `    ${line}`),
+    '',
+  ].join('\n');
+  return [
+    block('1.1', 'Code with a test', ['checks: [unit, build]']),
+    block('1.2', 'Lightweight with a test', ['taskType: lightweight', 'checks: [unit]']),
+    block('1.3', 'Code without a test', ['checks: [build]']),
+  ].join('\n');
+}
+
+test('the packet states the task class and which checks need a red', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, redRequirementTasks());
+    assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
+    const packet = (id, role = 'engineer') => renderWorkPacket(dir, getWorkItem(dir, 'demo', id), role);
+
+    assert.match(packet('1.1'), /^Task class: code$/m);
+    assert.match(packet('1.1'), /^Red required for: unit$/m);
+    assert.match(packet('1.2'), /^Task class: lightweight$/m);
+    assert.match(packet('1.2'), /^Red required for: none$/m);
+    assert.match(packet('1.3'), /^Task class: code$/m);
+    assert.match(packet('1.3'), /^Red required for: none$/m);
+    for (const role of ['reviewer', 'security-reviewer']) {
+      assert.match(packet('1.1', role), /^Red required for: unit$/m, role);
+    }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('the implementer method line makes the failing test conditional', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeDemoTasks(dir, redRequirementTasks());
+    assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
+    const packet = renderWorkPacket(dir, getWorkItem(dir, 'demo', '1.1'), 'engineer');
+    assert.doesNotMatch(packet, /Write a failing test before production code when the profile includes unit or equivalent checks/);
+    assert.match(packet, /Red required for/);
+    assert.match(packet, /Write a failing test before production code only for the kinds listed under Red required for/);
+  } finally {
+    cleanup(dir);
+  }
+});

@@ -54,7 +54,7 @@ When a file named `HALT` exists in the project root, next, sync-tasks, run, atte
 - **THEN** the command exits with an error and does not emit an agent request
 
 ### Requirement: Attempt lifecycle
-Each started work item SHALL have a persisted attempt whose state transitions reject illegal stage changes. Review notes are accepted from the reviewer. Red, verification, and security check records SHALL be retained only when the verification command wrote them. A `code` attempt SHALL NOT enter `verifying` until each required test kind has a stored failing red record. A `lightweight` attempt MAY enter `verifying` from `implementing` with no red record.
+Each started work item SHALL have a persisted attempt whose state transitions reject illegal stage changes. Review notes are accepted from the reviewer. Red, verification, and security check records SHALL be retained only when the verification command wrote them. A `code` attempt SHALL NOT enter `verifying` until each required test kind has a stored failing red record or a valid red exception from the red-evidence-exceptions capability. A `lightweight` attempt MAY enter `verifying` from `implementing` with no red record.
 
 #### Scenario: Illegal transition
 - **WHEN** an attempt transition skips from assigned directly to accepted
@@ -67,6 +67,10 @@ Each started work item SHALL have a persisted attempt whose state transitions re
 #### Scenario: Code attempt needs every test kind
 - **WHEN** a `code` attempt requires `unit` and `integration` and only `unit` has a stored failing red record
 - **THEN** the transition into `verifying` is rejected
+
+#### Scenario: Exception satisfies one kind
+- **WHEN** a `code` attempt requires `unit` and `integration`, has a stored failing red record for `unit`, and has a valid red exception for `integration`
+- **THEN** the transition into `verifying` is accepted
 
 #### Scenario: Lightweight attempt skips red
 - **WHEN** a `lightweight` attempt transitions from `implementing` to `verifying` with no red record
@@ -96,10 +100,10 @@ Completion SHALL require recorded implementer and reviewer identifiers and SHALL
 - **THEN** completion fails and the work item remains unfinished
 
 ### Requirement: Finalize accepted work
-Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD. A `code` item SHALL also have a stored failing CLI red record for each required test kind. A `lightweight` item SHALL NOT require a red record.
+Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD. A `code` item SHALL also have, for each required test kind, a stored failing CLI red record or a valid red exception from the red-evidence-exceptions capability. A `lightweight` item SHALL NOT require a red record.
 
 #### Scenario: Successful completion
-- **WHEN** complete receives an accepted `code` attempt with distinct role identifiers, a schema-valid passing attestation for every required check at the current clean HEAD, a stored failing red record for each required test kind, and a verification profile whose `humanGate` is false
+- **WHEN** complete receives an accepted `code` attempt with distinct role identifiers, a schema-valid passing attestation for every required check at the current clean HEAD, a stored failing red record or valid red exception for each required test kind, and a verification profile whose `humanGate` is false
 - **THEN** the matching journal is ready to commit, the OpenSpec checkbox is checked, scribe and identity records are current, the attempt is finalized, and the work item is done
 - **AND** the atomic work-item done update was the final correctness-critical write
 - **AND** the journal includes the durable commit target and frozen `finalizedAt` applied last, not as a pre-commit target
@@ -126,6 +130,15 @@ Complete SHALL require an accepted attempt, or a matching recoverable finalizati
 
 #### Scenario: Code completion missing one red kind
 - **WHEN** a `code` item requires `unit` and `integration` and the attempt has a failing red record for `unit` only
+- **THEN** complete fails and the work item remains unfinished
+
+#### Scenario: Code completion with an exception
+- **WHEN** a `code` item requires `unit` and the accepted attempt has a valid reuse exception for `unit` and every other completion requirement
+- **THEN** complete succeeds
+- **AND** the attempt still has no CLI red record for `unit`
+
+#### Scenario: Altered exception at completion
+- **WHEN** the attempt's only red for a required kind is an exception whose file no longer matches its stored digest
 - **THEN** complete fails and the work item remains unfinished
 
 ### Requirement: Journaled completion commit
@@ -220,3 +233,219 @@ The implementer packet for a work item SHALL include the rejection notes stored 
 #### Scenario: Notes do not authorize completion
 - **WHEN** a prior rejection note exists and no scoped approval exists
 - **THEN** the note does not authorize accept or complete
+
+### Requirement: Transition evidence sources
+`idefactory attempt transition` SHALL accept its evidence from exactly one of `--evidence <json>`, which carries inline JSON, or `--evidence-file <path>`, which names a file holding JSON. A relative path SHALL resolve from the current working directory. Evidence from either source SHALL go through the same validation and produce the same attempt result. `--evidence-file` SHALL NOT accept inline JSON, and the command SHALL NOT modify, move, or delete the file.
+
+#### Scenario: Evidence from a file
+- **WHEN** a transition is run with `--evidence-file` naming a file that holds a JSON object with a reviewer id and verdict
+- **THEN** the attempt moves to the requested state with that evidence
+- **AND** the stored attempt equals the one the same evidence passed inline would produce
+
+#### Scenario: Evidence file with spaces and escaped quotes
+- **WHEN** the evidence file holds a note containing spaces and escaped quotation marks
+- **THEN** the stored note equals the file content character for character
+
+#### Scenario: Inline evidence is unchanged
+- **WHEN** a transition is run with `--evidence` and valid inline JSON
+- **THEN** it behaves as it did before this requirement
+
+#### Scenario: File is left in place
+- **WHEN** a transition with `--evidence-file` succeeds or fails
+- **THEN** the named file still exists with its original content
+
+#### Scenario: Both sources given
+- **WHEN** a transition is run with both `--evidence` and `--evidence-file`
+- **THEN** the command exits with an error that tells the user to include only one of them
+- **AND** the attempt is not changed
+
+#### Scenario: Inline JSON passed as the file value
+- **WHEN** `--evidence-file` is given a value that is JSON text rather than the path of an existing file
+- **THEN** the command exits with an error that names the missing file
+- **AND** it does not parse the value as evidence
+
+### Requirement: Transition evidence file encoding
+The evidence file SHALL be read as UTF-8 and its content SHALL otherwise be parsed unchanged. The reader SHALL accept a leading UTF-8 byte-order mark and SHALL decode UTF-16LE content that begins with a UTF-16LE byte-order mark, because Windows PowerShell 5.1 writes both.
+
+#### Scenario: UTF-8 with a byte-order mark
+- **WHEN** the evidence file is UTF-8 with a leading byte-order mark
+- **THEN** the transition accepts its JSON object
+
+#### Scenario: UTF-16LE file
+- **WHEN** the evidence file is UTF-16LE with a byte-order mark
+- **THEN** the transition accepts its JSON object
+
+#### Scenario: Non-ASCII text
+- **WHEN** the evidence file is UTF-8 and the note contains non-ASCII characters
+- **THEN** the stored note equals the file content
+
+### Requirement: Transition evidence input errors
+A transition that cannot obtain evidence SHALL fail before it changes the attempt and SHALL name the cause. A missing path, an unreadable file, a directory, an empty file, content that is not valid JSON, and JSON that is not an object SHALL each fail with a message that names the evidence file path. A flag given without a value SHALL fail with the transition usage. Inline JSON that does not parse SHALL fail with a message that names `--evidence-file` as the alternative.
+
+#### Scenario: Missing file
+- **WHEN** `--evidence-file` names a path that does not exist
+- **THEN** the command exits with an error that names that path
+- **AND** the attempt is not changed
+
+#### Scenario: Directory
+- **WHEN** `--evidence-file` names a directory
+- **THEN** the command exits with an error that names that path
+
+#### Scenario: Empty file
+- **WHEN** the evidence file is empty
+- **THEN** the command exits with an error that says the file is empty and names its path
+
+#### Scenario: Malformed JSON in the file
+- **WHEN** the evidence file holds text that is not valid JSON
+- **THEN** the command exits with a parse error that names the file path
+
+#### Scenario: JSON that is not an object
+- **WHEN** the evidence file holds a JSON array, string, number, boolean, or null
+- **THEN** the command exits with an error that says evidence must be a JSON object and names the file path
+
+#### Scenario: Flag without a value
+- **WHEN** `--evidence` or `--evidence-file` is given with no value
+- **THEN** the command exits with the transition usage
+
+#### Scenario: Malformed inline JSON
+- **WHEN** `--evidence` holds text that is not valid JSON
+- **THEN** the command exits with an error that names `--evidence-file` as an alternative
+- **AND** the attempt is not changed
+
+#### Scenario: Existing validation still applies
+- **WHEN** the evidence file holds a caller-supplied verification result
+- **THEN** the transition is rejected as it is for inline evidence
+
+### Requirement: Packet names the evidence file option
+The work packet SHALL tell the implementing role to record transition evidence with `--evidence-file`.
+
+#### Scenario: Engineer packet
+- **WHEN** a work packet is rendered for the engineer role
+- **THEN** it names `idefactory attempt transition` and `--evidence-file`
+
+### Requirement: Review requires what the red gate requires
+The factory-review command and the Review section of the factory-build skill SHALL tell the reviewer to accept only when every required verification check has a passing CLI record on the current clean HEAD and, for a `code` item whose checks include a test kind, each such kind has a recorded failing red or a valid recorded red exception.
+
+#### Scenario: Code item with a test check
+- **WHEN** the review command is read for a `code` work item whose checks include `unit`
+- **THEN** it requires a recorded failing red or a valid red exception for `unit` and a passing CLI record for each required check
+
+#### Scenario: Unconditional wording is gone
+- **WHEN** the review command and the build skill are read
+- **THEN** neither says to accept only if a failing test was written first
+- **AND** neither says acceptance requires red evidence without naming the conditions
+
+### Requirement: Review guidance names the cases that need no red
+The review guidance SHALL say that a `lightweight` item, and a `code` item whose checks include no test kind, need no failing test. It SHALL say that a red exception is not a red that ran, that the reviewer relies on the evidence recorded on the attempt, and that the reviewer does not ask for a new failing test where a valid exception is recorded. It SHALL keep review by a role other than the implementer.
+
+#### Scenario: Lightweight item
+- **WHEN** the review command is read for a `lightweight` work item
+- **THEN** it does not require a failing test
+
+#### Scenario: No test check
+- **WHEN** the review command is read for a `code` item whose checks include no test kind
+- **THEN** it does not require a failing test
+
+#### Scenario: Recorded exception
+- **WHEN** the attempt holds a valid reuse or waiver exception for a required kind
+- **THEN** the guidance tells the reviewer to accept the exception as satisfying that kind
+- **AND** it does not tell the reviewer to treat the exception as a red that ran or to ask for a new failing test
+
+#### Scenario: Independent review remains
+- **WHEN** the review command is read
+- **THEN** it still says the reviewer is a different role from the implementer and that clean-revision verification must pass
+
+### Requirement: Charters match the review guidance
+The engineer and reviewer charters that init writes for a new project SHALL state the same conditions for a failing test as the review guidance: required only for a `code` item whose checks include a test kind, satisfied by a recorded red or a valid red exception.
+
+#### Scenario: New project charters
+- **WHEN** init runs in a directory with no `.factory/`
+- **THEN** the engineer charter requires a failing test only for a `code` item whose checks include a test kind
+- **AND** the reviewer charter accepts a valid recorded red exception in place of a red
+
+### Requirement: Packet states the red requirement
+The work packet SHALL state the work item's task class and the check kinds that need red evidence, or that none do. A `lightweight` item and a `code` item with no test kind SHALL show none.
+
+#### Scenario: Code item with a test check
+- **WHEN** a packet is rendered for a `code` item whose checks are `unit` and `build`
+- **THEN** it states task class `code` and red required for `unit`
+
+#### Scenario: Lightweight item
+- **WHEN** a packet is rendered for a `lightweight` item whose checks include `unit`
+- **THEN** it states task class `lightweight` and that no red is required
+
+#### Scenario: No test kind
+- **WHEN** a packet is rendered for a `code` item whose checks are `build`
+- **THEN** it states task class `code` and that no red is required
+
+### Requirement: Run request matches the red gate
+An implementing-stage run request for a `code` attempt whose checks include no test kind SHALL say that a failing test is not required and SHALL name `verifying` as the next state. A `code` attempt whose checks include a test kind SHALL still be asked for a red, unless every such kind already has a red or a valid exception.
+
+#### Scenario: Code item with no test kind
+- **WHEN** run reaches the implementing stage for a `code` attempt whose checks are `build`
+- **THEN** the request says a failing test is not required
+- **AND** its next state is `verifying`
+
+#### Scenario: Code item with a test kind
+- **WHEN** run reaches the implementing stage for a `code` attempt whose checks include `unit` and no red or exception is recorded
+- **THEN** the request asks for a failing test recorded with `idefactory verify run --red`
+- **AND** its next state is `red-confirmed`
+
+### Requirement: Required checks are the profile and item checks together
+The required checks for a work item's attempt SHALL be the checks of its `verificationProfile` together with its own `checks`, with duplicates removed. The review handoff and completion SHALL use that same set. A `verificationProfile` that is not defined in `.factory/profiles.json` SHALL refuse the handoff and completion with an error that names it.
+
+#### Scenario: Profile check missing from the item
+- **WHEN** a `code` item lists only `unit` and its `verificationProfile` also requires `build`, and the attempt has a passing `unit` record but no `build` record
+- **THEN** the attempt is not handed to the reviewer
+- **AND** the request names `build` as missing and tells the engineer to record it with `idefactory verify run`
+
+#### Scenario: Completion uses the profile too
+- **WHEN** complete receives an accepted attempt whose item lists only `unit` and whose profile also requires `build`, and no passing `build` record exists at the current clean HEAD
+- **THEN** completion fails naming `build`
+- **AND** the work item remains unfinished
+
+#### Scenario: Review entry is refused while a check is missing
+- **WHEN** a transition from `verifying` or `security-checking` to `awaiting-review` is requested and a required check has no passing record at the current clean HEAD
+- **THEN** the transition is refused
+- **AND** the attempt state is unchanged
+
+#### Scenario: Unknown profile
+- **WHEN** an item's `verificationProfile` is not defined in `.factory/profiles.json`
+- **THEN** the handoff and completion are refused with an error that names the profile
+- **AND** the factory does not fall back to `unit`
+
+#### Scenario: Unit-only profile
+- **WHEN** an item's `verificationProfile` is `cli` with checks `["unit"]` and its only check has a passing record at the current clean HEAD
+- **THEN** the attempt may be handed to review and completed
+
+### Requirement: Transition evidence keys and shapes
+`idefactory attempt transition` SHALL accept only the evidence keys `reviewerId`, `implementerId`, `securityReviewerId`, `verdict`, `notes`, `changedFiles`, and `baseRev`. A transition given any other key, or a supported key whose value has the wrong type, SHALL fail before it changes the attempt and SHALL name the offending key or value. A `verdict` that conflicts with the transition SHALL be refused.
+
+#### Scenario: Nested review shape is refused
+- **WHEN** a reviewer rejects an attempt in `awaiting-review` with evidence that nests the notes under a `review` key
+- **THEN** the command exits with an error that names `review` and points to the top-level `notes` key
+- **AND** the attempt file is byte-for-byte unchanged
+
+#### Scenario: Documented top-level notes are stored
+- **WHEN** a reviewer rejects an attempt in `awaiting-review` with `reviewerId`, `verdict` of `REJECT`, and top-level `notes` containing review findings
+- **THEN** the attempt moves to `rejected`
+- **AND** its stored `evidence.review.notes` equals those findings
+
+#### Scenario: Misspelled key is refused
+- **WHEN** a transition is given evidence with a key such as `note` that the command does not support
+- **THEN** the command exits with an error that names `note`
+- **AND** the attempt is not changed
+
+#### Scenario: Wrong value type is refused
+- **WHEN** `notes` is an object, or `changedFiles` is not an array of strings
+- **THEN** the command exits with an error that names that key
+- **AND** the attempt is not changed
+
+#### Scenario: Conflicting verdict is refused
+- **WHEN** a reviewer rejects an attempt in `awaiting-review` with a `verdict` of `ACCEPT`
+- **THEN** the transition is refused with an error that names the conflicting verdict
+- **AND** the attempt is not changed
+
+#### Scenario: Rejection without a verdict is accepted
+- **WHEN** a reviewer rejects an attempt in `awaiting-review` with `reviewerId` and `notes` and no `verdict`
+- **THEN** the attempt moves to `rejected` with the notes stored

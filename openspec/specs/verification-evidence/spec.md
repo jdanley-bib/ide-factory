@@ -61,7 +61,7 @@ Each stored check record SHALL include schema version, check kind, runner name a
 - **THEN** verification rejects the record
 
 ### Requirement: Source revision binding
-A passing check record SHALL identify the git revision and clean worktree against which the check ran. Verification SHALL refuse to record a pass when the worktree is dirty or the revision cannot be resolved. Uncommitted paths under `.factory/approvals/` and uncommitted changes to `.factory/decisions.md` SHALL NOT by themselves make the worktree dirty. The factory SHALL NOT gitignore `.factory/approvals/`.
+A passing check record SHALL identify the git revision and clean worktree against which the check ran. Verification SHALL refuse to record a pass when the worktree is dirty or the revision cannot be resolved. Uncommitted paths under `.factory/approvals/` or `.factory/exceptions/` and uncommitted changes to `.factory/decisions.md` SHALL NOT by themselves make the worktree dirty. The factory SHALL NOT gitignore `.factory/approvals/` or `.factory/exceptions/`.
 
 #### Scenario: Clean revision recorded
 - **WHEN** a registered check exits zero on a clean git worktree
@@ -73,6 +73,12 @@ A passing check record SHALL identify the git revision and clean worktree agains
 
 #### Scenario: Approval files alone stay clean
 - **WHEN** the only uncommitted paths are under `.factory/approvals/` or are `.factory/decisions.md`
+- **AND** a registered check exits zero
+- **THEN** verification records a passing result
+- **AND** the evidence source revision equals HEAD
+
+#### Scenario: Exception files alone stay clean
+- **WHEN** the only uncommitted paths are under `.factory/exceptions/`
 - **AND** a registered check exits zero
 - **THEN** verification records a passing result
 - **AND** the evidence source revision equals HEAD

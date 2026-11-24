@@ -3,7 +3,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { attemptsRoot, getAttempt } from './attempt.mjs';
 import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
+import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
+import { requiredTestKinds } from './red-evidence.mjs';
 import {
   ensureWorkDirs,
   getWorkItem,
@@ -363,7 +365,7 @@ function selectAcrossChanges(project) {
 function renderPacket({ role, item, modelProfile, project }) {
   const criteria = (item.acceptanceCriteria || []).map((entry) => `- ${entry}`).join('\n');
   const roles = (item.factory?.roles || []).join(', ');
-  const prior = priorRejectionBlock(project, item, role);
+  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role);
   return `# Work packet
 
 Role: ${role}
@@ -381,6 +383,8 @@ Change: ${item.change}
 Roles pipeline: ${roles || role}
 Verification profile: ${item.factory?.verificationProfile || '(default)'}
 Checks: ${(item.factory?.checks || []).join(', ') || '(default)'}
+Task class: ${taskClassOf(item)}
+Red required for: ${redRequiredKinds(item).join(', ') || 'none'}
 
 Description:
 openspec-task: ${item.id}
@@ -394,8 +398,8 @@ ${criteria || '- (see the task)'}
 ${prior}
 Method:
 - Prefer common scaffolds and libraries over hand-rolled toolchains (for example npm create vite@latest for a SPA).
-- Write a failing test before production code when the profile includes unit or equivalent checks.
-- Record evidence on the attempt via idefactory attempt transition.
+- Write a failing test before production code only for the kinds listed under Red required for. A human-authorized red exception satisfies a kind in place of a red.
+- Record evidence on the attempt via idefactory attempt transition. Pass JSON evidence with --evidence-file <path> to a temporary file outside the project, or --evidence <json> inline, never both.
 - Run verification profile checks before claiming done.
 - Review is a different role: reviewer. The implementer does not approve their own work.
 - Finalize with idefactory complete ${item.change} ${item.id} --attempt <id>.
@@ -409,6 +413,29 @@ function priorRejectionBlock(project, item, role) {
   const notes = priorRejections(project, item.change, item.id);
   if (notes.length === 0) return '';
   return `\nPrior rejections:\n${notes.join('\n')}\n`;
+}
+
+function taskClassOf(item) {
+  return item.factory?.taskType === 'lightweight' ? 'lightweight' : 'code';
+}
+
+function redRequiredKinds(item) {
+  if (taskClassOf(item) === 'lightweight') return [];
+  return requiredTestKinds(item.factory?.checks);
+}
+
+function redExceptionBlock(project, item, role) {
+  if (!project || (role !== 'reviewer' && role !== 'security-reviewer')) return '';
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return '';
+  const lines = [];
+  for (const name of fs.readdirSync(root).sort()) {
+    if (!name.endsWith('.json')) continue;
+    const attempt = getAttempt(project, name.slice(0, -'.json'.length));
+    if (!attempt || attempt.change !== item.change || attempt.taskId !== item.id) continue;
+    for (const row of listAttemptExceptions(project, attempt)) lines.push(`- ${describeException(row)}`);
+  }
+  return lines.length ? `\nRed exceptions:\n${lines.join('\n')}\n` : '';
 }
 
 function priorRejections(project, change, taskId) {
