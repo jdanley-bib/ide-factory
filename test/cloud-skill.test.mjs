@@ -27,6 +27,16 @@ test('init installs factory-cloud with the claim, resume-only --new-run, and nev
       }
       assert.match(text, /Never move the story to the ready state or to a done state/, rel);
       assert.doesNotMatch(text, /--auto-complete/, rel);
+      assert.match(text, /idefactory mcp ack <planId>/, rel);
+      assert.match(text, /--snapshot <file>/, rel);
+      assert.match(text, /No Azure DevOps token is on this machine/, rel);
+      assert.doesNotMatch(text, /ADO_TOKEN/, rel);
+      assert.match(text, /operating system temporary directory, not inside the project/, rel);
+      assert.match(text, /Never call these with `autoComplete`, `mergeStrategy`, `bypassReason`, `deleteSourceBranch`, `vote`, `status`, `reviewerIds`, or `isDraft`\./, rel);
+      assert.match(text, /Never use `update_status`, `update_reviewers`, `vote`, or an abandon/, rel);
+      assert.match(text, /Do not run `idefactory red waive` or `idefactory red reuse`/, rel);
+      assert.match(text, /Do not edit a plan, a plan file under `\.factory\/mcp\/`/, rel);
+      assert.match(text, /409/, rel);
     }
 
     const coordinator = read(dir, '.cursor/skills/factory-coordinator/SKILL.md');

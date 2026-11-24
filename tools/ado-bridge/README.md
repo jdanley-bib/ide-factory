@@ -32,8 +32,10 @@ Run once in the product repository, then commit `.factory/config.json`:
 
 ```bash
 idefactory board configure --organization https://dev.azure.com/<org> --project <project>
-idefactory forge configure --provider azure-devops --organization https://dev.azure.com/<org> --project <project> --repository <repo>
+idefactory forge configure --provider azure-devops --organization https://dev.azure.com/<org> --project <project> --repository <repo> --target-branch main
 ```
+
+Both default to the `mcp` transport: the CLI prints plans and the cloud agent applies them through Cursor's Azure DevOps MCP connection. Add `--transport az` only for runs outside a cloud agent that use the Azure CLI.
 
 After the GitHub migration, run `idefactory forge configure --provider github`. The board can stay on Azure DevOps.
 
@@ -50,9 +52,9 @@ Moving the published story to `Ready for Factory` asks the factory to build that
 ## 3. Cursor Automation
 
 1. Create an Automation with a **Webhook** trigger, repository set to the product repository, and **Run as** the team service account.
-2. Add the Azure DevOps MCP as a tool for reads.
-3. Add the runtime secret `ADO_TOKEN` to the environment: a PAT scoped to Work Items (read and write) and Code (read and write). Add `GH_TOKEN` too once the forge is GitHub.
-4. The environment image needs the Azure CLI and its extension: `az extension add --name azure-devops`.
+2. Enable the Azure DevOps MCP for the Automation. The factory reads stories and threads through it and applies the plans `idefactory` prints. No `ADO_TOKEN` and no Azure CLI are needed.
+3. Check which identity the MCP connection acts as. Give that identity access to the project's work items and repository, and deny it "Bypass policies when completing pull requests" and "Bypass policies when pushing". On the target branch, require at least one reviewer and block "Allow requestors to approve their own changes".
+4. The MCP cannot push commits. Let the cloud agent push `factory/<change>` with its own git access to the repository. Add `GH_TOKEN` once the forge is GitHub.
 5. Save the Automation, then copy its webhook URL and generated bearer token.
 
 Prompt:
@@ -60,8 +62,8 @@ Prompt:
 ```text
 Follow the factory-cloud skill in this repository.
 The webhook payload names workItemId, revision, and change.
-Run the claim with this run's URL, and stop unless the decision is start or resume.
-Open pull requests only with idefactory pr open. Never merge.
+Read the story with the Azure DevOps MCP, run the claim with this run's URL, apply and acknowledge the plan it prints, and stop unless the decision is start or resume.
+Call Azure DevOps only with operations that idefactory prints in a plan. Open pull requests only with idefactory pr open. Never merge.
 ```
 
 ## 4. Bridge

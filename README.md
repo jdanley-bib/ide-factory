@@ -242,10 +242,13 @@ flowchart TD
 | `idefactory halt` / `resume` | Set or clear the kill switch |
 | `idefactory forge configure` | Choose `github` (default) or `azure-devops` for `idefactory pr` |
 | `idefactory board …` | Optional Azure DevOps board mirror: `configure`, `publish`, `claim`, `report`, `comment`, `transition` |
+| `idefactory mcp ack` / `pending` | Record, or list, plans the agent applied through the Azure DevOps MCP |
 
 ## Cloud runs from an Azure DevOps board
 
 Local use is the default and needs none of this. With no `board` entry in `.factory/config.json`, every `board` command refuses and nothing talks to Azure DevOps.
+
+`idefactory` never contacts Azure DevOps with the default `mcp` transport, so no Azure DevOps secret is on the VM. A command that would write prints a plan: numbered operations for Cursor's Azure DevOps MCP connection, each a tool name and a full argument object. The cloud agent calls them exactly as printed and then runs `idefactory mcp ack <planId>`, and only then does the CLI record the result in `.factory/boards/` or `.factory/pull-requests/`. Reads go the other way: the agent saves the MCP result to a file in the temporary directory and passes it with `board claim --snapshot` or `pr capture --threads-file`. Plans name only these tools: `wit_work_item_write`, `wit_work_item_comment_write`, `wit_work_item_link_write`, `repo_pull_request_write` (create, or update the description), and `repo_pull_request_thread_write`. The plan builder refuses `autoComplete`, `bypassReason`, `vote`, `status`, and the other completion arguments. A claim's state change starts with a `Test` of the story revision, so two cloud runs cannot both claim one story. The MCP cannot push commits, so the cloud agent pushes `factory/<change>` with its own git access.
 
 To let the factory pick up work by itself:
 
@@ -255,7 +258,7 @@ To let the factory pick up work by itself:
 4. The agent runs `idefactory run --until human-gate` on `factory/<change>`, mirrors progress with `idefactory board report`, and opens the pull request with `idefactory pr open`.
 5. A gate, lockout, or rejected review moves the story to `Waiting on Human` or `Blocked`. The human decides, then moves the story back to `Ready for Factory` to resume.
 
-The agent never merges, never approves, never clears `HALT`, and never moves a story to the ready state or a done state. `ADO_TOKEN` is a runtime secret passed to the Azure CLI through its environment, never on argv. `idefactory` itself never launches a model and never polls the board.
+The agent never merges, never approves, never clears `HALT`, and never moves a story to the ready state or a done state. The CLI cannot prove the agent applied a plan or read a story honestly, so enforce the gates in Azure DevOps too: the identity behind the MCP connection should not hold "Bypass policies when completing pull requests" or "Bypass policies when pushing", and `main` should require a reviewer and block self-approval. `--transport az` on `board configure` and `forge configure` keeps the Azure CLI path for use outside a cloud agent: it needs `az` with the `azure-devops` extension and the runtime secret `ADO_TOKEN`, which reaches the CLI only as `AZURE_DEVOPS_EXT_PAT` in its environment, never on argv. `idefactory` itself never launches a model and never polls the board.
 
 ## What gets installed
 
