@@ -26,7 +26,7 @@ async function setupBoard(dir) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
   assert.equal((await idefactory(dir, ['setup', '--governance', 'lightweight', '--no-test'])).code, 0);
   const configured = await idefactory(dir, [
-    'board', 'configure', '--organization', ORG, '--project', 'Shop',
+    'board', 'configure', '--organization', ORG, '--project', 'Shop', '--transport', 'az',
   ]);
   assert.equal(configured.code, 0, configured.err || configured.out);
   writeChange(dir, CHANGE);
@@ -74,6 +74,7 @@ test('board configure fills defaults and refuses a missing project', async () =>
     assert.equal(ok.code, 0, ok.err);
     const { board } = readConfig(dir);
     assert.equal(board.provider, 'azure-devops');
+    assert.equal(board.transport, 'mcp');
     assert.equal(board.organization, ORG);
     assert.equal(board.workItemType, 'User Story');
     assert.equal(board.tag, 'factory');

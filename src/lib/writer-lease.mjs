@@ -45,6 +45,7 @@ const MUTATING = new Set([
   'board report',
   'board comment',
   'board transition',
+  'mcp ack',
   'approve',
   'reject',
   'lockout create',
@@ -115,6 +116,10 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
   if (head === 'board') {
     const sub = String(rest[0] || '').trim();
     return sub ? `board ${sub}` : 'board';
+  }
+  if (head === 'mcp') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `mcp ${sub}` : 'mcp';
   }
   if (head === 'forge') {
     const sub = String(rest[0] || '').trim();

@@ -16,7 +16,7 @@ function readConfig(dir) {
 async function configureAzure(dir) {
   const result = await idefactory(dir, [
     'forge', 'configure', '--provider', 'azure-devops',
-    '--organization', ORG, '--project', 'Shop', '--repository', 'web',
+    '--organization', ORG, '--project', 'Shop', '--repository', 'web', '--transport', 'az',
   ]);
   assert.equal(result.code, 0, result.err || result.out);
 }
@@ -41,6 +41,8 @@ test('forge configure refuses azure-devops without a repository and an unknown p
       organization: ORG,
       project: 'Shop',
       repository: 'web',
+      transport: 'az',
+      targetBranch: 'main',
     });
     const back = await idefactory(dir, ['forge', 'configure', '--provider', 'github']);
     assert.equal(back.code, 0, back.err);

@@ -22,6 +22,7 @@ import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { configureBoard, configureForge } from './integration-config.mjs';
 import { claimBoard, commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
+import { ackPlan, formatPlan, listPlans } from './mcp-plan.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -49,14 +50,16 @@ Usage:
   idefactory complete <change> <taskId> --attempt <id> [--path dir]
   idefactory pr open <change> [--path dir]
   idefactory pr comment <attemptId> [--path dir]
-  idefactory pr capture <change> [--path dir]
-  idefactory board configure --organization <url> --project <name> [--work-item-type <type>] [--tag <tag>] [--change-field <ref>] [--state-<key> <name>] [--path dir]
+  idefactory pr capture <change> [--threads-file <path>] [--path dir]
+  idefactory board configure --organization <url> --project <name> [--transport mcp|az] [--work-item-type <type>] [--tag <tag>] [--change-field <ref>] [--state-<key> <name>] [--path dir]
   idefactory board publish <change> [--path dir]
-  idefactory board claim <change> --work-item <id> [--revision N] [--run-url <url>] [--json] [--path dir]
+  idefactory board claim <change> --work-item <id> [--snapshot <file>] [--revision N] [--run-url <url>] [--json] [--path dir]
   idefactory board report <change> [--path dir]
   idefactory board comment <change> --message "text" [--key key] [--path dir]
   idefactory board transition <change> --to in-progress|waiting|blocked|in-review|ready-for-human-review [--note "text"] [--path dir]
-  idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>] [--path dir]
+  idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name> --transport mcp|az --target-branch <name>] [--path dir]
+  idefactory mcp ack <planId> [--result <json> | --result-file <path>] [--path dir]
+  idefactory mcp pending [--json] [--path dir]
   idefactory ci scaffold [path] [--path dir]
   idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]
   idefactory reject <id> --note "text" [--path dir]
@@ -237,9 +240,11 @@ async function dispatchCommand(cmd, ctx) {
       return handleCi(project, parsed, out);
     case 'board':
       return handleBoard(project, parsed, env, out);
+    case 'mcp':
+      return handleMcp(project, parsed, out);
     case 'forge': {
       if (parsed.rest[0] !== 'configure') {
-        throw new Error('Usage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>]');
+        throw new Error('Usage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name> --transport mcp|az --target-branch <name>]');
       }
       const forge = configureForge(project, parsed.flags);
       out(JSON.stringify(forge, null, 2));
@@ -379,20 +384,23 @@ function handlePr(project, parsed, env, out) {
     const change = parsed.rest[1];
     if (!change) throw new Error('Usage: idefactory pr open <change>');
     const result = openPullRequest(project, change, env);
-    out(JSON.stringify(result.record, null, 2));
+    out(result.plan ? formatPlan(result.plan) : JSON.stringify(result.record, null, 2));
     return 0;
   }
   if (sub === 'comment') {
     const attemptId = parsed.rest[1];
     if (!attemptId) throw new Error('Usage: idefactory pr comment <attemptId>');
     const result = commentOnPullRequest(project, attemptId, env);
-    out(JSON.stringify(result.record, null, 2));
+    out(result.plan ? formatPlan(result.plan) : JSON.stringify(result.record, null, 2));
     return 0;
   }
   if (sub === 'capture') {
     const change = parsed.rest[1];
     if (!change) throw new Error('Usage: idefactory pr capture <change>');
-    const result = capturePullRequestComments(project, change, env);
+    const threadsFile = typeof parsed.flags['threads-file'] === 'string'
+      ? path.resolve(parsed.flags['threads-file'])
+      : '';
+    const result = capturePullRequestComments(project, change, env, { threadsFile });
     out(JSON.stringify(result.record, null, 2));
     return 0;
   }
@@ -422,6 +430,10 @@ function handleBoard(project, parsed, env, out) {
   }
   if (sub === 'publish') {
     const result = publishBoard(project, change, env);
+    if (result.plan) {
+      out(formatPlan(result.plan));
+      return 0;
+    }
     const verb = result.created ? 'Created' : (result.updated ? 'Updated' : 'Unchanged');
     out(`${verb} work item ${result.record.workItem.id} for ${result.record.change}: ${result.record.workItem.url}`);
     return 0;
@@ -431,6 +443,7 @@ function handleBoard(project, parsed, env, out) {
       workItem: parsed.flags['work-item'],
       revision: parsed.flags.revision,
       runUrl: text(parsed.flags['run-url']),
+      snapshot: text(parsed.flags.snapshot) ? path.resolve(text(parsed.flags.snapshot)) : '',
     }, env);
     if (parsed.flags.json) {
       out(JSON.stringify(result, null, 2));
@@ -439,6 +452,10 @@ function handleBoard(project, parsed, env, out) {
     out(`Decision: ${result.decision}`);
     out(`Reason: ${result.reason}`);
     out(`Next: ${result.next || '(stop; do not run the factory)'}`);
+    if (result.plan) {
+      out('Apply this plan and acknowledge it before the next step:');
+      out(formatPlan(result.plan));
+    }
     return 0;
   }
   if (sub === 'comment') {
@@ -446,6 +463,10 @@ function handleBoard(project, parsed, env, out) {
       message: text(parsed.flags.message),
       key: text(parsed.flags.key),
     }, env);
+    if (result.plan) {
+      out(formatPlan(result.plan));
+      return 0;
+    }
     out(result.posted ? 'Comment posted.' : 'Comment already posted for that key.');
     return 0;
   }
@@ -454,15 +475,59 @@ function handleBoard(project, parsed, env, out) {
       to: text(parsed.flags.to),
       note: text(parsed.flags.note),
     }, env);
+    if (result.plan) {
+      out(formatPlan(result.plan));
+      return 0;
+    }
     out(`Work item ${result.record.workItem.id} is ${result.record.state}.`);
     return 0;
   }
   if (sub === 'report') {
     const result = reportBoard(project, change, env);
+    if (result.plan) {
+      out(formatPlan(result.plan));
+      return 0;
+    }
     out(`Work item ${result.record.workItem.id} is ${result.state}. Reported tasks: ${result.posted.join(', ') || '(none)'}.`);
     return 0;
   }
   throw new Error(BOARD_USAGE);
+}
+
+const MCP_USAGE = [
+  'Usage: idefactory mcp ack <planId> [--result <json> | --result-file <path>]',
+  '       idefactory mcp pending [--json]',
+].join('\n');
+
+function handleMcp(project, parsed, out) {
+  const sub = parsed.rest[0];
+  if (sub === 'pending') {
+    const plans = listPlans(project);
+    out(parsed.flags.json
+      ? JSON.stringify(plans, null, 2)
+      : (plans.map((plan) => `${plan.id} ${plan.kind} ${plan.change} (${plan.operations} operations)`).join('\n') || '(no pending plans)'));
+    return 0;
+  }
+  if (sub === 'ack') {
+    const id = parsed.rest[1];
+    if (!id) throw new Error(MCP_USAGE);
+    const inline = parsed.flags.result;
+    const file = parsed.flags['result-file'];
+    if ((inline !== undefined && file !== undefined) || inline === true || file === true) {
+      throw new Error(MCP_USAGE);
+    }
+    let result = {};
+    try {
+      if (typeof file === 'string') result = JSON.parse(fs.readFileSync(path.resolve(file), 'utf8'));
+      else if (typeof inline === 'string') result = JSON.parse(inline);
+    } catch (error) {
+      throw new Error(`Invalid ack result: ${error.message}`);
+    }
+    const acked = ackPlan(project, id, result);
+    out(`Recorded plan ${id}: ${acked.written.join(', ')}`);
+    return 0;
+  }
+  throw new Error(MCP_USAGE);
 }
 
 async function handleVerify(project, parsed, out) {

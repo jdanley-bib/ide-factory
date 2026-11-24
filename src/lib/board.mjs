@@ -6,6 +6,7 @@ import { appendControlEvent } from './event-log.mjs';
 import { hasActiveLockout } from './govern.mjs';
 import { readBoardConfig } from './integration-config.mjs';
 import { halted, readText, writeText } from './layout.mjs';
+import { createPlan, mcpOrgName } from './mcp-plan.mjs';
 import { readPullRequestRecord } from './pull-request.mjs';
 import { latestRunSession } from './run-session.mjs';
 import { listWorkItems } from './work.mjs';
@@ -27,6 +28,10 @@ const HALT_MESSAGE = 'HALT file present. Factory commands are stopped. Remove it
 
 export function boardRecordPath(project, change) {
   return path.join(project, '.factory', 'boards', `${change}.json`);
+}
+
+function boardRecordRelative(change) {
+  return `.factory/boards/${change}.json`;
 }
 
 export function readBoardRecord(project, change) {
@@ -105,11 +110,173 @@ function digest(text) {
 }
 
 /**
+ * Board writes are described once as neutral operations:
+ *   { op: 'create', title, description, fields }
+ *   { op: 'update', id, state?, description?, comment?, fields?, rev? }
+ *   { op: 'comment', id, text }
+ *   { op: 'link', id, url }
+ * The `az` transport runs them through the Azure CLI. The `mcp` transport turns
+ * them into Azure DevOps MCP operations for the agent to apply.
+ */
+function runAzOperation(project, board, operation, env) {
+  if (operation.op === 'create') {
+    const fields = Object.entries(operation.fields).map(([key, value]) => `${key}=${value}`);
+    return runAzJson(project, [
+      'boards', 'work-item', 'create',
+      '--org', board.organization,
+      '--project', board.project,
+      '--type', board.workItemType,
+      '--title', operation.title,
+      '--description', operation.description,
+      '--fields', ...fields,
+      '--output', 'json',
+    ], env, env.IDEFACTORY_BOARD);
+  }
+  if (operation.op === 'update') {
+    return updateWorkItem(project, board, operation.id, {
+      state: operation.state,
+      description: operation.description,
+      discussion: operation.comment,
+      fields: operation.fields,
+    }, env);
+  }
+  if (operation.op === 'comment') {
+    return updateWorkItem(project, board, operation.id, { discussion: operation.text }, env);
+  }
+  return runAzJson(project, [
+    'boards', 'work-item', 'relation', 'add',
+    '--id', String(operation.id),
+    '--relation-type', 'Hyperlink',
+    '--target-url', operation.url,
+    '--org', board.organization,
+    '--output', 'json',
+  ], env, env.IDEFACTORY_BOARD);
+}
+
+function toMcpOperations(board, operation) {
+  const base = { orgName: mcpOrgName(board.organization), project: board.project };
+  if (operation.op === 'create') {
+    return [{
+      tool: 'wit_work_item_write',
+      arguments: {
+        action: 'create',
+        ...base,
+        workItemType: board.workItemType,
+        fields: [
+          { name: 'System.Title', value: operation.title },
+          { name: 'System.Description', value: operation.description, format: 'Html' },
+          ...Object.entries(operation.fields).map(([name, value]) => ({ name, value })),
+        ],
+      },
+    }];
+  }
+  if (operation.op === 'update') {
+    const updates = [];
+    if (operation.rev) updates.push({ op: 'Test', path: '/rev', value: operation.rev });
+    if (operation.state) updates.push({ op: 'Add', path: '/fields/System.State', value: operation.state });
+    if (operation.description) {
+      updates.push({ op: 'Add', path: '/fields/System.Description', value: operation.description, format: 'Html' });
+    }
+    for (const [name, value] of Object.entries(operation.fields || {})) {
+      if (value !== undefined && value !== '') updates.push({ op: 'Add', path: `/fields/${name}`, value });
+    }
+    const out = [];
+    if (updates.length) {
+      out.push({
+        tool: 'wit_work_item_write',
+        arguments: { action: 'update', ...base, id: operation.id, updates },
+      });
+    }
+    if (operation.comment) {
+      out.push({
+        tool: 'wit_work_item_comment_write',
+        arguments: { action: 'add', ...base, workItemId: operation.id, comment: operation.comment },
+      });
+    }
+    return out;
+  }
+  if (operation.op === 'comment') {
+    return [{
+      tool: 'wit_work_item_comment_write',
+      arguments: { action: 'add', ...base, workItemId: operation.id, comment: operation.text },
+    }];
+  }
+  return [{
+    tool: 'wit_work_item_link_write',
+    arguments: { action: 'link', ...base, id: operation.id, linkType: 'hyperlink', url: operation.url },
+  }];
+}
+
+/**
+ * Apply one unit of board work: operations plus the record to store afterward.
+ * `az` runs the operations now. `mcp` saves a plan and stores the record at ack.
+ * @returns {{ applied: boolean, record: object, plan: object|null }}
+ */
+function commitBoardWork(project, board, env, { kind, change, operations, record, events = [], createsWorkItem = false }) {
+  if (board.transport === 'az') {
+    let next = record;
+    for (const operation of operations) {
+      const result = runAzOperation(project, board, operation, env);
+      if (operation.op === 'create') {
+        const id = Number(result?.id);
+        if (!Number.isInteger(id) || id <= 0) throw new Error('az boards work-item create did not return an id');
+        next = { ...record, workItem: { id, url: workItemUrl(board, id) } };
+      }
+    }
+    writeBoardRecord(project, next);
+    for (const event of events) appendControlEvent(project, event);
+    return { applied: true, record: next, plan: null };
+  }
+  const mcpOperations = operations.flatMap((operation) => toMcpOperations(board, operation));
+  if (mcpOperations.length === 0) {
+    writeBoardRecord(project, record);
+    for (const event of events) appendControlEvent(project, event);
+    return { applied: true, record, plan: null };
+  }
+  const plan = createPlan(project, {
+    kind,
+    change,
+    operations: mcpOperations,
+    effects: {
+      writes: [{ path: boardRecordRelative(change), json: record }],
+      events,
+      ...(createsWorkItem
+        ? {
+          bind: [{
+            result: 'workItemId',
+            write: 0,
+            pointer: ['workItem', 'id'],
+            urlPointer: ['workItem', 'url'],
+            urlTemplate: workItemUrl(board, '{id}').replace('%7Bid%7D', '{id}'),
+          }],
+        }
+        : {}),
+    },
+  });
+  return { applied: false, record, plan };
+}
+
+function newRecord(board, change, workItemId, extra = {}) {
+  return {
+    schemaVersion: 1,
+    change,
+    provider: board.provider,
+    workItem: workItemId ? { id: workItemId, url: workItemUrl(board, workItemId) } : { id: null, url: null },
+    state: 'new',
+    descriptionDigest: null,
+    comments: [],
+    claims: [],
+    linkedPullRequests: [],
+    ...extra,
+  };
+}
+
+/**
  * Create the story for a change once; later calls update its description.
  * @param {string} project
  * @param {string} change
  * @param {NodeJS.ProcessEnv} env
- * @returns {{ record: object, created: boolean, updated: boolean }}
+ * @returns {{ record: object, created: boolean, updated: boolean, applied: boolean, plan: object|null }}
  */
 export function publishBoard(project, change, env = process.env) {
   if (halted(project)) throw new Error(HALT_MESSAGE);
@@ -123,84 +290,96 @@ export function publishBoard(project, change, env = process.env) {
   const existing = readBoardRecord(project, name);
 
   if (!existing) {
-    const created = runAzJson(project, [
-      'boards', 'work-item', 'create',
-      '--org', board.organization,
-      '--project', board.project,
-      '--type', board.workItemType,
-      '--title', name,
-      '--description', description,
-      '--fields', `System.Tags=${board.tag}`, `${board.changeField}=${name}`,
-      '--output', 'json',
-    ], env, env.IDEFACTORY_BOARD);
-    const id = Number(created?.id);
-    if (!Number.isInteger(id) || id <= 0) throw new Error('az boards work-item create did not return an id');
-    const record = {
-      schemaVersion: 1,
+    const record = { ...newRecord(board, name, null), descriptionDigest };
+    const work = commitBoardWork(project, board, env, {
+      kind: 'board-publish',
       change: name,
-      provider: board.provider,
-      workItem: { id, url: workItemUrl(board, id) },
-      state: 'new',
-      descriptionDigest,
-      comments: [],
-      claims: [],
-      linkedPullRequests: [],
-    };
-    writeBoardRecord(project, record);
-    return { record, created: true, updated: false };
+      operations: [{
+        op: 'create',
+        title: name,
+        description,
+        fields: { 'System.Tags': board.tag, [board.changeField]: name },
+      }],
+      record,
+      createsWorkItem: true,
+    });
+    return { ...work, created: true, updated: false };
   }
 
   if (existing.descriptionDigest === descriptionDigest) {
-    return { record: existing, created: false, updated: false };
+    return { record: existing, created: false, updated: false, applied: true, plan: null };
   }
-  updateWorkItem(project, board, existing.workItem.id, {
-    description,
-    fields: { [board.changeField]: name },
-  }, env);
-  const record = { ...existing, descriptionDigest };
-  writeBoardRecord(project, record);
-  return { record, created: false, updated: true };
+  const work = commitBoardWork(project, board, env, {
+    kind: 'board-publish',
+    change: name,
+    operations: [{
+      op: 'update',
+      id: existing.workItem.id,
+      description,
+      fields: { [board.changeField]: name },
+    }],
+    record: { ...existing, descriptionDigest },
+  });
+  return { ...work, created: false, updated: true };
 }
 
-/**
- * Post one comment per key.
- * @returns {{ record: object, posted: boolean }}
- */
-export function commentBoard(project, change, { message, key } = {}, env = process.env) {
-  const board = requireBoardConfig(project);
-  const name = assertChangeName(change, 'Usage: idefactory board comment <change> --message "text" [--key key]');
-  const text = typeof message === 'string' ? message.trim() : '';
-  if (!text) throw new Error('Usage: idefactory board comment <change> --message "text" [--key key]');
-  const record = requireRecord(project, name);
-  const commentKey = typeof key === 'string' && key.trim() ? key.trim() : digest(text);
-  if (record.comments.includes(commentKey)) return { record, posted: false };
-  updateWorkItem(project, board, record.workItem.id, { discussion: text }, env);
-  const next = { ...record, comments: [...record.comments, commentKey] };
-  writeBoardRecord(project, next);
-  return { record: next, posted: true };
+function planComment(record, { text, key }) {
+  const commentKey = key || digest(text);
+  if (record.comments.includes(commentKey)) return null;
+  return {
+    operations: [{ op: 'comment', id: record.workItem.id, text }],
+    record: { ...record, comments: [...record.comments, commentKey] },
+  };
 }
 
-/**
- * Move the story to one of the agent states. Never to ready, new, or done.
- * @returns {{ record: object }}
- */
-export function transitionBoard(project, change, { to, note, fields } = {}, env = process.env) {
-  const board = requireBoardConfig(project);
-  const name = assertChangeName(change, 'Usage: idefactory board transition <change> --to <state>');
+function planTransition(board, record, { to, note, fields, rev }) {
   const stateKey = AGENT_TRANSITIONS[to];
   if (!stateKey) {
     throw new Error(`board transition --to must be one of ${Object.keys(AGENT_TRANSITIONS).join(', ')}`);
   }
+  return {
+    operations: [{
+      op: 'update',
+      id: record.workItem.id,
+      state: board.states[stateKey],
+      comment: typeof note === 'string' && note.trim() ? note.trim() : '',
+      fields,
+      rev,
+    }],
+    record: { ...record, state: to },
+  };
+}
+
+/**
+ * Post one comment per key.
+ * @returns {{ record: object, posted: boolean, applied: boolean, plan: object|null }}
+ */
+export function commentBoard(project, change, { message, key } = {}, env = process.env) {
+  const board = requireBoardConfig(project);
+  const usage = 'Usage: idefactory board comment <change> --message "text" [--key key]';
+  const name = assertChangeName(change, usage);
+  const text = typeof message === 'string' ? message.trim() : '';
+  if (!text) throw new Error(usage);
   const record = requireRecord(project, name);
-  const discussion = typeof note === 'string' && note.trim() ? note.trim() : '';
-  updateWorkItem(project, board, record.workItem.id, {
-    state: board.states[stateKey],
-    discussion,
-    fields,
-  }, env);
-  const next = { ...record, state: to };
-  writeBoardRecord(project, next);
-  return { record: next };
+  const planned = planComment(record, { text, key: typeof key === 'string' ? key.trim() : '' });
+  if (!planned) return { record, posted: false, applied: true, plan: null };
+  const work = commitBoardWork(project, board, env, { kind: 'board-comment', change: name, ...planned });
+  return { ...work, posted: true };
+}
+
+/**
+ * Move the story to one of the agent states. Never to ready, new, or done.
+ * @returns {{ record: object, applied: boolean, plan: object|null }}
+ */
+export function transitionBoard(project, change, { to, note, fields } = {}, env = process.env) {
+  const board = requireBoardConfig(project);
+  const name = assertChangeName(change, 'Usage: idefactory board transition <change> --to <state>');
+  if (!AGENT_TRANSITIONS[to]) {
+    throw new Error(`board transition --to must be one of ${Object.keys(AGENT_TRANSITIONS).join(', ')}`);
+  }
+  const record = requireRecord(project, name);
+  const planned = planTransition(board, record, { to, note, fields });
+  return commitBoardWork(project, board, env, { kind: 'board-transition', change: name, ...planned });
 }
 
 /**
@@ -232,45 +411,45 @@ export function mirroredState(project, change) {
 
 /**
  * Post newly done tasks, mirror the factory state, and link the pull request once.
- * @returns {{ record: object, posted: string[], state: string }}
+ * @returns {{ record: object, posted: string[], state: string, applied: boolean, plan: object|null }}
  */
 export function reportBoard(project, change, env = process.env) {
   const board = requireBoardConfig(project);
   const name = assertChangeName(change, 'Usage: idefactory board report <change>');
   let record = requireRecord(project, name);
+  const operations = [];
   const posted = [];
   const items = listWorkItems(project, name)
     .filter((item) => item.status === 'done' && item.attemptId)
     .sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
   for (const item of items) {
     const key = `task:${item.id}:${item.attemptId}`;
-    if (record.comments.includes(key)) continue;
-    const result = commentBoard(project, name, {
-      message: `Factory task ${item.id} done. Attempt ${item.attemptId}.`,
+    const planned = planComment(record, {
+      text: `Factory task ${item.id} done. Attempt ${item.attemptId}.`,
       key,
-    }, env);
-    record = result.record;
+    });
+    if (!planned) continue;
+    operations.push(...planned.operations);
+    record = planned.record;
     posted.push(item.id);
   }
 
   const mirror = mirroredState(project, name);
   if (mirror.to !== record.state) {
-    record = transitionBoard(project, name, { to: mirror.to, note: mirror.reason }, env).record;
+    const planned = planTransition(board, record, { to: mirror.to, note: mirror.reason });
+    operations.push(...planned.operations);
+    record = planned.record;
   }
   const prUrl = mirror.pullRequest?.pullRequest?.url;
   if (prUrl && !record.linkedPullRequests.includes(prUrl)) {
-    runAzJson(project, [
-      'boards', 'work-item', 'relation', 'add',
-      '--id', String(record.workItem.id),
-      '--relation-type', 'Hyperlink',
-      '--target-url', prUrl,
-      '--org', board.organization,
-      '--output', 'json',
-    ], env, env.IDEFACTORY_BOARD);
+    operations.push({ op: 'link', id: record.workItem.id, url: prUrl });
     record = { ...record, linkedPullRequests: [...record.linkedPullRequests, prUrl] };
-    writeBoardRecord(project, record);
   }
-  return { record, posted, state: record.state };
+  if (operations.length === 0) {
+    return { record, posted, state: record.state, applied: true, plan: null };
+  }
+  const work = commitBoardWork(project, board, env, { kind: 'board-report', change: name, operations, record });
+  return { ...work, posted, state: record.state };
 }
 
 const SKIP_STATES = new Set(['in-progress', 'in-review', 'ready-for-human-review']);
@@ -284,16 +463,52 @@ function storyTags(fields) {
 }
 
 /**
+ * The story as `wit_work_item get` returned it, saved to a file by the agent.
+ * Accepts the bare work item, `{ workItem }`, or a one-element list.
+ */
+export function readWorkItemSnapshot(file) {
+  let raw;
+  try {
+    raw = JSON.parse(readText(file));
+  } catch (error) {
+    throw new Error(`cannot read work item snapshot ${file}: ${error.message}`);
+  }
+  let item = raw;
+  if (Array.isArray(raw)) [item] = raw;
+  else if (raw?.workItem) item = raw.workItem;
+  else if (Array.isArray(raw?.value)) [item] = raw.value;
+  if (!item || typeof item !== 'object' || !item.fields || typeof item.fields !== 'object') {
+    throw new Error(`work item snapshot ${file} has no fields. Save the wit_work_item get result unchanged.`);
+  }
+  return item;
+}
+
+function loadWorkItem(project, board, workItemId, { snapshot }, env) {
+  if (board.transport === 'az') return showWorkItem(project, board, workItemId, env);
+  if (!snapshot) {
+    throw new Error(
+      `board claim needs --snapshot <file> with the story. Run wit_work_item with action get, id ${workItemId}, orgName ${mcpOrgName(board.organization)}, and save the result to a file.`,
+    );
+  }
+  const item = readWorkItemSnapshot(snapshot);
+  if (item.id !== undefined && Number(item.id) !== workItemId) {
+    throw new Error(`snapshot is work item ${item.id}, not ${workItemId}`);
+  }
+  return item;
+}
+
+/**
  * Decide whether a cloud run begins for a story a human moved to the ready state.
  * `not-ready` and `duplicate` write nothing.
+ * With the `mcp` transport the result carries a `plan` the agent applies, then acknowledges.
  * @param {string} project
  * @param {string} change
- * @param {{ workItem: string|number, revision?: string|number, runUrl?: string }} options
+ * @param {{ workItem: string|number, revision?: string|number, runUrl?: string, snapshot?: string }} options
  * @param {NodeJS.ProcessEnv} env
- * @returns {{ decision: string, reason: string, change: string, workItemId: number, revision: number, next: string|null }}
+ * @returns {{ decision: string, reason: string, change: string, workItemId: number, revision: number, next: string|null, plan: object|null }}
  */
-export function claimBoard(project, change, { workItem, revision, runUrl } = {}, env = process.env) {
-  const usage = 'Usage: idefactory board claim <change> --work-item <id> [--revision N] [--run-url <url>] [--json]';
+export function claimBoard(project, change, { workItem, revision, runUrl, snapshot } = {}, env = process.env) {
+  const usage = 'Usage: idefactory board claim <change> --work-item <id> [--snapshot <file>] [--revision N] [--run-url <url>] [--json]';
   const board = requireBoardConfig(project);
   const name = assertChangeName(change, usage);
   const workItemId = Number(workItem);
@@ -306,7 +521,7 @@ export function claimBoard(project, change, { workItem, revision, runUrl } = {},
     throw new Error(`${name} is published as work item ${record.workItem.id}, not ${workItemId}`);
   }
 
-  const item = showWorkItem(project, board, workItemId, env);
+  const item = loadWorkItem(project, board, workItemId, { snapshot }, env);
   const fields = item?.fields || {};
   const named = String(fields[board.changeField] || '').trim();
   if (named !== name) {
@@ -315,19 +530,25 @@ export function claimBoard(project, change, { workItem, revision, runUrl } = {},
   if (!storyTags(fields).includes(String(board.tag).toLowerCase())) {
     throw new Error(`work item ${workItemId} is missing the ${board.tag} tag`);
   }
+  const currentRevision = Number(item?.rev ?? fields['System.Rev']);
   const claimedRevision = revision !== undefined && revision !== true && String(revision).trim() !== ''
     ? Number(revision)
-    : Number(item?.rev);
+    : currentRevision;
   if (!Number.isInteger(claimedRevision) || claimedRevision <= 0) {
     throw new Error(`work item ${workItemId} has no usable revision`);
   }
-  const result = (decision, reason, next = null) => ({
+  if (board.transport !== 'az' && !(Number.isInteger(currentRevision) && currentRevision > 0)) {
+    throw new Error(`work item ${workItemId} snapshot has no rev. Save the wit_work_item get result unchanged.`);
+  }
+  const testRevision = board.transport === 'az' ? undefined : currentRevision;
+  const result = (decision, reason, next = null, plan = null) => ({
     decision,
     reason,
     change: name,
     workItemId,
     revision: claimedRevision,
     next,
+    plan,
   });
 
   if (fields['System.State'] !== board.states.ready) {
@@ -337,73 +558,76 @@ export function claimBoard(project, change, { workItem, revision, runUrl } = {},
     return result('duplicate', `Revision ${claimedRevision} was already claimed.`);
   }
 
-  if (!record) {
-    record = {
-      schemaVersion: 1,
-      change: name,
-      provider: board.provider,
-      workItem: { id: workItemId, url: workItemUrl(board, workItemId) },
-      state: 'new',
-      descriptionDigest: null,
-      comments: [],
-      claims: [],
-      linkedPullRequests: [],
-    };
-    writeBoardRecord(project, record);
-  }
+  if (!record) record = newRecord(board, name, workItemId);
 
   const priorState = record.state;
-  let outcome;
+  let decision;
+  let reason;
+  let next = null;
+  let planned;
   if (halted(project)) {
-    outcome = result('halted', 'HALT is present. A human must remove it with idefactory resume.');
-    transitionBoard(project, name, {
+    decision = 'halted';
+    reason = 'HALT is present. A human must remove it with idefactory resume.';
+    planned = planTransition(board, record, {
       to: 'blocked',
       note: `Factory did not begin ${name}: HALT is present. A human must remove it with idefactory resume, then move this story to ${board.states.ready}.`,
-    }, env);
+      rev: testRevision,
+    });
   } else if (SKIP_STATES.has(priorState)) {
-    outcome = result('skip', `The factory already recorded ${priorState} for this change.`);
-    transitionBoard(project, name, {
+    decision = 'skip';
+    reason = `The factory already recorded ${priorState} for this change.`;
+    planned = planTransition(board, record, {
       to: priorState,
       note: `Factory is already working on ${name} (${priorState}). This move to ${board.states.ready} was ignored. To resume after a stop, move the story to ${board.states.waiting} first.`,
-    }, env);
+      rev: testRevision,
+    });
   } else {
     const resume = RESUME_STATES.has(priorState);
-    const next = `idefactory run --change ${name} --until human-gate${resume ? ' --new-run' : ''}`;
-    outcome = result(resume ? 'resume' : 'start', resume
+    next = `idefactory run --change ${name} --until human-gate${resume ? ' --new-run' : ''}`;
+    decision = resume ? 'resume' : 'start';
+    reason = resume
       ? `A human returned the story to ${board.states.ready} after ${priorState}.`
-      : 'First claim for this change.', next);
+      : 'First claim for this change.';
     const lines = [
       `Factory ${resume ? 'resumed' : 'claimed'} ${name}.`,
       `Branch: factory/${name}`,
     ];
     if (runUrl) lines.push(`Run: ${runUrl}`);
-    transitionBoard(project, name, {
+    planned = planTransition(board, record, {
       to: 'in-progress',
       note: lines.join('\n'),
       fields: {
         [board.branchField]: `factory/${name}`,
         ...(runUrl ? { [board.runUrlField]: runUrl } : {}),
       },
-    }, env);
+      rev: testRevision,
+    });
   }
 
-  record = readBoardRecord(project, name);
-  record.claims = [...record.claims, {
-    revision: claimedRevision,
-    decision: outcome.decision,
-    at: new Date().toISOString(),
-    ...(runUrl ? { runUrl } : {}),
-  }];
-  writeBoardRecord(project, record);
-  appendControlEvent(project, {
-    type: 'board-claim',
-    time: new Date().toISOString(),
+  const claimedRecord = {
+    ...planned.record,
+    claims: [...planned.record.claims, {
+      revision: claimedRevision,
+      decision,
+      at: new Date().toISOString(),
+      ...(runUrl ? { runUrl } : {}),
+    }],
+  };
+  const work = commitBoardWork(project, board, env, {
+    kind: 'board-claim',
     change: name,
-    workItemId,
-    revision: claimedRevision,
-    decision: outcome.decision,
+    operations: planned.operations,
+    record: claimedRecord,
+    events: [{
+      type: 'board-claim',
+      time: new Date().toISOString(),
+      change: name,
+      workItemId,
+      revision: claimedRevision,
+      decision,
+    }],
   });
-  return outcome;
+  return result(decision, reason, next, work.plan);
 }
 
 /**

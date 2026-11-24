@@ -48,6 +48,8 @@ function sanitizeEvent(event) {
     'revision',
     'decision',
     'exceptionType',
+    'planId',
+    'kind',
   ];
   const clean = {};
   for (const key of allowed) {

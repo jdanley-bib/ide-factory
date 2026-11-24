@@ -18,6 +18,7 @@ import {
   runForge,
 } from './forge.mjs';
 import { forgeConfigErrors, readForgeConfig } from './integration-config.mjs';
+import { createPlan, mcpOrgName } from './mcp-plan.mjs';
 import { halted, writeText } from './layout.mjs';
 
 const CHANGE_NAME = /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/;
@@ -44,6 +45,10 @@ export function openPullRequest(project, change, env = process.env) {
   const bodyDigest = digestBody(body);
   const forge = forgePort(project);
 
+  if (forge.transport === 'mcp') {
+    return planOpenPullRequest(project, { name, branch, existing, body, bodyDigest, forge });
+  }
+
   if (!existing) {
     ensureBranch(project, branch);
     const { number, url } = forge.create(project, { branch, title: name, body }, env);
@@ -60,7 +65,7 @@ export function openPullRequest(project, change, env = process.env) {
       capturedComments: [],
     };
     writePullRequestRecord(project, record);
-    return { record, created: true };
+    return { record, created: true, applied: true, plan: null };
   }
 
   forge.update(project, { number: existing.pullRequest.number, body }, env);
@@ -73,7 +78,7 @@ export function openPullRequest(project, change, env = process.env) {
     capturedComments: Array.isArray(existing.capturedComments) ? existing.capturedComments : [],
   };
   writePullRequestRecord(project, record);
-  return { record, created: false };
+  return { record, created: false, applied: true, plan: null };
 }
 
 /**
@@ -128,7 +133,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   const alreadyPosted = postedVerdicts.some(
     (item) => item?.attemptId === attempt.id && item?.role === stored.role,
   );
-  if (alreadyPosted) return { record };
+  if (alreadyPosted) return { record, applied: true, plan: null };
 
   const lines = [
     `Role: ${stored.role}`,
@@ -140,6 +145,12 @@ export function postVerdictComment(project, stored, env = process.env) {
   }
   const exceptions = listAttemptExceptions(project, attempt);
   const port = forgePort(project);
+  const posted = {
+    attemptId: attempt.id,
+    verdict: stored.verdict,
+    role: stored.role,
+    reviewerId: stored.reviewerId || null,
+  };
   const build = (withReason) => `${[
     ...lines,
     ...exceptions.map((row) => describeException(row, { withReason })),
@@ -148,21 +159,37 @@ export function postVerdictComment(project, stored, env = process.env) {
   if (exceptions.length > 0 && !port.acceptsCommentBody(record.pullRequest.number, body)) {
     body = build(false);
   }
+  if (port.transport === 'mcp') {
+    const next = {
+      ...record,
+      postedVerdicts: [...postedVerdicts, posted],
+      capturedComments: Array.isArray(record.capturedComments) ? record.capturedComments : [],
+    };
+    const plan = createPlan(project, {
+      kind: 'pr-comment',
+      change: attempt.change,
+      operations: [{
+        tool: 'repo_pull_request_thread_write',
+        arguments: {
+          action: 'create',
+          ...mcpScope(port.forge),
+          pullRequestId: record.pullRequest.number,
+          content: body,
+        },
+      }],
+      effects: { writes: [{ path: pullRequestRecordRelative(attempt.change), json: next }] },
+    });
+    return { record: next, applied: false, plan };
+  }
   port.comment(project, { number: record.pullRequest.number, body }, env);
 
-  const posted = {
-    attemptId: attempt.id,
-    verdict: stored.verdict,
-    role: stored.role,
-    reviewerId: stored.reviewerId || null,
-  };
   const next = {
     ...record,
     postedVerdicts: [...postedVerdicts, posted],
     capturedComments: Array.isArray(record.capturedComments) ? record.capturedComments : [],
   };
   writePullRequestRecord(project, next);
-  return { record: next };
+  return { record: next, applied: true, plan: null };
 }
 
 /**
@@ -173,7 +200,7 @@ export function postVerdictComment(project, stored, env = process.env) {
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {{ record: object }}
  */
-export function capturePullRequestComments(project, change, env = process.env) {
+export function capturePullRequestComments(project, change, env = process.env, { threadsFile } = {}) {
   if (halted(project)) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
@@ -186,10 +213,13 @@ export function capturePullRequestComments(project, change, env = process.env) {
     throw new Error(`No pull request record for ${name}`);
   }
 
-  const incoming = forgePort(project).listComments(project, {
-    number: record.pullRequest.number,
-    url: record.pullRequest.url,
-  }, env);
+  const port = forgePort(project);
+  const incoming = port.transport === 'mcp'
+    ? port.commentsFromThreads(readThreadsFile(port.forge, threadsFile, record.pullRequest.number), record.pullRequest.url)
+    : port.listComments(project, {
+      number: record.pullRequest.number,
+      url: record.pullRequest.url,
+    }, env);
   const captured = Array.isArray(record.capturedComments) ? [...record.capturedComments] : [];
   const seen = new Set(captured.map((item) => String(item.id)));
   for (const raw of incoming) {
@@ -515,29 +545,174 @@ function azurePort(forge) {
     },
     listComments(project, { number, url }, env) {
       const parsed = parseForgeJson(runChecked(project, buildAzureThreadsArgv({ ...forge, number }), env), 'comment list');
-      const threads = Array.isArray(parsed?.value) ? parsed.value : [];
-      const comments = [];
-      for (const thread of threads) {
-        for (const comment of Array.isArray(thread?.comments) ? thread.comments : []) {
-          if (comment?.commentType === 'system' || comment?.commentType === 3) continue;
-          if (thread.id === undefined || comment.id === undefined) continue;
-          comments.push({
-            id: `${thread.id}:${comment.id}`,
-            author: comment.author?.uniqueName || comment.author?.displayName || '',
-            url: url ? `${url}?discussionId=${thread.id}` : '',
-            createdAt: comment.publishedDate || '',
-            body: typeof comment.content === 'string' ? comment.content : '',
-          });
-        }
-      }
-      return comments;
+      return azureCommentsFromThreads(Array.isArray(parsed?.value) ? parsed.value : [], url);
     },
   };
+}
+
+function azureCommentsFromThreads(threads, url) {
+  const comments = [];
+  for (const thread of threads) {
+    for (const comment of Array.isArray(thread?.comments) ? thread.comments : []) {
+      if (comment?.commentType === 'system' || comment?.commentType === 3) continue;
+      if (thread.id === undefined || comment.id === undefined) continue;
+      comments.push({
+        id: `${thread.id}:${comment.id}`,
+        author: comment.author?.uniqueName || comment.author?.displayName || '',
+        url: url ? `${url}?discussionId=${thread.id}` : '',
+        createdAt: comment.publishedDate || '',
+        body: typeof comment.content === 'string' ? comment.content : '',
+      });
+    }
+  }
+  return comments;
+}
+
+function azureMcpPort(forge) {
+  return {
+    provider: 'azure-devops',
+    transport: 'mcp',
+    forge,
+    acceptsCommentBody() {
+      return true;
+    },
+    commentsFromThreads(threads, url) {
+      return azureCommentsFromThreads(threads, url);
+    },
+  };
+}
+
+function mcpScope(forge) {
+  return {
+    orgName: mcpOrgName(forge.organization),
+    project: forge.project,
+    repositoryId: forge.repository,
+  };
+}
+
+const AZURE_DESCRIPTION_LIMIT = 4000;
+
+function truncateDescription(body) {
+  if (body.length <= AZURE_DESCRIPTION_LIMIT) return body;
+  const note = '\n\n(Truncated for Azure DevOps. Full evidence list: .factory/attempts/ in the repository.)';
+  return `${body.slice(0, AZURE_DESCRIPTION_LIMIT - note.length)}${note}`;
+}
+
+function pullRequestRecordRelative(change) {
+  return `.factory/pull-requests/${change}.json`;
+}
+
+function linkedWorkItemId(project, change) {
+  try {
+    const id = JSON.parse(fs.readFileSync(path.join(project, '.factory', 'boards', `${change}.json`), 'utf8'))?.workItem?.id;
+    return Number.isInteger(id) && id > 0 ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function planOpenPullRequest(project, { name, branch, existing, body, bodyDigest, forge: port }) {
+  const forge = port.forge;
+  const scope = mcpScope(forge);
+  const description = truncateDescription(body);
+  if (!existing) {
+    ensureBranch(project, branch);
+    const record = {
+      change: name,
+      provider: port.provider,
+      branch,
+      pullRequest: { number: null, url: null },
+      bodyDigest,
+      postedVerdicts: [],
+      capturedComments: [],
+    };
+    const workItemId = linkedWorkItemId(project, name);
+    const plan = createPlan(project, {
+      kind: 'pr-open',
+      change: name,
+      operations: [{
+        tool: 'repo_pull_request_write',
+        arguments: {
+          action: 'create',
+          ...scope,
+          sourceRefName: `refs/heads/${branch}`,
+          targetRefName: `refs/heads/${forge.targetBranch}`,
+          title: name,
+          description,
+          ...(workItemId ? { workItems: String(workItemId) } : {}),
+        },
+      }],
+      effects: {
+        writes: [{ path: pullRequestRecordRelative(name), json: record }],
+        bind: [{
+          result: 'pullRequestId',
+          write: 0,
+          pointer: ['pullRequest', 'number'],
+          urlPointer: ['pullRequest', 'url'],
+          urlTemplate: `${azurePullRequestUrl(forge, 1).replace(/\/1$/, '/{id}')}`,
+        }],
+      },
+    });
+    return { record, created: true, applied: false, plan };
+  }
+  const record = {
+    ...existing,
+    change: name,
+    branch: existing.branch || branch,
+    bodyDigest,
+    postedVerdicts: Array.isArray(existing.postedVerdicts) ? existing.postedVerdicts : [],
+    capturedComments: Array.isArray(existing.capturedComments) ? existing.capturedComments : [],
+  };
+  const plan = createPlan(project, {
+    kind: 'pr-open',
+    change: name,
+    operations: [{
+      tool: 'repo_pull_request_write',
+      arguments: {
+        action: 'update',
+        ...scope,
+        pullRequestId: existing.pullRequest.number,
+        description,
+      },
+    }],
+    effects: { writes: [{ path: pullRequestRecordRelative(name), json: record }] },
+  });
+  return { record, created: false, applied: false, plan };
+}
+
+function readThreadsFile(forge, file, number) {
+  if (!file) {
+    throw new Error(
+      `pr capture needs --threads-file <file>. Run repo_pull_request_thread with action list, orgName ${mcpOrgName(forge.organization)}, project ${forge.project}, repositoryId ${forge.repository}, pullRequestId ${number}, and save the result to a file.`,
+    );
+  }
+  let raw;
+  try {
+    raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (error) {
+    throw new Error(`cannot read threads file ${file}: ${error.message}`);
+  }
+  const threads = Array.isArray(raw) ? raw : (raw?.value ?? raw?.threads);
+  if (!Array.isArray(threads)) {
+    throw new Error(`threads file ${file} has no thread list. Save the repo_pull_request_thread list result unchanged.`);
+  }
+  return threads;
+}
+
+/**
+ * True when Azure DevOps writes go through MCP plans, so an attempt transition
+ * must not try to post a verdict on its own.
+ * @param {string} project
+ */
+export function forgeDefersWrites(project) {
+  const forge = readForgeConfig(project);
+  return forge.provider === 'azure-devops' && forge.transport === 'mcp';
 }
 
 function forgePort(project) {
   const forge = readForgeConfig(project);
   const errors = forgeConfigErrors(forge);
   if (errors.length) throw new Error(errors.join('\n'));
-  return forge.provider === 'azure-devops' ? azurePort(forge) : githubPort;
+  if (forge.provider !== 'azure-devops') return githubPort;
+  return forge.transport === 'az' ? azurePort(forge) : azureMcpPort(forge);
 }

@@ -12,7 +12,7 @@ const RUN_URL = 'https://cursor.com/agents/bc-example';
 async function publishedStory(dir) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
   assert.equal((await idefactory(dir, [
-    'board', 'configure', '--organization', ORG, '--project', 'Shop',
+    'board', 'configure', '--organization', ORG, '--project', 'Shop', '--transport', 'az',
   ])).code, 0);
   writeChange(dir, CHANGE);
   const published = await idefactory(dir, ['board', 'publish', CHANGE], azEnv(dir));
@@ -181,7 +181,7 @@ test('claim adopts a story a human created with the change field and tag', async
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     assert.equal((await idefactory(dir, [
-      'board', 'configure', '--organization', ORG, '--project', 'Shop',
+      'board', 'configure', '--organization', ORG, '--project', 'Shop', '--transport', 'az',
     ])).code, 0);
     writeChange(dir, CHANGE);
     writeAzDb(dir, {

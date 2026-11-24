@@ -3,6 +3,8 @@ import path from 'node:path';
 import { halted, readText, writeText } from './layout.mjs';
 
 export const FORGE_PROVIDERS = ['github', 'azure-devops'];
+export const TRANSPORTS = ['mcp', 'az'];
+const DEFAULT_TARGET_BRANCH = 'main';
 
 export function configPath(project) {
   return path.join(project, '.factory', 'config.json');
@@ -21,7 +23,7 @@ export function writeFactoryConfig(project, config) {
 /**
  * Forge settings. A missing entry means GitHub.
  * @param {string} project
- * @returns {{ provider: string, organization?: string, project?: string, repository?: string }}
+ * @returns {{ provider: string, organization?: string, project?: string, repository?: string, transport?: string, targetBranch?: string }}
  */
 export function readForgeConfig(project) {
   const file = configPath(project);
@@ -29,7 +31,12 @@ export function readForgeConfig(project) {
   try {
     const forge = JSON.parse(readText(file)).forge;
     if (!forge || typeof forge !== 'object') return { provider: 'github' };
-    return { provider: 'github', ...forge };
+    const merged = { provider: 'github', ...forge };
+    if (merged.provider === 'azure-devops') {
+      merged.transport = merged.transport || 'mcp';
+      merged.targetBranch = merged.targetBranch || DEFAULT_TARGET_BRANCH;
+    }
+    return merged;
   } catch {
     return { provider: 'github' };
   }
@@ -48,6 +55,13 @@ export function forgeConfigErrors(forge) {
   }
   if (forge.provider !== 'azure-devops') return [];
   const errors = [];
+  if (forge.transport !== undefined && !TRANSPORTS.includes(forge.transport)) {
+    errors.push(`config.json forge.transport must be one of ${TRANSPORTS.join(', ')}`);
+  }
+  if (forge.targetBranch !== undefined
+    && (typeof forge.targetBranch !== 'string' || !forge.targetBranch.trim())) {
+    errors.push('config.json forge.targetBranch must be a non-empty string');
+  }
   for (const key of ['organization', 'project', 'repository']) {
     if (typeof forge[key] !== 'string' || !forge[key].trim()) {
       errors.push(`config.json forge.${key} is required for azure-devops`);
@@ -77,11 +91,13 @@ export function configureForge(project, flags) {
       organization: stringFlag(flags.organization).replace(/\/+$/, ''),
       project: stringFlag(flags.project),
       repository: stringFlag(flags.repository),
+      transport: stringFlag(flags.transport) || 'mcp',
+      targetBranch: stringFlag(flags['target-branch']) || DEFAULT_TARGET_BRANCH,
     }
     : { provider };
   const errors = forgeConfigErrors(forge);
   if (errors.length) {
-    throw new Error(`${errors.join('\n')}\nUsage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name>]`);
+    throw new Error(`${errors.join('\n')}\nUsage: idefactory forge configure --provider github|azure-devops [--organization <url> --project <name> --repository <name> --transport mcp|az --target-branch <name>]`);
   }
   const config = readFactoryConfig(project);
   config.forge = forge;
@@ -105,6 +121,7 @@ export const BOARD_STATE_DEFAULTS = {
 
 const BOARD_DEFAULTS = {
   provider: 'azure-devops',
+  transport: 'mcp',
   workItemType: 'User Story',
   tag: 'factory',
   changeField: 'Custom.OpenSpecChange',
@@ -155,6 +172,9 @@ export function boardConfigErrors(board) {
   const errors = [];
   const provider = board.provider ?? BOARD_DEFAULTS.provider;
   if (provider !== 'azure-devops') errors.push('config.json board.provider must be azure-devops');
+  if (board.transport !== undefined && !TRANSPORTS.includes(board.transport)) {
+    errors.push(`config.json board.transport must be one of ${TRANSPORTS.join(', ')}`);
+  }
   for (const key of ['organization', 'project']) {
     if (typeof board[key] !== 'string' || !board[key].trim()) {
       errors.push(`config.json board.${key} is required`);
@@ -201,6 +221,7 @@ export function configureBoard(project, flags) {
     'change-field': 'changeField',
     'branch-field': 'branchField',
     'run-url-field': 'runUrlField',
+    transport: 'transport',
   };
   for (const [flagName, key] of Object.entries(fields)) {
     const value = stringFlag(flags[flagName]);
@@ -213,7 +234,7 @@ export function configureBoard(project, flags) {
   if (typeof board.organization === 'string') board.organization = board.organization.replace(/\/+$/, '');
   const errors = boardConfigErrors(board);
   if (errors.length) {
-    throw new Error(`${errors.join('\n')}\nUsage: idefactory board configure --organization <url> --project <name> [--work-item-type <type>] [--tag <tag>] [--change-field <ref>] [--state-ready <name>] ...`);
+    throw new Error(`${errors.join('\n')}\nUsage: idefactory board configure --organization <url> --project <name> [--work-item-type <type>] [--transport mcp|az] [--tag <tag>] [--change-field <ref>] [--state-ready <name>] ...`);
   }
   config.board = board;
   writeFactoryConfig(project, config);
