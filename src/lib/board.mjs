@@ -420,8 +420,7 @@ export function reportBoard(project, change, env = process.env) {
   const operations = [];
   const posted = [];
   const items = listWorkItems(project, name)
-    .filter((item) => item.status === 'done' && item.attemptId)
-    .sort((a, b) => String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+    .filter((item) => item.status === 'done' && item.attemptId);
   for (const item of items) {
     const key = `task:${item.id}:${item.attemptId}`;
     const planned = planComment(record, {
