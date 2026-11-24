@@ -21,15 +21,25 @@
 
 ## Decisions
 
-### Azure CLI is the client
+### Transport: MCP plans by default, Azure CLI optional
 
-Board and Azure forge calls go through `az` with the shell disabled, the same port pattern `gh` uses. `IDEFACTORY_BOARD` and `IDEFACTORY_FORGE` swap the binary for `support/fake-az.mjs` in tests. When `ADO_TOKEN` is set and `AZURE_DEVOPS_EXT_PAT` is not, the child environment receives `AZURE_DEVOPS_EXT_PAT`, which the Azure DevOps extension reads. A token never appears on argv.
+`board.transport` and `forge.transport` are `mcp` (default) or `az`. With `mcp` the CLI makes no Azure DevOps call. A command that would write builds one plan: ordered operations, each `{ tool, arguments }` with every argument filled in, plus the record the CLI will store. The plan is saved as `.factory/mcp/<planId>.json`, where `planId` is a digest of the plan content, so planning twice yields the same id. The command prints the plan. The agent calls each operation exactly as printed, in order, and then runs `idefactory mcp ack <planId> --result '<json>'`. Ack writes the stored record, merges ids returned by the create operations (`workItemId`, `pullRequestId`), appends a control event, and removes the plan. A failed operation means no ack, so the record never claims a write that did not happen.
+
+Plans only name these tools and actions: `wit_work_item_write` (`create`, `update`), `wit_work_item_comment_write` (`add`), `wit_work_item_link_write` (`link`), `repo_pull_request_write` (`create`, and `update` of the description only), and `repo_pull_request_thread_write` (`create`). The plan builder asserts that and refuses the argument names `autoComplete`, `mergeStrategy`, `mergeCommitMessage`, `bypassReason`, `deleteSourceBranch`, `vote`, `status`, `reviewerIds`, and `isDraft` for pull requests. Reads (`wit_work_item get`, `repo_pull_request_thread list`) are saved by the agent to a file and passed to `board claim --snapshot` and `pr capture --threads-file`.
+
+Concurrency: the state-changing update in a claim plan starts with `{ op: Test, path: /rev, value: <revision read> }`. Azure DevOps rejects the whole update with 409 if the story changed, so two cloud runs for one story cannot both claim it even though each has its own clone. The agent stops on a 409.
+
+Trade-off: a plan and a snapshot are inputs the agent hands the CLI, so the CLI cannot prove the agent applied the operations or read the story honestly. Azure DevOps permissions are the enforcement layer: the MCP identity should not hold "Bypass policies when completing pull requests" or "Bypass policies when pushing", and `main` should require a reviewer and block self-approval.
+
+### Azure CLI transport
+
+With `transport: az`, board and Azure forge calls go through `az` with the shell disabled, the same port pattern `gh` uses. `IDEFACTORY_BOARD` and `IDEFACTORY_FORGE` swap the binary for `support/fake-az.mjs` in tests. When `ADO_TOKEN` is set and `AZURE_DEVOPS_EXT_PAT` is not, the child environment receives `AZURE_DEVOPS_EXT_PAT`, which the Azure DevOps extension reads. A token never appears on argv.
 
 Alternative considered: `fetch` against the REST API. Rejected because every forge function is synchronous today and is called from `transitionAttempt`. Making them async would ripple through attempts and completion.
 
 ### Config lives in `.factory/config.json`
 
-`forge` holds `provider` (`github` or `azure-devops`) and, for Azure, `organization`, `project`, and `repository`. `board` holds `provider` (`azure-devops`), `organization`, `project`, `workItemType`, `tag`, `changeField`, `branchField`, `runUrlField`, and `states` (`new`, `ready`, `inProgress`, `waiting`, `blocked`, `inReview`, `readyForHumanReview`). `forge configure` and `board configure` write those keys, so humans do not hand-edit config. Defaults: `User Story`, tag `factory`, `Custom.OpenSpecChange`, `Custom.FactoryBranch`, `Custom.FactoryRunUrl`, and states `New`, `Ready for Factory`, `In Progress`, `Waiting on Human`, `Blocked`, `In Review`, `Ready for Human Review`.
+`forge` holds `provider` (`github` or `azure-devops`) and, for Azure, `organization`, `project`, `repository`, `targetBranch` (default `main`, the MCP create call needs it), and `transport`. `board` holds `provider` (`azure-devops`), `transport`, `organization`, `project`, `workItemType`, `tag`, `changeField`, `branchField`, `runUrlField`, and `states` (`new`, `ready`, `inProgress`, `waiting`, `blocked`, `inReview`, `readyForHumanReview`). `forge configure` and `board configure` write those keys, so humans do not hand-edit config. Defaults: `User Story`, tag `factory`, `Custom.OpenSpecChange`, `Custom.FactoryBranch`, `Custom.FactoryRunUrl`, and states `New`, `Ready for Factory`, `In Progress`, `Waiting on Human`, `Blocked`, `In Review`, `Ready for Human Review`.
 
 ### Board record
 
@@ -63,7 +73,9 @@ Create: `az repos pr create --source-branch factory/<change> --title --descripti
 
 ## Risks / Trade-offs
 
-- [The Azure CLI is not installed on a cloud image] → `factory-cloud` names it as an environment prerequisite. Board commands fail with the CLI error and write nothing.
+- [The Azure CLI is not installed on a cloud image] → the default `mcp` transport does not need it. Only `transport: az` does, and it fails with the CLI error and writes nothing.
+- [An agent skips a plan operation or edits its arguments] → the record changes only at ack, the skill forbids edits, and a claim write carries a revision `Test`.
+- [A pull request description over 4000 characters] → the MCP rejects it, so Azure plans truncate the body to 4000 characters.
 - [A human renames a state] → `board configure --state-<key>` updates it, and doctor rejects a ready state equal to another state.
-- [Two triggers race] → the writer lease serializes claims, and the second claim of a revision is `duplicate`.
+- [Two triggers race] → the writer lease serializes claims in one clone, the second claim of an acknowledged revision is `duplicate`, and across clones the revision `Test` makes the second write fail.
 - [The bridge is skipped and ADO posts every edit] → claim still returns `not-ready` or `duplicate` without writes, but each post costs a cloud run. The bridge is the documented path.

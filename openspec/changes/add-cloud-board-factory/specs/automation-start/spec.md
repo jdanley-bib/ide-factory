@@ -7,7 +7,7 @@ Lets a Cursor Automation begin or resume a cloud factory run only when a human m
 ## ADDED Requirements
 
 ### Requirement: Claim validates the story
-`idefactory board claim <change> --work-item <id>` SHALL fail without a board write when `openspec/changes/<change>/` does not exist, when the story's change field names another change, or when the story lacks the factory tag.
+`idefactory board claim <change> --work-item <id>` (with `--snapshot <file>` holding the story read through the MCP when the transport is `mcp`) SHALL fail without a board write when `openspec/changes/<change>/` does not exist, when the story's change field names another change, or when the story lacks the factory tag.
 
 #### Scenario: Change field mismatch
 - **WHEN** the story's change field names a different change
@@ -47,6 +47,13 @@ The printed next step SHALL include `--new-run` only for `resume`. `start` SHALL
 #### Scenario: Start prints a bounded run
 - **WHEN** the decision is `start`
 - **THEN** the next step is `idefactory run --change <change> --until human-gate` without `--new-run`
+
+### Requirement: Claim write is revision-guarded
+With the `mcp` transport, the claim plan's state-changing update SHALL begin with a `Test` of `/rev` against the revision in the snapshot.
+
+#### Scenario: Claim carries the revision test
+- **WHEN** a claim decides `start` from a snapshot at revision 7
+- **THEN** the first update operation in the plan tests `/rev` equal to 7 before it changes the state
 
 ### Requirement: Claim event
 Every claim that writes to the board SHALL append one `board-claim` event with the change, work item id, revision, and decision to the control event log.

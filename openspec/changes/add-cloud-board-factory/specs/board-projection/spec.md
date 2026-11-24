@@ -15,11 +15,11 @@ Board commands SHALL fail with a configuration error and SHALL NOT call Azure De
 - **AND** the board client is not invoked
 
 ### Requirement: Configure writes board settings
-`idefactory board configure` SHALL write `board` into `.factory/config.json` with the organization, project, work item type, tag, change field, branch field, run URL field, and state names, filling defaults for omitted values. It SHALL fail without an organization or project and SHALL write nothing then.
+`idefactory board configure` SHALL write `board` into `.factory/config.json` with the transport (`mcp` by default, or `az`), the organization, project, work item type, tag, change field, branch field, run URL field, and state names, filling defaults for omitted values. It SHALL fail without an organization or project and SHALL write nothing then.
 
 #### Scenario: Defaults are filled
 - **WHEN** board configure runs with an organization and a project only
-- **THEN** config stores work item type `User Story`, tag `factory`, change field `Custom.OpenSpecChange`, and ready state `Ready for Factory`
+- **THEN** config stores transport `mcp`, work item type `User Story`, tag `factory`, change field `Custom.OpenSpecChange`, and ready state `Ready for Factory`
 
 ### Requirement: One story per change
 `idefactory board publish <change>` SHALL create one story for an on-disk OpenSpec change, with the factory tag and the change field, and SHALL store its id in `.factory/boards/<change>.json`. A second publish SHALL update that story and SHALL NOT create another.
@@ -34,10 +34,10 @@ Board commands SHALL fail with a configuration error and SHALL NOT call Azure De
 - **THEN** the command exits non-zero and the board client is not invoked
 
 ### Requirement: Token stays off argv
-Board and Azure forge calls SHALL pass `ADO_TOKEN` to the child process only as `AZURE_DEVOPS_EXT_PAT` in its environment and SHALL NOT place a token on argv.
+With the `az` transport, board and Azure forge calls SHALL pass `ADO_TOKEN` to the child process only as `AZURE_DEVOPS_EXT_PAT` in its environment and SHALL NOT place a token on argv. With the default `mcp` transport, board commands SHALL NOT read `ADO_TOKEN` or start a child process.
 
 #### Scenario: Token in environment
-- **WHEN** publish runs with `ADO_TOKEN` set
+- **WHEN** publish runs with the `az` transport and `ADO_TOKEN` set
 - **THEN** the board client sees `AZURE_DEVOPS_EXT_PAT`
 - **AND** no argv contains the token value
 
