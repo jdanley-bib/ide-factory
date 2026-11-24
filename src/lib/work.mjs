@@ -30,7 +30,35 @@ export function listWorkItems(project, change) {
     .filter((name) => name.endsWith('.json') && (!change || name.startsWith(prefix)))
     .map((name) => readWorkItemFile(path.join(dir, name)))
     .filter(Boolean)
-    .sort((a, b) => `${a.change}:${a.id}`.localeCompare(`${b.change}:${b.id}`));
+    .sort(compareWorkItems);
+}
+
+/** Dotted OpenSpec task ids (1.2, 10.1) sort numerically, not lexicographically. */
+export function compareTaskIds(a, b) {
+  const left = String(a ?? '').split('.');
+  const right = String(b ?? '').split('.');
+  const len = Math.max(left.length, right.length);
+  for (let i = 0; i < len; i += 1) {
+    const lPart = left[i] ?? '';
+    const rPart = right[i] ?? '';
+    const lNum = Number(lPart);
+    const rNum = Number(rPart);
+    const lIsNum = lPart !== '' && Number.isFinite(lNum);
+    const rIsNum = rPart !== '' && Number.isFinite(rNum);
+    if (lIsNum && rIsNum) {
+      if (lNum !== rNum) return lNum - rNum;
+      continue;
+    }
+    const cmp = lPart.localeCompare(rPart, undefined, { numeric: true });
+    if (cmp !== 0) return cmp;
+  }
+  return 0;
+}
+
+function compareWorkItems(a, b) {
+  const changeCmp = String(a.change ?? '').localeCompare(String(b.change ?? ''));
+  if (changeCmp !== 0) return changeCmp;
+  return compareTaskIds(a.id, b.id);
 }
 
 export function getWorkItem(project, change, id) {
