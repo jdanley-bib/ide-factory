@@ -30,7 +30,7 @@ export const ATTEMPT_STATES = [
   'finalize-failed',
 ];
 
-const TRANSITIONS = {
+export const TRANSITIONS = {
   planned: ['assigned'],
   assigned: ['implementing'],
   implementing: ['red-confirmed', 'verifying'],

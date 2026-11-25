@@ -17,6 +17,7 @@ import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mj
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
+import { answerHelp } from './command-help.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
@@ -72,8 +73,10 @@ export async function run(argv, io = {}) {
   const parsed = parseArgs(argv);
   const cmd = parsed.cmd;
   if (!cmd || cmd === 'help' || parsed.flags.help) {
-    out(HELP);
-    return 0;
+    const answer = answerHelp(argv, { explicitHelp: cmd === 'help', globalText: HELP });
+    if (answer.stdout) out(answer.stdout);
+    if (answer.stderr) err(answer.stderr);
+    return answer.code;
   }
   const project = projectDir(parsed.flags, parsed.rest, cwd, cmd);
   const commandKey = cliCommandKey(cmd, parsed.rest, parsed.flags);
@@ -490,7 +493,7 @@ function reportDoctor(project, out, err) {
   return report.errors.length ? 1 : 0;
 }
 
-function parseArgs(argv) {
+export function parseArgs(argv) {
   const rest = [];
   const flags = {};
   const sequence = [];
@@ -499,6 +502,11 @@ function parseArgs(argv) {
     if (token === '--') {
       rest.push(...argv.slice(i + 1));
       break;
+    }
+    if (token === '--help' || token === '-h') {
+      flags.help = true;
+      sequence.push({ key: 'help', value: true });
+      continue;
     }
     if (token.startsWith('--')) {
       const key = token.slice(2);

@@ -70,15 +70,15 @@ Tests keep the help honest:
 
 1. Every top-level command that `dispatchCommand` handles has a table entry. The test reads the `case '<name>'` labels from `run.mjs` and checks each against the table.
 2. Every `idefactory ...` usage line in `HELP` matches a table entry's usage.
-3. Every flag in a table entry is accepted by the command. The test calls each command with the flag against a fixture and checks that no "unknown flag" style rejection occurs. Where the command does not reject unknown flags, the test checks that the handler reads the flag by name from a list kept beside the handler.
+3. Every flag in a table entry is read by the CLI. Handlers read flags by name and do not reject unknown flags, so the test scans the CLI source (excluding the help table) for each documented flag name. It also checks that every `--flag` in an entry's usage line is documented in that entry.
 4. `effects` agrees with the writer-lease classification for each command key.
 5. Each authored precondition sentence is paired with a real transition attempt that fails for exactly that reason, and the failure message contains the phrase the sentence is built on.
 
-Guard 3 depends on how the handlers read flags. The apply phase will check whether a small per-handler list of accepted flags is needed. If it is, the handlers consult that list and the table references it, so there is still one source.
+Guard 3 checks that a flag is read somewhere in the CLI, not that a particular command reads it. A flag moved to a different command would not be caught. A per-handler accepted-flag list would close that gap but means changing every handler, which this change does not do.
 
 ## Risks / Trade-offs
 
-- Guard 3 may need a modest handler change to expose accepted flags. It is behavior-neutral and covered by the existing command tests.
+- Guard 3 is a source scan and can miss a flag that is read by a different command than the one that documents it.
 - Authored preconditions can still go stale if a new rule is added without a sentence. Guard 5 covers only the listed rules. The test also fails if `validateEvidence` gains a new guarded target state that has no sentence, by comparing the guarded states against the table keys.
 - Skill wording lands in six places. The existing identical-copy tests and the adapter history table catch a missed copy.
 
