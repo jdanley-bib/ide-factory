@@ -14,7 +14,7 @@ The IDE session model does the work.
 Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help verify run` lists the check flags. Add `--json` for structured output. Do not read the CLI source to learn usage.
 
 1. Read the work item `verificationProfile` and `checks` from the packet or `.factory/work/items/`.
-2. Run `idefactory verify status <attemptId>`. A check that is `valid` is reused: its passing record still holds because only factory run-state changed since. Do not re-run it.
+2. Run `idefactory verify status <attemptId>`. A check that is `valid` is reused: its passing record still holds because only factory run-state changed since. Do not re-run it. Reliance does not replace review: still review the change independently, and run a focused check yourself when the change warrants it.
 3. Map each remaining check (`stale`, `missing`, `failed`, `untrusted`, or whose reason says `re-run verify`) to a project command (unit, build, playwright, docs, etc.).
 4. Run each command in the project. Do not describe a run you did not start.
 5. Read the exit code and the failing lines. A skipped check is not a pass.

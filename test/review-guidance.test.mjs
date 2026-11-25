@@ -229,6 +229,8 @@ const RELIANCE_MARKERS = [
   [/idefactory verify status/, 'verify status'],
   [/`valid`/, 'valid state'],
   [/re-run verify/, 're-run verify reason'],
+  [/still review the change independently/, 'independent review'],
+  [/focused check/, 'focused check'],
 ];
 const UNCONDITIONAL_RERUN = /re-run every required check/i;
 
