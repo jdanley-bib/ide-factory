@@ -14,6 +14,7 @@ import { buildPacket, syncTasks } from './queue.mjs';
 import { scaffoldConsumerCi } from './ci-scaffold.mjs';
 import { capturePullRequestComments, commentOnPullRequest, openPullRequest } from './pull-request.mjs';
 import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mjs';
+import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
@@ -253,7 +254,7 @@ async function dispatchCommand(cmd, ctx) {
       if (sub === 'resolve') {
         const id = parsed.rest[1];
         if (!id) {
-          throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "text"');
+          throw new Error(`Usage: ${LOCKOUT_RESOLVE_USAGE}`);
         }
         const result = resolveLockout(project, id, {
           resolver: parsed.flags.resolver,
@@ -264,8 +265,8 @@ async function dispatchCommand(cmd, ctx) {
       }
       if (sub && sub !== 'create') {
         throw new Error(
-          'Usage: idefactory lockout create --agent <id> --reason "text"\n'
-          + '       idefactory lockout resolve <id> --resolver <id> --reason "text"',
+          `Usage: ${LOCKOUT_CREATE_USAGE}\n`
+          + `       ${LOCKOUT_RESOLVE_USAGE}`,
         );
       }
       const result = createLockout(project, {

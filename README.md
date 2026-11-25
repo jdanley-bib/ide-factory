@@ -142,6 +142,8 @@ idefactory lockout create --agent <implementer-id> --reviewer reviewer --reason 
 idefactory lockout resolve <id> --resolver <id> --reason "what changed"
 ```
 
+`--agent`, `--reviewer`, and `--resolver` take the same identities as attempt evidence, so an id such as `engineer-5.1-abc123` works. `--reviewer` is required. An id outside that format is accepted only when an attempt already records it exactly.
+
 `HALT` in the project root stops mutating factory commands. `idefactory resume` clears it.
 
 `idefactory run` persists a session for the change. Exit `2` means one IDE role should take the printed request. Exit `0` is a clean stop: the queue is done, a human gate is waiting, or a budget stop was reached. Exit `1` is an error such as an active lockout, a rejected attempt, or a blocked dependency. Sticky stops, including max agent steps, max tasks, wall-clock, max failures, and unchanged state, stay in force until a human starts a new session:
@@ -171,7 +173,7 @@ Records written before this release carry no reuse fingerprint, so they are stal
 
 Evidence may contain only these keys. The review text goes in the top-level `notes` key, not nested under `review`:
 
-- `reviewerId`, `implementerId`, and `securityReviewerId` are strings.
+- `reviewerId`, `implementerId`, and `securityReviewerId` are identities: 1 to 128 characters from letters, digits, `.`, `_`, `@`, `:`, `+`, and `-`, starting with a letter or digit. Any other value is refused before the attempt changes.
 - `verdict` is a string. A reviewer's `accepted` or `rejected` transition refuses a verdict that contradicts it; omit `verdict` or send the matching one.
 - `notes` is a string. It is stored as the review notes for a reviewer's accept or reject.
 - `changedFiles` is an array of strings, and `baseRev` is a string.

@@ -41,7 +41,7 @@ Every agent, reviewer, or resolver identity the CLI accepts as input SHALL be 1 
 
 #### Scenario: Reviewer recorded as given
 - **WHEN** lockout create runs with `--reviewer reviewer-2`
-- **THEN** creation data and the event log name `reviewer-2` as the reviewer
+- **THEN** creation data names `reviewer-2` as the reviewer
 
 ### Requirement: Identities recorded on attempts stay usable
 A lockout command SHALL accept an identity outside the shared format when it exactly equals an `implementerId`, `reviewerId`, or `securityReviewerId` already stored on an attempt. It SHALL compare identities exactly, without trimming, case folding, or aliasing, and SHALL NOT change stored attempts.

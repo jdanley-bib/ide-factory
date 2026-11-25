@@ -1,3 +1,5 @@
+import { IDENTITY_FORMAT_TEXT } from './identity.mjs';
+import { LOCKOUT_CREATE_ALIAS_USAGE, LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { ATTEMPT_STATES, SUPPLIED_EVIDENCE_TYPES, TRANSITIONS } from './attempt.mjs';
 
 export const HELP_SCHEMA_VERSION = 1;
@@ -235,6 +237,7 @@ export const COMMANDS = [
       ],
       notes: [
         'Check results (red, verification, security) cannot be supplied. Use idefactory verify run.',
+        `Identities (implementerId, reviewerId, securityReviewerId): ${IDENTITY_FORMAT_TEXT}.`,
       ],
     },
   ),
@@ -397,9 +400,9 @@ export const COMMANDS = [
   leaf(
     ['lockout', 'create'],
     'Lock an implementer out of a reviewer after a failed review.',
-    'idefactory lockout create --agent <id> --reviewer <id> --reason "text" [--path dir]',
+    LOCKOUT_CREATE_USAGE,
     {
-      aliasUsages: ['idefactory lockout --agent <id> --reviewer <id> --reason "text" [--path dir]'],
+      aliasUsages: [LOCKOUT_CREATE_ALIAS_USAGE],
       flags: [
         { name: 'agent', value: '<id>', required: true, description: 'Implementer id that was locked out.' },
         { name: 'reviewer', value: '<id>', required: true, description: 'Reviewer id.' },
@@ -407,13 +410,16 @@ export const COMMANDS = [
         PATH_FLAG,
       ],
       examples: ['idefactory lockout create --agent engineer-1 --reviewer reviewer --reason "failed review twice"'],
-      notes: ['"idefactory lockout --agent ..." with no subcommand also creates a lockout.'],
+      notes: [
+        '"idefactory lockout --agent ..." with no subcommand also creates a lockout.',
+        `Identities: ${IDENTITY_FORMAT_TEXT}. An id outside that format is accepted only if an attempt already records it exactly.`,
+      ],
     },
   ),
   leaf(
     ['lockout', 'resolve'],
     'Resolve a lockout.',
-    'idefactory lockout resolve <id> --resolver <id> --reason "text" [--path dir]',
+    LOCKOUT_RESOLVE_USAGE,
     {
       arguments: [{ name: 'id', required: true, description: 'Lockout id.' }],
       flags: [
@@ -422,6 +428,7 @@ export const COMMANDS = [
         PATH_FLAG,
       ],
       examples: ['idefactory lockout resolve <id> --resolver human-1 --reason "fixed"'],
+      notes: [`Identities: ${IDENTITY_FORMAT_TEXT}. The resolver must differ from the locked agent.`],
     },
   ),
   leaf(

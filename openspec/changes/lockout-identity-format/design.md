@@ -36,7 +36,7 @@ Alternative: accept any non-empty token. Rejected: it would let newline and cont
 `createLockout`, `resolveLockout`, and `parseLegacyLockoutFields` call `assertIdentity`, so the `lockout --agent ...` alias and any programmatic caller get the same behavior. `assertSuppliedEvidence` calls it for the three id keys, so a bad id is refused before the attempt file is touched. Internal transitions that do not pass `supplied: true` are unchanged.
 
 **4. Exact-match exception for identities already on attempts.**
-When a lockout identity fails the format, `recordedAttemptIdentities(project)` reads `.factory/orchestration/attempts/*.json` and collects `implementerId`, `reviewerId`, `evidence.review.reviewerId`, and `evidence.securityReview.reviewerId`. The identity is accepted only if it equals one of them exactly. The scan runs only on the failure path, skips unreadable files, and never writes.
+When a lockout identity fails the format, `recordedAttemptIdentities(project)` reads `.factory/attempts/*.json` and collects `implementerId`, `reviewerId`, `evidence.review.reviewerId`, and `evidence.securityReview.reviewerId`. The identity is accepted only if it equals one of them exactly. The scan runs only on the failure path, skips unreadable files, and never writes.
 Alternatives: (a) no exception - simpler, but an older attempt with an unusual id could never be locked out, which is the failure in the issue; (b) accept anything an attempt accepted - reopens the newline problem.
 
 **5. `--reviewer` is required with no default.**

@@ -50,7 +50,7 @@ When the reviewer rejects an implementation, run:
 idefactory lockout create --agent <implementer-id> --reviewer reviewer --reason "what failed"
 ```
 
-`idefactory lockout --agent ...` remains a create alias. Creation prints a lockout id and writes immutable event data; it does not delete product files.
+`--agent`, `--reviewer`, and `--resolver` take identities of 1 to 128 characters from letters, digits, `.`, `_`, `@`, `:`, `+`, and `-`, starting with a letter or digit; `--reviewer` is required. `idefactory lockout --agent ...` remains a create alias. Creation prints a lockout id and writes immutable event data; it does not delete product files.
 
 Resolve an active lockout (or a legacy `*lockout*.md` basename) with a distinct resolver:
 

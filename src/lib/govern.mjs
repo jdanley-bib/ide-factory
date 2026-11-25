@@ -2,12 +2,15 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
+import { recordedAttemptIdentities } from './attempt.mjs';
 import { appendControlEvent } from './event-log.mjs';
+import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { setupReadinessErrors } from './setup.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
 import { resolveGitBinding } from './verification-evidence.mjs';
+import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { listWorkItems, workCounts } from './work.mjs';
 
 const REQUIRED = [
@@ -205,11 +208,12 @@ export function reject(project, id, note) {
  * @returns {{ id: string, createdPath: string }}
  */
 export function createLockout(project, { agent, reviewer, reason }) {
-  if (!agent || !/^[a-z0-9-]+$/.test(agent)) {
-    throw new Error('Usage: idefactory lockout create --agent <id> --reason "..."');
+  assertLockoutIdentity(project, agent, '--agent', LOCKOUT_CREATE_USAGE);
+  assertLockoutIdentity(project, reviewer, '--reviewer', LOCKOUT_CREATE_USAGE);
+  if (!reason || typeof reason !== 'string') {
+    throw new Error(`lockout requires --reason\nUsage: ${LOCKOUT_CREATE_USAGE}`);
   }
-  if (!reason) throw new Error('lockout requires --reason');
-  const who = reviewer || 'reviewer';
+  const who = reviewer;
   const id = randomUUID();
   const createdAt = new Date().toISOString();
   const createdPath = lockoutCreatedPath(project, id);
@@ -245,12 +249,12 @@ export function lockout(project, options) {
  */
 export function resolveLockout(project, id, { resolver, reason }) {
   if (!id || typeof id !== 'string') {
-    throw new Error('Usage: idefactory lockout resolve <id> --resolver <id> --reason "..."');
+    throw new Error(`Usage: ${LOCKOUT_RESOLVE_USAGE}`);
   }
-  if (!resolver || !/^[a-z0-9-]+$/.test(resolver)) {
-    throw new Error('lockout resolve requires --resolver <id>');
+  assertLockoutIdentity(project, resolver, '--resolver', LOCKOUT_RESOLVE_USAGE);
+  if (!reason || typeof reason !== 'string') {
+    throw new Error(`lockout resolve requires --reason\nUsage: ${LOCKOUT_RESOLVE_USAGE}`);
   }
-  if (!reason) throw new Error('lockout resolve requires --reason');
 
   const legacy = findLegacyLockout(project, id);
   if (legacy) {
@@ -430,12 +434,23 @@ function legacyLockoutResolved(project, basename) {
     && isValidResolvedRecord(resolved);
 }
 
+function assertLockoutIdentity(project, value, label, usage) {
+  try {
+    return assertIdentity(value, label);
+  } catch (error) {
+    if (typeof value === 'string' && recordedAttemptIdentities(project).has(value)) return value;
+    throw new Error(`${error.message}\nUsage: ${usage}`);
+  }
+}
+
 function parseLegacyLockoutFields(body) {
   const agent = (body.match(/^Agent:\s*(.+)$/m) || [])[1]?.trim() || '';
   const reviewer = (body.match(/^Reviewer:\s*(.+)$/m) || [])[1]?.trim() || 'reviewer';
   const reason = (body.match(/^Reason:\s*(.+)$/m) || [])[1]?.trim() || '';
-  if (!agent || !/^[a-z0-9-]+$/.test(agent)) {
-    throw new Error('legacy lockout note must name a valid Agent');
+  try {
+    assertIdentity(agent, 'legacy lockout note "Agent:" line');
+  } catch (error) {
+    throw new Error(`legacy lockout note must name a valid Agent: ${error.message}`);
   }
   return { agent, reviewer, reason };
 }
