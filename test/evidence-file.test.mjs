@@ -547,3 +547,54 @@ test('README names each supported evidence key and the top-level notes form', ()
   assert.match(section, /"notes"/);
   assert.match(section, /unsupported evidence key/);
 });
+
+test('a dotted implementer id is accepted on the implementing transition', async () => {
+  const dir = tempProject();
+  try {
+    const [id] = await seedAttempts(dir);
+    const result = await idefactory(dir, [
+      'attempt', 'transition', id, 'implementing', '--evidence', JSON.stringify({ implementerId: 'engineer-5.1-abc123' }),
+    ]);
+    assert.equal(result.code, 0, result.err);
+    assert.equal(getAttempt(dir, id).implementerId, 'engineer-5.1-abc123');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an invalid supplied identity names its evidence key and leaves the attempt untouched', async () => {
+  const dir = tempProject();
+  try {
+    const [id] = await seedAttempts(dir);
+    for (const key of ['implementerId', 'reviewerId', 'securityReviewerId']) {
+      const before = attemptBytes(dir, id);
+      const result = await idefactory(dir, [
+        'attempt', 'transition', id, 'implementing', '--evidence', JSON.stringify({ [key]: 'bad id' }),
+      ]);
+      assert.notEqual(result.code, 0, key);
+      assert.match(result.err, new RegExp(`evidence key "${key}" "bad id" is not a valid identity`));
+      assert.match(result.err, /letters, digits/);
+      assert.equal(attemptBytes(dir, id), before, key);
+    }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an identity already stored on an attempt is not re-validated', async () => {
+  const dir = tempProject();
+  try {
+    const [id] = await seedAttempts(dir);
+    const file = path.join(dir, '.factory/attempts', `${id}.json`);
+    const stored = JSON.parse(fs.readFileSync(file, 'utf8'));
+    stored.implementerId = 'Eng One';
+    fs.writeFileSync(file, JSON.stringify(stored, null, 2));
+    const result = await idefactory(dir, [
+      'attempt', 'transition', id, 'implementing', '--evidence', JSON.stringify({ notes: 'starting' }),
+    ]);
+    assert.equal(result.code, 0, result.err);
+    assert.equal(getAttempt(dir, id).implementerId, 'Eng One');
+  } finally {
+    cleanup(dir);
+  }
+});

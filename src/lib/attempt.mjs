@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { assertIdentity } from './identity.mjs';
 import { ledger, writeText } from './layout.mjs';
 import {
   commentOnPullRequest,
@@ -52,6 +53,36 @@ export function attemptPath(project, attemptId) {
   return path.join(attemptsRoot(project), `${attemptId}.json`);
 }
 
+/**
+ * Every identity stored on an attempt as implementer or reviewer. Unreadable
+ * attempt files are skipped; nothing is written.
+ *
+ * @returns {Set<string>}
+ */
+export function recordedAttemptIdentities(project) {
+  const found = new Set();
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return found;
+  for (const name of fs.readdirSync(root)) {
+    if (!name.endsWith('.json')) continue;
+    let attempt;
+    try {
+      attempt = JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const value of [
+      attempt?.implementerId,
+      attempt?.reviewerId,
+      attempt?.evidence?.review?.reviewerId,
+      attempt?.evidence?.securityReview?.reviewerId,
+    ]) {
+      if (typeof value === 'string' && value.length > 0) found.add(value);
+    }
+  }
+  return found;
+}
+
 export function getAttempt(project, attemptId) {
   const file = attemptPath(project, attemptId);
   if (!fs.existsSync(file)) return null;
@@ -93,6 +124,8 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
     evidence: { assignedRole: role },
   });
 }
+
+const IDENTITY_EVIDENCE_KEYS = ['reviewerId', 'implementerId', 'securityReviewerId'];
 
 export const SUPPLIED_EVIDENCE_TYPES = {
   reviewerId: 'string',
@@ -211,6 +244,7 @@ export function assertSuppliedEvidence(attempt, nextState, evidence) {
     if (type === 'string' && typeof value !== 'string') {
       throw new Error(`evidence key "${key}" must be a string`);
     }
+    if (IDENTITY_EVIDENCE_KEYS.includes(key)) assertIdentity(value, `evidence key "${key}"`);
     if (type === 'string[]' && !(Array.isArray(value) && value.every((item) => typeof item === 'string'))) {
       throw new Error(`evidence key "${key}" must be an array of strings`);
     }
