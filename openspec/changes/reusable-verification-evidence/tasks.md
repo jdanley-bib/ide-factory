@@ -15,9 +15,9 @@
 
 ## 3. Verification status report
 
-- [ ] 3.1 Implement `verifyStatus(project, attemptId)` that assigns `valid`, `failed`, `untrusted`, `stale`, or `missing` per required kind, using the newest-record rule in the design. Verify: unit tests cover one attempt per state and check `allValid` is true only when every kind is `valid`.
-- [ ] 3.2 Wire `verify status <attemptId> [--json]` into `handleVerify` in `src/lib/run.mjs` and classify it as read-only in `src/lib/writer-lease.mjs`. Verify: a CLI test exits 0 with `allValid` false, takes no lease file, and leaves the project tree snapshot unchanged.
-- [ ] 3.3 Add the text and JSON renderers and a `verify status` entry to the command-help table, including effects `read-only` and the `--json` flag. Verify: `test/command-help.test.mjs` passes, including the drift guards, and `idefactory help verify status --json` parses with `schemaVersion` 1.
+- [x] 3.1 Implement `verifyStatus(project, attemptId)` that assigns `valid`, `failed`, `untrusted`, `stale`, or `missing` per required kind, using the newest-record rule in the design. Verify: unit tests cover one attempt per state and check `allValid` is true only when every kind is `valid`.
+- [x] 3.2 Wire `verify status <attemptId> [--json]` into `handleVerify` in `src/lib/run.mjs` and classify it as read-only in `src/lib/writer-lease.mjs`. Verify: a CLI test exits 0 with `allValid` false, takes no lease file, and leaves the project tree snapshot unchanged.
+- [x] 3.3 Add the text and JSON renderers and a `verify status` entry to the command-help table, including effects `read-only` and the `--json` flag. Verify: `test/command-help.test.mjs` passes, including the drift guards, and `idefactory help verify status --json` parses with `schemaVersion` 1.
 
 ## 4. Reviewer and implementer guidance
 

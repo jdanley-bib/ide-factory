@@ -654,7 +654,7 @@ export function gitSnapshot(project) {
   if (head === undefined) {
     return { head: undefined, error: 'git HEAD is unresolvable', dirtyPath: null, worktreeClean: false };
   }
-  const status = spawnSync('git', ['status', '--porcelain'], {
+  const status = spawnSync('git', ['--no-optional-locks', 'status', '--porcelain'], {
     cwd: project,
     encoding: 'utf8',
     shell: false,

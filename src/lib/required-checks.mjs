@@ -60,8 +60,59 @@ export function readCheckRegistry(project) {
 }
 
 /**
- * Return the required kinds without a passing attestation, in order. Throws for a kind the
- * registry does not map. With stopAtFirst, the list holds at most one entry.
+ * Judge one required kind from the attempt's records. Any valid record passes; otherwise the
+ * newest record's verdict is the state and reason. A kind with no record is `missing`.
+ */
+export function evaluateCheckKind(attempt, kind, rawEntry, {
+  project,
+  snapshot,
+  requireCleanWorktree = true,
+}) {
+  const results = [
+    ...(attempt.evidence?.verification || []),
+    ...(attempt.evidence?.security || []),
+  ];
+  const candidates = results.filter((entry) => entry.kind === kind || entry.check === kind);
+  const registryDigest = commandDigest(rawEntry.argv);
+  let newest = null;
+  for (const record of candidates) {
+    let verdict;
+    try {
+      validateCheckRecord(record);
+      verdict = recordValidity(record, {
+        project,
+        attemptId: attempt.id,
+        entry: { argv: rawEntry.argv, commandDigest: registryDigest, cwdPolicy: rawEntry.cwdPolicy, timeoutMs: rawEntry.timeoutMs, artifacts: rawEntry.artifacts || [] },
+        snapshot,
+        requireCleanWorktree,
+      });
+    } catch (error) {
+      verdict = { valid: false, kind: 'untrusted', reason: error.message };
+    }
+    if (verdict.valid) return { passed: true, state: 'valid', reason: null };
+    newest = verdict;
+  }
+  if (!newest) return { passed: false, state: 'missing', reason: `${MISSING_RECORD_PREFIX} ${kind}` };
+  return { passed: false, state: newest.kind, reason: newest.reason };
+}
+
+function assertMappedKind(rawChecks, kind) {
+  const rawEntry = rawChecks[kind];
+  if (rawEntry === undefined) {
+    throw new Error(`Unknown or unmapped check kind: ${kind}`);
+  }
+  if (!Array.isArray(rawEntry?.argv) || rawEntry.argv.length === 0) {
+    throw new Error(`Check kind has no argv mapping: ${kind}`);
+  }
+  if (!rawEntry.argv.every((part) => typeof part === 'string' && part.length > 0)) {
+    throw new Error(`Check kind has no argv mapping: ${kind}`);
+  }
+  return rawEntry;
+}
+
+/**
+ * Return the required kinds without a passing record, in order, each with its reason. Throws for
+ * a kind the registry does not map. With stopAtFirst, the list holds at most one entry.
  */
 export function unpassedChecks(attempt, required, {
   rawChecks,
@@ -70,55 +121,39 @@ export function unpassedChecks(attempt, required, {
   requireCleanWorktree = true,
   snapshot = gitSnapshot(project),
 }) {
-  const results = [
-    ...(attempt.evidence?.verification || []),
-    ...(attempt.evidence?.security || []),
-  ];
   const unpassed = [];
   for (const kind of required) {
-    const rawEntry = rawChecks[kind];
-    if (rawEntry === undefined) {
-      throw new Error(`Unknown or unmapped check kind: ${kind}`);
-    }
-    if (!Array.isArray(rawEntry?.argv) || rawEntry.argv.length === 0) {
-      throw new Error(`Check kind has no argv mapping: ${kind}`);
-    }
-    if (!rawEntry.argv.every((part) => typeof part === 'string' && part.length > 0)) {
-      throw new Error(`Check kind has no argv mapping: ${kind}`);
-    }
-    const registryDigest = commandDigest(rawEntry.argv);
-
-    const candidates = results.filter((entry) => entry.kind === kind || entry.check === kind);
-    let passed = false;
-    let failureReason = null;
-    for (const record of candidates) {
-      try {
-        validateCheckRecord(record);
-      } catch (error) {
-        if (/exitCode/i.test(error.message)) {
-          failureReason = 'check record requires exitCode';
-        }
-        continue;
-      }
-      const verdict = recordValidity(record, {
-        project,
-        attemptId: attempt.id,
-        entry: { argv: rawEntry.argv, commandDigest: registryDigest, cwdPolicy: rawEntry.cwdPolicy, timeoutMs: rawEntry.timeoutMs, artifacts: rawEntry.artifacts || [] },
-        snapshot,
-        requireCleanWorktree,
-      });
-      if (verdict.valid) {
-        passed = true;
-        break;
-      }
-      failureReason = verdict.reason;
-    }
-    if (!passed) {
-      unpassed.push({ kind, reason: failureReason || `${MISSING_RECORD_PREFIX} ${kind}` });
+    const rawEntry = assertMappedKind(rawChecks, kind);
+    const verdict = evaluateCheckKind(attempt, kind, rawEntry, { project, snapshot, requireCleanWorktree });
+    if (!verdict.passed) {
+      unpassed.push({ kind, reason: verdict.reason });
       if (stopAtFirst) break;
     }
   }
   return unpassed;
+}
+
+/**
+ * Per-kind state for `verify status`, judged by the same rule as the gates.
+ */
+export function checkStates(attempt, required, {
+  rawChecks,
+  project,
+  requireCleanWorktree = true,
+  snapshot = gitSnapshot(project),
+}) {
+  return required.map((kind) => {
+    const rawEntry = rawChecks[kind];
+    if (rawEntry === undefined) {
+      return { kind, state: 'missing', reason: `Unknown or unmapped check kind: ${kind}` };
+    }
+    const verdict = evaluateCheckKind(attempt, kind, assertMappedKind(rawChecks, kind), {
+      project,
+      snapshot,
+      requireCleanWorktree,
+    });
+    return { kind, state: verdict.state, reason: verdict.reason };
+  });
 }
 
 /** Required kinds with their reasons when no record passes the current gate. Used by review handoff and review entry. */

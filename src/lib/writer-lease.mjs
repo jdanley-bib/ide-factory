@@ -15,6 +15,7 @@ const READ_ONLY = new Set([
   'doctor',
   'help',
   'attempt show',
+  'verify status',
   'setup detect',
   'init dry-run',
   'upgrade dry-run',

@@ -495,3 +495,81 @@ test('a changed check registry re-runs the run baseline', async () => {
     cleanup(markerDir);
   }
 });
+
+function treeSnapshot(dir, current = dir) {
+  const entries = [];
+  for (const name of fs.readdirSync(current).sort()) {
+    if (name === '.git') continue;
+    const full = path.join(current, name);
+    if (fs.statSync(full).isDirectory()) {
+      entries.push(...treeSnapshot(dir, full));
+    } else {
+      entries.push(`${path.relative(dir, full)}:${createHash('sha256').update(fs.readFileSync(full)).digest('hex')}`);
+    }
+  }
+  return entries;
+}
+
+async function statusOf(dir, attemptId) {
+  const result = await idefactory(dir, ['verify', 'status', attemptId, '--json']);
+  assert.equal(result.code, 0, result.err + result.out);
+  return JSON.parse(result.out);
+}
+
+test('verify status reports each state, exits zero, and changes nothing', async () => {
+  const { dir, attemptId } = await fixture();
+  try {
+    const before = await statusOf(dir, attemptId);
+    assert.equal(before.schemaVersion, 1);
+    assert.equal(before.allValid, false);
+    assert.deepEqual(before.checks.map((entry) => [entry.kind, entry.state]), [['unit', 'missing']]);
+
+    await passAt(dir, attemptId);
+    const valid = await statusOf(dir, attemptId);
+    assert.equal(valid.allValid, true);
+    assert.deepEqual(valid.checks.map((entry) => [entry.kind, entry.state, entry.reason]), [['unit', 'valid', null]]);
+
+    writeProduct(dir, 'src/app.txt', 'v3\n');
+    commitAll(dir, 'product change');
+    const stale = await statusOf(dir, attemptId);
+    assert.equal(stale.allValid, false);
+    assert.equal(stale.checks[0].state, 'stale');
+    assert.match(stale.checks[0].reason, /src\/app\.txt/);
+
+    const stored = getAttempt(dir, attemptId);
+    stored.evidence.verification[0].commandDigest = 'sha256:tampered';
+    fs.writeFileSync(path.join(dir, '.factory', 'attempts', `${attemptId}.json`), `${JSON.stringify(stored, null, 2)}\n`);
+    commitAll(dir, 'tamper');
+    const untrusted = await statusOf(dir, attemptId);
+    assert.equal(untrusted.checks[0].state, 'untrusted');
+
+    const before2 = treeSnapshot(dir);
+    const leaseBefore = fs.existsSync(path.join(dir, '.factory', 'orchestration', 'writer.lease'));
+    const text = await idefactory(dir, ['verify', 'status', attemptId]);
+    assert.equal(text.code, 0, text.err + text.out);
+    assert.match(text.out, /unit: untrusted/);
+    assert.match(text.out, /allValid: false/);
+    assert.deepEqual(treeSnapshot(dir), before2);
+    assert.equal(fs.existsSync(path.join(dir, '.factory', 'orchestration', 'writer.lease')), leaseBefore);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('verify status reports a failing newest record as failed', async () => {
+  const { dir, attemptId } = await fixture();
+  try {
+    writeRegistry(dir, {
+      schemaVersion: 1,
+      checks: { unit: { argv: [process.execPath, '-e', 'process.exit(3)'], cwdPolicy: 'project', timeoutMs: 30_000, artifacts: [] } },
+    });
+    commitAll(dir, 'failing check');
+    const run = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit']);
+    assert.equal(run.code, 0, run.err + run.out);
+    const status = await statusOf(dir, attemptId);
+    assert.equal(status.allValid, false);
+    assert.deepEqual(status.checks.map((entry) => [entry.kind, entry.state]), [['unit', 'failed']]);
+  } finally {
+    cleanup(dir);
+  }
+});

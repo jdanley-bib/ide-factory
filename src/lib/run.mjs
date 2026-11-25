@@ -17,6 +17,7 @@ import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mj
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
+import { renderVerifyStatusText, verifyStatus } from './verification-status.mjs';
 import { answerHelp } from './command-help.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
@@ -388,10 +389,17 @@ function handlePr(project, parsed, env, out) {
 }
 
 async function handleVerify(project, parsed, out) {
+  const sub = parsed.rest[0];
+  if (sub === 'status') {
+    const attemptId = parsed.rest[1] || (typeof parsed.flags.json === 'string' ? parsed.flags.json : '');
+    if (!attemptId) throw new Error('Usage: idefactory verify status <attemptId> [--json]');
+    const status = verifyStatus(project, attemptId);
+    out(parsed.flags.json ? `${JSON.stringify(status, null, 2)}\n` : renderVerifyStatusText(status));
+    return 0;
+  }
   if (halted(project)) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
-  const sub = parsed.rest[0];
   if (sub === 'run') {
     const attemptId = parsed.rest[1];
     const check = parsed.flags.check;
@@ -417,7 +425,8 @@ async function handleVerify(project, parsed, out) {
   }
   throw new Error(
     'Usage: idefactory verify run <attemptId> --check <kind> [--red]\n'
-    + '       idefactory verify import <attemptId> --file <path>',
+    + '       idefactory verify import <attemptId> --file <path>\n'
+    + '       idefactory verify status <attemptId> [--json]',
   );
 }
 
