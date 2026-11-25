@@ -5,7 +5,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from './attempt.mjs';
 import { appendControlEvent } from './event-log.mjs';
-import { classifyCheckOutcome, retryKey } from './red-evidence.mjs';
+import {
+  classifyCheckOutcome,
+  describeRedFailure,
+  redFailureDiagnostics,
+  retryKey,
+} from './red-evidence.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { halted, writeText } from './layout.mjs';
 
@@ -201,20 +206,35 @@ export async function verifyRun(project, attemptId, options = {}) {
     asRed,
   });
 
+  const logDigest = digestBytes(Buffer.concat([stdout, stderr]));
+
   if (asRed && classification !== 'assertion-failure') {
+    const diagnostics = redFailureDiagnostics({
+      kind,
+      classification,
+      timedOut,
+      timeoutMs: entry.timeoutMs,
+      startedAt,
+      finishedAt,
+      exitCode,
+      spawnError,
+      logDigest,
+      recordedAt: finishedAt,
+    });
+    const detail = describeRedFailure(diagnostics);
     const count = noteRetry(attempt, classification, kind);
+    attempt.evidence.redFailures = [...(attempt.evidence.redFailures || []), diagnostics];
     writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
     if (count >= 4) {
       closeLatestRunSession(project, attempt.change, 'retry-cap');
-      throw new Error(`retry-cap: ${classification} for ${kind}`);
+      throw new Error(`retry-cap: ${classification} for ${kind} (${detail})`);
     }
     if (classification === 'vacuous-red') {
       closeLatestRunSession(project, attempt.change, 'vacuous-red');
     }
-    throw new Error(`${classification}: red run did not record an assertion failure for ${kind}`);
+    throw new Error(`${classification}: red run did not record an assertion failure for ${kind} (${detail})`);
   }
 
-  const logDigest = digestBytes(Buffer.concat([stdout, stderr]));
   const { artifactDigests, allPresent } = hashArtifacts(project, entry.artifacts);
   const { sourceRevision, worktreeClean } = resolveGitBinding(project);
 

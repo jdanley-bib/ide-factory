@@ -7,6 +7,13 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { getAttempt } from '../src/lib/attempt.mjs';
+import { eventLogPath } from '../src/lib/event-log.mjs';
+import { hasAnyFailingRed, redForKind } from '../src/lib/red-evidence.mjs';
+import {
+  BUILTIN_RUN_BUDGETS,
+  createRunSession,
+  latestRunSession,
+} from '../src/lib/run-session.mjs';
 import {
   commandDigest,
   validateCheckRecord,
@@ -1141,6 +1148,167 @@ test('installed factory-verify names verify run and does not supply a pass boole
     assert.match(skill, /infrastructure-failure/);
     assert.doesNotMatch(skill, /passed"\s*:/);
     assert.doesNotMatch(skill, /pass boolean/i);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function unitRegistry(argv, timeoutMs = 30_000) {
+  return {
+    schemaVersion: 1,
+    checks: {
+      unit: { argv, cwdPolicy: 'project', timeoutMs, artifacts: [] },
+    },
+  };
+}
+
+async function redRunAttempt(dir, registry) {
+  const attempt = await seedAttempt(dir, registry);
+  const result = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+  return { attemptId: attempt.id, result, stored: getAttempt(dir, attempt.id) };
+}
+
+test('a timed-out red run records diagnostics and names its limit', async () => {
+  const dir = tempProject();
+  try {
+    const { result, stored } = await redRunAttempt(
+      dir,
+      unitRegistry([process.execPath, '-e', 'setTimeout(() => {}, 10000)'], 200),
+    );
+    assert.notEqual(result.code, 0);
+    assert.match(result.err, /infrastructure-failure: red run did not record an assertion failure for unit \(timed out after 200 ms, elapsed \d+ ms\)/);
+    assert.equal(stored.evidence.redFailures.length, 1);
+    const [entry] = stored.evidence.redFailures;
+    assert.equal(entry.kind, 'unit');
+    assert.equal(entry.classification, 'infrastructure-failure');
+    assert.equal(entry.timedOut, true);
+    assert.equal(entry.timeoutMs, 200);
+    assert.ok(entry.durationMs >= 200, `durationMs ${entry.durationMs}`);
+    assert.match(entry.logDigest, /^sha256:[0-9a-f]{64}$/);
+    assert.ok(entry.recordedAt);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a red run whose command cannot start records the spawn error code', async () => {
+  const dir = tempProject();
+  try {
+    const { result, stored } = await redRunAttempt(
+      dir,
+      unitRegistry(['definitely-missing-idefactory-bin']),
+    );
+    assert.notEqual(result.code, 0);
+    assert.match(result.err, /infrastructure-failure: .* \(spawn error ENOENT\)/);
+    const [entry] = stored.evidence.redFailures;
+    assert.equal(entry.spawnError, 'ENOENT');
+    assert.equal(entry.exitCode, null);
+    assert.equal(entry.timedOut, false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a red run that reports no tests records its exit code', async () => {
+  const dir = tempProject();
+  try {
+    const { result, stored } = await redRunAttempt(
+      dir,
+      unitRegistry([process.execPath, '-e', "console.error('no tests'); process.exit(1)"]),
+    );
+    assert.notEqual(result.code, 0);
+    assert.match(result.err, /infrastructure-failure: .* \(no tests reported, exit code 1\)/);
+    const [entry] = stored.evidence.redFailures;
+    assert.equal(entry.exitCode, 1);
+    assert.equal(entry.spawnError, null);
+    assert.equal(entry.timedOut, false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('non-assertion red failures never create a red record', async () => {
+  const dir = tempProject();
+  try {
+    const { stored } = await redRunAttempt(
+      dir,
+      unitRegistry([process.execPath, '-e', 'setTimeout(() => {}, 10000)'], 200),
+    );
+    assert.equal(stored.evidence.reds?.unit, undefined);
+    assert.equal(stored.evidence.red, null);
+    assert.equal(hasAnyFailingRed(stored), false);
+    assert.equal(redForKind(stored, 'unit'), null);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a fourth timed-out red run closes the run session with retry-cap and keeps the limit in the error', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(
+      dir,
+      unitRegistry([process.execPath, '-e', 'setTimeout(() => {}, 10000)'], 200),
+    );
+    createRunSession(dir, { change: 'demo', budgets: BUILTIN_RUN_BUDGETS });
+    for (let n = 1; n <= 3; n += 1) {
+      const stopped = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+      assert.notEqual(stopped.code, 0);
+      assert.match(stopped.err, /infrastructure-failure: .*timed out after 200 ms/);
+      assert.equal(latestRunSession(dir, 'demo').status, 'open');
+    }
+    const capped = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(capped.code, 0);
+    assert.match(capped.err, /retry-cap: infrastructure-failure for unit \(timed out after 200 ms, elapsed \d+ ms\)/);
+    const session = latestRunSession(dir, 'demo');
+    assert.equal(session.status, 'closed');
+    assert.equal(session.stopReason, 'retry-cap');
+    const stored = getAttempt(dir, attempt.id);
+    assert.equal(stored.evidence.retryCounts['infrastructure-failure:unit'], 4);
+    assert.equal(stored.evidence.redFailures.length, 4);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('raw check output never reaches the attempt, the error, or the control event log', async () => {
+  const dir = tempProject();
+  const SENTINEL = 'IDEFACTORY-SENTINEL-7f3a9c';
+  try {
+    const attempt = await seedAttempt(
+      dir,
+      unitRegistry([
+        process.execPath,
+        '-e',
+        `console.log('${SENTINEL}'); console.error('no tests ${SENTINEL}'); process.exit(1)`,
+      ]),
+    );
+    const result = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(result.code, 0);
+    assert.doesNotMatch(`${result.out}${result.err}`, new RegExp(SENTINEL));
+    const stored = getAttempt(dir, attempt.id);
+    assert.doesNotMatch(JSON.stringify(stored), new RegExp(SENTINEL));
+    const eventsFile = eventLogPath(dir);
+    const events = fs.existsSync(eventsFile) ? fs.readFileSync(eventsFile, 'utf8') : '';
+    assert.doesNotMatch(events, new RegExp(SENTINEL));
+    const [entry] = stored.evidence.redFailures;
+    assert.equal(entry.logDigest, sha256Digest(`${SENTINEL}\nno tests ${SENTINEL}\n`));
+    assert.match(entry.logDigest, /^sha256:[0-9a-f]{64}$/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an attempt without redFailures still records an assertion-failure red', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 1);
+    assert.equal(getAttempt(dir, attempt.id).evidence.redFailures, undefined);
+    const result = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.equal(result.code, 0, result.err + result.out);
+    const stored = getAttempt(dir, attempt.id);
+    assert.equal(stored.evidence.reds.unit.exitCode, 1);
+    assert.equal(stored.evidence.redFailures, undefined);
   } finally {
     cleanup(dir);
   }
