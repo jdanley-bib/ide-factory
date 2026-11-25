@@ -21,11 +21,11 @@
 
 ## 4. Reviewer and implementer guidance
 
-- [ ] 4.1 Add the reliance wording to `templates/commands/factory-review.md`, `templates/skills/factory-build/SKILL.md`, `templates/skills/factory-verify/SKILL.md`, and `templates/factory/agents/reviewer/charter.md`. Verify: `test/review-guidance.test.mjs` asserts each source template contains the reliance and re-run markers and none contains an unconditional "re-run every required check" phrase.
-- [ ] 4.2 Copy the changed skill and command files into the `.agents`, `.claude`, `.cline`, `.cursor`, and `.github` folders and run `node scripts/build-adapter-history.mjs`. Verify: the shipped-copy equality tests pass, `test/adapter-history.test.mjs` passes, and `test/adapter-ownership.test.mjs` shows the legacy review command is replaced and an edited copy is preserved.
-- [ ] 4.3 Confirm the charter change reaches only new installs. Verify: a fresh `init` writes a charter containing the reliance wording, and `upgrade` in a project with an existing charter leaves that file byte-identical.
+- [x] 4.1 Add the reliance wording to `templates/commands/factory-review.md`, `templates/skills/factory-build/SKILL.md`, `templates/skills/factory-verify/SKILL.md`, and `templates/factory/agents/reviewer/charter.md`. Verify: `test/review-guidance.test.mjs` asserts each source template contains the reliance and re-run markers and none contains an unconditional "re-run every required check" phrase.
+- [x] 4.2 Copy the changed skill and command files into the `.agents`, `.claude`, `.cline`, `.cursor`, and `.github` folders and run `node scripts/build-adapter-history.mjs`. Verify: the shipped-copy equality tests pass, `test/adapter-history.test.mjs` passes, and `test/adapter-ownership.test.mjs` shows the legacy review command is replaced and an edited copy is preserved.
+- [x] 4.3 Confirm the charter change reaches only new installs. Verify: a fresh `init` writes a charter containing the reliance wording, and `upgrade` in a project with an existing charter leaves that file byte-identical.
 
 ## 5. Documentation and checks
 
-- [ ] 5.1 Add `verify status` to the README command table, a short note on reuse and the stale reasons, and a one-time re-run note for upgraded projects. Verify: `test/readme-adapters.test.mjs` passes with new assertions that the README names `verify status`, `re-run verify`, and the run-state reuse rule.
-- [ ] 5.2 Run the full suite, the secret scan, and strict validation. Verify: `npm test`, `npm run secretlint`, and `openspec validate reusable-verification-evidence --strict` each exit 0.
+- [x] 5.1 Add `verify status` to the README command table, a short note on reuse and the stale reasons, and a one-time re-run note for upgraded projects. Verify: `test/readme-adapters.test.mjs` passes with new assertions that the README names `verify status`, `re-run verify`, and the run-state reuse rule.
+- [x] 5.2 Run the full suite, the secret scan, and strict validation. Verify: `npm test`, `npm run secretlint`, and `openspec validate reusable-verification-evidence --strict` each exit 0.
