@@ -12,6 +12,10 @@ Implement exactly one work item.
 
 <!-- idefactory:owned -->
 
+## Command help
+
+Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help attempt transition` lists the attempt states, the allowed transitions, the evidence keys, and what each state needs. Add `--json` for structured output. Do not read the CLI source to learn usage.
+
 ## Scope
 
 1. Run `idefactory next` or use the work item the human named.

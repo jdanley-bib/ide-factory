@@ -9,6 +9,10 @@ description: >
 
 <!-- idefactory:owned -->
 
+## Command help
+
+Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help approve` and `idefactory help lockout` list what those commands take. Add `--json` for structured output. Do not read the CLI source to learn usage.
+
 ## Pull requests
 
 The only legal pull-request steps are `idefactory pr open <change>`, `idefactory pr comment <attemptId>`, and `idefactory pr capture <change>`.

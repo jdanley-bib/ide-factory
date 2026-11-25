@@ -11,6 +11,8 @@ description: >
 
 The IDE session model does the work.
 
+Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help verify run` lists the check flags. Add `--json` for structured output. Do not read the CLI source to learn usage.
+
 1. Restate the backlog acceptance criterion as one observable behavior.
 2. Write a failing test that fails because the behavior is missing, not because the test is broken.
 3. Run `idefactory verify run <attemptId> --check <kind> --red` and read the failure. Stop if the command names `vacuous-red` or `infrastructure-failure`.

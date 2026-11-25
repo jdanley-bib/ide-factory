@@ -11,6 +11,8 @@ description: >
 
 The IDE session model does the work.
 
+Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help verify run` lists the check flags. Add `--json` for structured output. Do not read the CLI source to learn usage.
+
 1. Read the work item `verificationProfile` and `checks` from the packet or `.factory/work/items/`.
 2. Map each required check to a project command (unit, build, playwright, docs, etc.).
 3. Run each command in the project. Do not describe a run you did not start.
