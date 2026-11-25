@@ -12,6 +12,10 @@ Human-started bounded orchestration for one OpenSpec change.
 
 <!-- idefactory:owned -->
 
+## Command help
+
+Run `idefactory help <command>` for a command's usage, flags, and examples. `idefactory help run` lists the run flags, and `idefactory help attempt transition` lists the attempt states and evidence keys. Add `--json` for structured output. Do not read the CLI source to learn usage.
+
 ## Loop
 
 1. If `HALT` exists, stop.
