@@ -1,9 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './layout.mjs';
-import { commandDigest, resolveGitBinding, validateCheckRecord } from './verification-evidence.mjs';
+import {
+  commandDigest,
+  gitSnapshot,
+  recordValidity,
+  validateCheckRecord,
+} from './verification-evidence.mjs';
 
 const DEFAULT_PROFILE = 'frontend-low';
+export const MISSING_RECORD_PREFIX = 'Missing passing check evidence for:';
 
 export function readProfiles(project) {
   const file = path.join(project, '.factory', 'profiles.json');
@@ -57,7 +63,13 @@ export function readCheckRegistry(project) {
  * Return the required kinds without a passing attestation, in order. Throws for a kind the
  * registry does not map. With stopAtFirst, the list holds at most one entry.
  */
-export function unpassedChecks(attempt, required, { rawChecks, headSha, stopAtFirst = false }) {
+export function unpassedChecks(attempt, required, {
+  rawChecks,
+  project,
+  stopAtFirst = false,
+  requireCleanWorktree = true,
+  snapshot = gitSnapshot(project),
+}) {
   const results = [
     ...(attempt.evidence?.verification || []),
     ...(attempt.evidence?.security || []),
@@ -84,35 +96,40 @@ export function unpassedChecks(attempt, required, { rawChecks, headSha, stopAtFi
         validateCheckRecord(record);
       } catch (error) {
         if (/exitCode/i.test(error.message)) {
-          failureReason = failureReason || 'check record requires exitCode';
+          failureReason = 'check record requires exitCode';
         }
         continue;
       }
-      const reason = attestationFailureReason(record, {
+      const verdict = recordValidity(record, {
+        project,
         attemptId: attempt.id,
-        registryDigest,
-        headSha,
+        entry: { argv: rawEntry.argv, commandDigest: registryDigest, cwdPolicy: rawEntry.cwdPolicy, timeoutMs: rawEntry.timeoutMs, artifacts: rawEntry.artifacts || [] },
+        snapshot,
+        requireCleanWorktree,
       });
-      if (!reason) {
+      if (verdict.valid) {
         passed = true;
         break;
       }
-      failureReason = failureReason || reason;
+      failureReason = verdict.reason;
     }
     if (!passed) {
-      unpassed.push({ kind, reason: failureReason || `Missing passing check evidence for: ${kind}` });
+      unpassed.push({ kind, reason: failureReason || `${MISSING_RECORD_PREFIX} ${kind}` });
       if (stopAtFirst) break;
     }
   }
   return unpassed;
 }
 
-/** Required kinds with no passing record at the current HEAD. Used by review handoff and review entry. */
-export function missingChecks(project, attempt, item) {
+/** Required kinds with their reasons when no record passes the current gate. Used by review handoff and review entry. */
+export function missingCheckReasons(project, attempt, item) {
   const required = requiredChecksFor(project, item);
   const rawChecks = readCheckRegistry(project);
-  const { sourceRevision: headSha } = resolveGitBinding(project);
-  return unpassedChecks(attempt, required, { rawChecks, headSha }).map((entry) => entry.kind);
+  return unpassedChecks(attempt, required, { rawChecks, project });
+}
+
+export function missingChecks(project, attempt, item) {
+  return missingCheckReasons(project, attempt, item).map((entry) => entry.kind);
 }
 
 /**

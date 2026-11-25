@@ -4,7 +4,9 @@ import { readText, writeText } from './layout.mjs';
 import { readPolicyVersion } from './principal.mjs';
 import {
   commandDigest,
+  gitSnapshot,
   isSecurityPatternedCheck,
+  recordValidity,
   resolveGitBinding,
   validateCheckRecord,
 } from './verification-evidence.mjs';
@@ -299,8 +301,8 @@ export function assertPassingCliSecurityEvidence(project, attempt, item) {
     ? rawRegistry.checks
     : {};
 
-  const { sourceRevision: headSha, worktreeClean } = resolveGitBinding(project);
-  if (!worktreeClean || !headSha) {
+  const snapshot = gitSnapshot(project);
+  if (!snapshot.worktreeClean || !snapshot.head) {
     throw new Error('security evidence requires a clean git worktree at the current HEAD');
   }
 
@@ -333,10 +335,15 @@ export function assertPassingCliSecurityEvidence(project, attempt, item) {
       } catch {
         continue;
       }
-      const reason = cliSecurityFailureReason(record, {
+      const reason = securityRecordReason(record, {
+        project,
         attemptId: attempt.id,
         registryDigest,
-        headSha,
+        argv: rawEntry.argv,
+        cwdPolicy: rawEntry.cwdPolicy,
+        timeoutMs: rawEntry.timeoutMs,
+        artifacts: rawEntry.artifacts || [],
+        snapshot,
       });
       if (!reason) {
         passed = true;
@@ -350,29 +357,21 @@ export function assertPassingCliSecurityEvidence(project, attempt, item) {
   }
 }
 
-function cliSecurityFailureReason(record, { attemptId, registryDigest, headSha }) {
-  if (record.issuer !== 'cli') {
-    return 'security evidence requires issuer cli';
-  }
-  if (record.exitCode !== 0) {
-    return `security attestation exit code must be 0 for: ${record.kind || 'check'}`;
-  }
-  if (record.timedOut !== false) {
-    return 'security attestation must not be timedOut';
-  }
-  if (record.passed !== true) {
-    return `security attestation must be a pass for: ${record.kind || 'check'}`;
-  }
-  if (record.commandDigest !== registryDigest) {
-    return 'security attestation commandDigest does not match current registry argv';
-  }
-  if (record.attemptId !== attemptId) {
-    return 'security attestation attemptId does not match attempt';
-  }
-  if (record.sourceRevision !== headSha) {
-    return 'security attestation sourceRevision does not match current clean HEAD';
-  }
-  return null;
+function securityRecordReason(record, context) {
+  if (record.issuer !== 'cli') return 'security evidence requires issuer cli';
+  const verdict = recordValidity(record, {
+    project: context.project,
+    attemptId: context.attemptId,
+    entry: {
+      argv: context.argv,
+      commandDigest: context.registryDigest,
+      cwdPolicy: context.cwdPolicy,
+      timeoutMs: context.timeoutMs,
+      artifacts: context.artifacts,
+    },
+    snapshot: context.snapshot,
+  });
+  return verdict.valid ? null : verdict.reason;
 }
 
 function recordsMatch(a, b) {
