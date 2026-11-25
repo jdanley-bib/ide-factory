@@ -182,7 +182,12 @@ function assertChecksPassed(project, attempt, required, options = {}) {
     throw new Error('finalization journal source revision mismatch');
   }
 
-  const [failure] = unpassedChecks(attempt, required, { rawChecks, headSha, stopAtFirst: true });
+  const [failure] = unpassedChecks(attempt, required, {
+    rawChecks,
+    project,
+    stopAtFirst: true,
+    requireCleanWorktree: !options.allowDirtyWorktree,
+  });
   if (failure) {
     throw new Error(failure.reason);
   }

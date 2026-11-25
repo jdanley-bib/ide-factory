@@ -14,7 +14,7 @@ import {
 import { getWorkItem, updateWorkItem } from './work.mjs';
 import { hasAnyFailingRed, requiredTestKinds, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
-import { missingChecks } from './required-checks.mjs';
+import { MISSING_RECORD_PREFIX, missingCheckReasons } from './required-checks.mjs';
 
 export const ATTEMPT_STATES = [
   'planned',
@@ -271,9 +271,14 @@ function validateEvidence(project, attempt, nextState, evidence) {
     && (attempt.state === 'verifying' || attempt.state === 'security-checking')
   ) {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
-    const missing = item ? missingChecks(project, attempt, item) : [];
+    const missing = item ? missingCheckReasons(project, attempt, item) : [];
     if (missing.length) {
-      throw new Error(`awaiting-review requires passing check evidence for: ${missing.join(', ')}`);
+      const named = missing.map((entry) => entry.kind).join(', ');
+      const reasons = missing
+        .filter((entry) => !entry.reason.startsWith(MISSING_RECORD_PREFIX))
+        .map((entry) => `${entry.kind}: ${entry.reason}`);
+      const detail = reasons.length ? ` (${reasons.join('; ')})` : '';
+      throw new Error(`awaiting-review requires passing check evidence for: ${named}${detail}`);
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {

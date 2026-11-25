@@ -154,6 +154,14 @@ Mutating commands take a single writer lease at `.factory/orchestration/writer.l
 
 `idefactory verify run <attemptId> --check <kind>` stores the check result from the registry command. Completion does not accept a pass/fail flag supplied on the transition.
 
+### Reusing passing checks
+
+A passing `verify run` record stays valid across commits that change only factory run-state, such as attempts, the work queue, observability, and orchestration files under `.factory/`. Any other change since the record makes it stale, and the reason names the first changed path. A changed registry entry, timeout, or `.factory/checks.json` also makes it stale. Review handoff, `complete`, and the security gate use this one rule.
+
+`idefactory verify status <attemptId>` shows each required check as `valid`, `stale`, `missing`, `failed`, or `untrusted`, with the reason. Add `--json` for one document with `schemaVersion` 1 and `allValid`. It is read-only and exits zero even when a check is not valid.
+
+Records written before this release carry no reuse fingerprint, so they are stale with the reason `re-run verify`. After upgrading, run `idefactory verify run <attemptId> --check <kind>` once for each check that is stale.
+
 ### Transition evidence
 
 `idefactory attempt transition <attemptId> <state>` takes its evidence JSON from one of two flags. Give only one.
@@ -235,6 +243,7 @@ flowchart TD
 | `idefactory run` | Resume the persisted run and print the next request or stop reason |
 | `idefactory attempt …` | Start, transition, or show an execution attempt |
 | `idefactory verify run` | Run a registered check and store CLI evidence |
+| `idefactory verify status` | Report each required check as valid, stale, missing, failed, or untrusted. Read-only |
 | `idefactory red reuse` / `waive` | Record an audited red exception for a verification-only retry. Does not write a red |
 | `idefactory complete` | Journal the finalization and mark an accepted attempt done |
 | `idefactory approve` / `reject` | Record a human decision. Does not publish or spend |

@@ -36,7 +36,7 @@ If a skill named `test-driven-development` is installed, follow that skill for t
 
 Where the packet's `Red required for` line lists kinds, record a failing red for each, or use a red exception as described below, then implement until green. Read the packet's Prior rejections section and address every note before asking for review again.
 
-Run verification profile checks before claiming done. Follow `factory-verify`.
+Run verification profile checks before claiming done. Follow `factory-verify`. Run `idefactory verify status <attemptId>` first: a `valid` check is reused and is not re-run.
 
 If the command fails, follow `systematic-debugging` when that skill is installed, otherwise `factory-debug`.
 
@@ -53,7 +53,7 @@ Neither command claims a red ran. The record names the approver and reason, and 
 
 Review is a different role: the reviewer. The implementer does not approve their own work.
 
-Spawn a reviewer subagent with only the reviewer charter. The reviewer accepts only when the recorded evidence satisfies the work item: every required verification check has a passing CLI record on the current clean HEAD, and, for a `code` item whose checks include a test kind, each such kind has a recorded failing red or a valid red exception that a human authorized. A red exception is not a red that ran, and the reviewer does not ask for a new failing test where one is recorded. A `lightweight` item, and a `code` item with no test check, need no failing test. Rejection uses `idefactory lockout`.
+Spawn a reviewer subagent with only the reviewer charter. The reviewer accepts only when the recorded evidence satisfies the work item: every required verification check is `valid` in `idefactory verify status <attemptId>` (a passing CLI record that still holds at the current clean HEAD, where only factory run-state has changed since), and, for a `code` item whose checks include a test kind, each such kind has a recorded failing red or a valid red exception that a human authorized. A red exception is not a red that ran, and the reviewer does not ask for a new failing test where one is recorded. The reviewer relies on `valid` checks and asks for `idefactory verify run` only for a check that is `stale`, `missing`, `failed`, or `untrusted`, or whose reason says `re-run verify`. Reliance does not replace review: still review the change independently, and run a focused check yourself when the change warrants it. A `lightweight` item, and a `code` item with no test check, need no failing test. Rejection uses `idefactory lockout`.
 
 Transition the attempt to accepted or rejected with distinct implementerId and reviewerId.
 

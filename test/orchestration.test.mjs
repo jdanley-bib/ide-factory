@@ -891,7 +891,7 @@ test('complete refuses source revision other than current clean HEAD', async () 
     const record = stored.evidence.verification.find((entry) => entry.kind === 'unit');
     assert.ok(record);
     assert.notEqual(record.sourceRevision, head);
-    await assertCompleteLeavesUnfinished(dir, attempt.id, /sourceRevision|revision|HEAD/i);
+    await assertCompleteLeavesUnfinished(dir, attempt.id, /changed since the record|sourceRevision|revision|HEAD/i);
   } finally {
     cleanup(dir);
   }

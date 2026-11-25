@@ -26,7 +26,12 @@ import { classifyCheckOutcome, isRequiredTestKind, requiredTestKinds, retryKey }
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
 import { humanGateAllows } from './risk-gates.mjs';
 import { missingChecks } from './required-checks.mjs';
-import { resolveGitBinding, validateCheckRegistry } from './verification-evidence.mjs';
+import {
+  gitSnapshot,
+  registrySetDigest,
+  revisionReuse,
+  validateCheckRegistry,
+} from './verification-evidence.mjs';
 import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
@@ -619,13 +624,15 @@ function readConfig(project) {
 function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
   const mapped = mappedTestChecks(project);
   if (mapped.length === 0) return { session, stop: null };
-  const { sourceRevision } = resolveGitBinding(project);
-  const revision = sourceRevision || '';
+  const snapshot = gitSnapshot(project);
+  const revision = snapshot.head || '';
+  const configDigest = registrySetDigest(mapped);
   const current = session.testBaseline;
   if (
     current
-    && current.sourceRevision === revision
     && (current.result === 'passed' || current.result === 'accepted')
+    && current.configDigest === configDigest
+    && revisionReuse(project, current.sourceRevision, snapshot).valid
   ) {
     return { session, stop: null };
   }
@@ -641,7 +648,7 @@ function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
         return {
           session: writeRunSession(project, {
             ...session,
-            testBaseline: { sourceRevision: revision, result: 'accepted' },
+            testBaseline: { sourceRevision: revision, configDigest, result: 'accepted' },
           }),
           stop: null,
         };
@@ -653,7 +660,7 @@ function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
   return {
     session: writeRunSession(project, {
       ...session,
-      testBaseline: { sourceRevision: revision, result: 'passed' },
+      testBaseline: { sourceRevision: revision, configDigest, result: 'passed' },
     }),
     stop: null,
   };

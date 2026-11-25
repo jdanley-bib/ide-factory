@@ -246,8 +246,8 @@ export const COMMANDS = [
   }),
   group(
     ['verify'],
-    'Run a registered check or import signed check evidence.',
-    'idefactory verify run|import ...',
+    'Run a registered check, import signed check evidence, or report check states.',
+    'idefactory verify run|import|status ...',
   ),
   leaf(
     ['verify', 'run'],
@@ -277,6 +277,17 @@ export const COMMANDS = [
         PATH_FLAG,
       ],
       examples: ['idefactory verify import <attemptId> --file evidence.json'],
+    },
+  ),
+  leaf(
+    ['verify', 'status'],
+    'Report the state of each required check for an attempt. Read-only; exits zero even when a check is not valid.',
+    'idefactory verify status <attemptId> [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [ATTEMPT_ARG],
+      flags: [JSON_FLAG('Print one JSON document with schemaVersion, allValid, and one entry per check.'), PATH_FLAG],
+      examples: ['idefactory verify status <attemptId>', 'idefactory verify status <attemptId> --json'],
     },
   ),
   group(
