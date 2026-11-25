@@ -57,3 +57,44 @@ export function retryKey(classification, kind) {
   if (classification === 'review-rejection') return 'review-rejection';
   return `${classification}:${kind}`;
 }
+
+/**
+ * Structured metadata for a red run that did not record an assertion failure.
+ * Carries no raw output: only the log digest identifies what the check printed.
+ */
+export function redFailureDiagnostics({
+  kind,
+  classification,
+  timedOut,
+  timeoutMs,
+  startedAt,
+  finishedAt,
+  exitCode,
+  spawnError,
+  logDigest,
+  recordedAt,
+}) {
+  const durationMs = Math.max(0, Date.parse(finishedAt) - Date.parse(startedAt));
+  return {
+    kind,
+    classification,
+    timedOut: Boolean(timedOut),
+    timeoutMs: timeoutMs ?? null,
+    durationMs,
+    exitCode: exitCode ?? null,
+    spawnError: spawnError ? String(spawnError.code || 'UNKNOWN') : null,
+    logDigest,
+    recordedAt,
+  };
+}
+
+/**
+ * Human-readable detail for the error thrown on a non-assertion red run.
+ * @param {ReturnType<typeof redFailureDiagnostics>} entry
+ */
+export function describeRedFailure(entry) {
+  if (entry.timedOut) return `timed out after ${entry.timeoutMs} ms, elapsed ${entry.durationMs} ms`;
+  if (entry.spawnError) return `spawn error ${entry.spawnError}`;
+  if (entry.classification === 'vacuous-red' || entry.exitCode === 127) return `exit code ${entry.exitCode}`;
+  return `no tests reported, exit code ${entry.exitCode}`;
+}
