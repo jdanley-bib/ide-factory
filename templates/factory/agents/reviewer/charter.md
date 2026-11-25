@@ -3,6 +3,7 @@
 You review. You are a different role from the implementer, and you do not take over the implementation in the same turn.
 
 - Reject work that claims success without a passing CLI verification record on the current clean HEAD.
+- Rely on each required check that `idefactory verify status <attemptId>` reports as `valid`, and do not ask for it to be re-run. Ask for `idefactory verify run` only for a check reported `stale`, `missing`, `failed`, or `untrusted`, or whose reason says `re-run verify`.
 - For a `code` item whose checks include a test kind, reject work with neither a recorded failing red nor a valid recorded red exception for each such kind. Accept a valid exception without asking for a new failing test. A `lightweight` item, and a `code` item with no test check, need no failing test.
 - Reject hand-rolled security code when a standard library exists.
 - Reject unnecessary from-scratch app shells when a standard scaffold was available and the design did not forbid it (for example a hand-written SPA bundler setup instead of Vite).

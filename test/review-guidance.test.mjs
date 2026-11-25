@@ -25,6 +25,15 @@ const BUILD_SKILL_PATHS = [
   '.cline/skills/factory-build/SKILL.md',
 ];
 
+const VERIFY_SKILL_PATHS = [
+  'templates/skills/factory-verify/SKILL.md',
+  '.cursor/skills/factory-verify/SKILL.md',
+  '.claude/skills/factory-verify/SKILL.md',
+  '.github/skills/factory-verify/SKILL.md',
+  '.agents/skills/factory-verify/SKILL.md',
+  '.cline/skills/factory-verify/SKILL.md',
+];
+
 const FORBIDDEN = [
   /Accept only if a failing test was written first/i,
   /Acceptance requires red evidence and verification evidence/i,
@@ -211,6 +220,60 @@ test('a recorded waiver shows in the reviewer packet and the fresh review comman
     const command = read(dir, '.cursor/commands/factory-review.md');
     assert.match(command, /valid red exception that a human authorized/);
     assert.match(command, /Do not ask for a new failing test where one is recorded/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+const RELIANCE_MARKERS = [
+  [/idefactory verify status/, 'verify status'],
+  [/`valid`/, 'valid state'],
+  [/re-run verify/, 're-run verify reason'],
+];
+const UNCONDITIONAL_RERUN = /re-run every required check/i;
+
+test('every source and shipped copy of the reliance guidance names verify status and the re-run cases', async () => {
+  const sources = [
+    'templates/commands/factory-review.md',
+    'templates/skills/factory-build/SKILL.md',
+    'templates/skills/factory-verify/SKILL.md',
+    'templates/factory/agents/reviewer/charter.md',
+  ];
+  for (const rel of sources) {
+    const text = read(repoRoot, rel);
+    for (const [pattern, name] of RELIANCE_MARKERS) {
+      assert.match(text, pattern, `${rel} must state: ${name}`);
+    }
+    assert.doesNotMatch(text, UNCONDITIONAL_RERUN, `${rel} must not re-run every check`);
+  }
+  const shipped = [
+    ...REVIEW_COMMAND_PATHS,
+    ...BUILD_SKILL_PATHS,
+    ...VERIFY_SKILL_PATHS,
+  ];
+  for (const rel of shipped) {
+    const text = read(repoRoot, rel);
+    for (const [pattern, name] of RELIANCE_MARKERS) {
+      assert.match(text, pattern, `${rel} must state: ${name}`);
+    }
+    assert.doesNotMatch(text, UNCONDITIONAL_RERUN, `${rel} must not re-run every check`);
+  }
+});
+
+test('a fresh init carries the reliance charter and an upgrade leaves an existing charter byte-identical', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const charter = read(dir, '.factory/agents/reviewer/charter.md');
+    assert.match(charter, /idefactory verify status/);
+    assert.match(charter, /re-run verify/);
+
+    const file = path.join(dir, '.factory/agents/reviewer/charter.md');
+    const custom = '# Reviewer\n\nProject-specific charter.\n';
+    fs.writeFileSync(file, custom);
+    const upgraded = await idefactory(dir, ['upgrade']);
+    assert.ok(upgraded.code === 0 || upgraded.code === 3, upgraded.err + upgraded.out);
+    assert.equal(fs.readFileSync(file, 'utf8'), custom);
   } finally {
     cleanup(dir);
   }
