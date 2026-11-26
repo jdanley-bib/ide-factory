@@ -154,9 +154,17 @@ export function readBoundException(project, attempt, kind) {
  * @returns {'cli'|'reuse'|'waiver'|'missing'}
  */
 export function redSatisfaction(project, attempt, kind) {
-  if (isFailingRed(redForKind(attempt, kind))) return 'cli';
   const record = readBoundException(project, attempt, kind);
+  if (record?.invalidRed) {
+    const red = redForKind(attempt, kind);
+    return isFailingRed(red) && redDigestOf(red) === record.invalidRed.redDigest ? 'waiver' : 'missing';
+  }
+  if (isFailingRed(redForKind(attempt, kind))) return 'cli';
   return record ? record.type : 'missing';
+}
+
+function redDigestOf(red) {
+  return digestText(canonicalJson(red));
 }
 
 const PRE_VERIFYING_STATES = ['planned', 'assigned', 'implementing', 'red-confirmed'];
@@ -298,7 +306,7 @@ export function reuseRed(project, options) {
       throw new Error(`attempt already has an exception for ${kind}`);
     }
     const red = redForKind(source, kind);
-    if (!isFailingRed(red) || red.attemptId !== source.id) {
+    if (redSatisfaction(project, source, kind) !== 'cli' || red.attemptId !== source.id) {
       throw new Error(`source attempt has no failing CLI red for ${kind}`);
     }
     try {
@@ -380,6 +388,15 @@ export function waiverWarning(kinds) {
   ].join(' ');
 }
 
+export function invalidRedWarning(kinds) {
+  return [
+    `A failing red is stored for ${kinds.join(', ')}, and an invalid-red waiver is requested.`,
+    'The red is treated as recorded after implementation and does not satisfy red.',
+    'The waiver does not replace passing verification, distinct review, or lockouts.',
+    'To proceed, repeat the command with --acknowledge-not-stuck.',
+  ].join(' ');
+}
+
 function isStuck(attempt, kind) {
   return (attempt.evidence?.retryCounts?.[retryKey('vacuous-red', kind)] || 0) >= 1;
 }
@@ -404,6 +421,11 @@ export function waiveRed(project, options) {
   const kinds = [...new Set(options.kinds || [])];
   if (kinds.length === 0) throw new Error('waive requires at least one --kind');
   const reason = requireText(options.reason, 'reason');
+  const invalidRedGiven = options.invalidRed !== undefined;
+  if (invalidRedGiven && (typeof options.invalidRed !== 'string' || options.invalidRed.trim() === '')) {
+    throw new Error('--invalid-red needs a reason');
+  }
+  const invalidRedReason = invalidRedGiven ? options.invalidRed.trim() : '';
   const target = getAttempt(project, options.targetAttemptId);
   if (!target) throw new Error(`Attempt not found: ${options.targetAttemptId}`);
 
@@ -415,9 +437,25 @@ export function waiveRed(project, options) {
     }
   }
 
-  const notStuck = kinds.filter((kind) => !isStuck(target, kind));
-  if (notStuck.length > 0 && !options.acknowledgeNotStuck) {
-    throw new Error(waiverWarning(notStuck));
+  if (invalidRedGiven) {
+    const withoutRed = kinds.filter((kind) => !isFailingRed(redForKind(target, kind)));
+    if (withoutRed.length > 0) {
+      throw new Error(`--invalid-red needs a failing CLI red stored on this attempt for: ${withoutRed.join(', ')}`);
+    }
+    if (!options.acknowledgeNotStuck) throw new Error(invalidRedWarning(kinds));
+  } else {
+    const withRed = kinds.filter((kind) => isFailingRed(redForKind(target, kind)));
+    if (withRed.length > 0) {
+      const red = redForKind(target, withRed[0]);
+      throw new Error(
+        `a failing CLI red is stored for ${withRed.join(', ')} (exit ${red.exitCode}, started ${red.startedAt}); `
+        + 'if that red was recorded after implementation, invalidate it with --invalid-red "<reason>" and --acknowledge-not-stuck',
+      );
+    }
+    const notStuck = kinds.filter((kind) => !isStuck(target, kind));
+    if (notStuck.length > 0 && !options.acknowledgeNotStuck) {
+      throw new Error(waiverWarning(notStuck));
+    }
   }
 
   const { sourceRevision: headSha } = resolveGitBinding(project);
@@ -443,8 +481,15 @@ export function waiveRed(project, options) {
       policyVersion,
       sourceRevision: headSha,
       ...(principal ? { principal } : {}),
-      noRedExists: true,
+      noRedExists: !invalidRedGiven,
       acknowledgedNotStuck: !isStuck(target, kind),
+      ...(invalidRedGiven ? {
+        invalidRed: {
+          kind,
+          reason: invalidRedReason,
+          redDigest: redDigestOf(redForKind(target, kind)),
+        },
+      } : {}),
     };
     const bound = bindRedException(project, target.id, record);
     records.push(record);
@@ -471,9 +516,13 @@ export function listAttemptExceptions(project, attempt) {
       kind: record.kind,
       approver: record.approver,
       reason: record.reason,
-      noRedRan: true,
+      noRedRan: !record.invalidRed,
       ...(record.type === 'reuse' ? { sourceAttemptId: record.source?.attemptId ?? null } : {}),
       ...(record.type === 'waiver' ? { acknowledgedNotStuck: record.acknowledgedNotStuck === true } : {}),
+      ...(record.invalidRed ? {
+        invalidRedDigest: record.invalidRed.redDigest,
+        invalidRedReason: record.invalidRed.reason,
+      } : {}),
     });
   }
   return rows;
@@ -504,6 +553,13 @@ export function listAllExceptions(project) {
  */
 export function describeException(row, { withReason = true } = {}) {
   const why = withReason ? `: ${row.reason}` : ` (reason on record ${row.id})`;
+  if (row.invalidRedDigest) {
+    const invalid = withReason
+      ? `: ${row.invalidRedReason}`
+      : ` (invalid-red reason on record ${row.id})`;
+    return `A red ran for ${row.kind} on attempt ${row.attemptId} and was invalidated by ${row.approver}${invalid}; `
+      + `the stored red (digest ${row.invalidRedDigest}) does not satisfy red`;
+  }
   const how = row.type === 'reuse'
     ? `reuse of attempt ${row.sourceAttemptId} red by ${row.approver}${why}`
     : `waiver by ${row.approver}${why}${

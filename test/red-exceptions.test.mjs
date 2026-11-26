@@ -6,15 +6,19 @@ import { test } from 'node:test';
 import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
 import {
   bindRedException,
+  describeException,
   exceptionFilePath,
+  listAllExceptions,
+  listAttemptExceptions,
   redSatisfaction,
   reuseRed,
   waiveRed,
   WAIVER_WARNING_SENTENCE,
 } from '../src/lib/red-exceptions.mjs';
 import { renderWorkPacket } from '../src/lib/queue.mjs';
-import { resolveGitBinding } from '../src/lib/verification-evidence.mjs';
+import { canonicalJson, resolveGitBinding } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
+import { createHash } from 'node:crypto';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
 function writeRegistry(dir, exitCode) {
@@ -1487,5 +1491,271 @@ test('issue 27: an early waiver is refused with the warning until the human ackn
     assert.equal(stored.evidence.redExceptions.unit.type, 'waiver');
   } finally {
     cleanup(dir);
+  }
+});
+
+const POST_HOC_REASON = 'recorded after implementing; red written once the code existed';
+
+async function postHocRed(dir, { exitCode = 1 } = {}) {
+  const started = await seedAttempt(dir);
+  writeRegistry(dir, exitCode);
+  ensureCleanGitCommit(dir);
+  await toImplementing(dir, started.id);
+  const red = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
+  assert.equal(red.code, 0, red.err + red.out);
+  return getAttempt(dir, started.id);
+}
+
+function redDigest(attempt, kind = 'unit') {
+  return `sha256:${createHash('sha256').update(canonicalJson(attempt.evidence.reds[kind]), 'utf8').digest('hex')}`;
+}
+
+test('an invalid-red waiver binds the stored red digest and keeps the red unchanged', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    const redBefore = fileBytes(attemptPath(dir, attempt.id));
+    const result = waiveRed(dir, waiveOptions(attempt, {
+      invalidRed: POST_HOC_REASON,
+      acknowledgeNotStuck: true,
+    }));
+    const record = JSON.parse(fs.readFileSync(result.files[0], 'utf8'));
+    assert.equal(record.type, 'waiver');
+    assert.equal(record.noRedExists, false);
+    assert.equal(record.invalidRed.kind, 'unit');
+    assert.equal(record.invalidRed.reason, POST_HOC_REASON);
+    assert.equal(record.invalidRed.redDigest, redDigest(attempt));
+    const stored = getAttempt(dir, attempt.id);
+    assert.equal(stored.evidence.reds.unit.exitCode, 1);
+    assert.equal(redSatisfaction(dir, stored, 'unit'), 'waiver');
+    assert.notEqual(fileBytes(attemptPath(dir, attempt.id)), redBefore);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a waiver without --invalid-red is refused over a stored failing red and records nothing', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    const before = fileBytes(attemptPath(dir, attempt.id));
+    assert.throws(
+      () => waiveRed(dir, waiveOptions(attempt, { acknowledgeNotStuck: true })),
+      (error) => /failing CLI red is stored for unit/.test(error.message)
+        && error.message.includes('--invalid-red'),
+    );
+    assert.equal(fileBytes(attemptPath(dir, attempt.id)), before);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/exceptions/red')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an invalid-red waiver needs a stored failing red and the acknowledgment', async () => {
+  const dir = tempProject();
+  try {
+    const stuck = await stuckAttempt(dir);
+    assert.throws(
+      () => waiveRed(dir, waiveOptions(stuck, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true })),
+      /--invalid-red needs a failing CLI red stored on this attempt for: unit/,
+    );
+
+    const attempt = await postHocRed(dir);
+    const before = fileBytes(attemptPath(dir, attempt.id));
+    assert.throws(
+      () => waiveRed(dir, waiveOptions(attempt, { invalidRed: POST_HOC_REASON })),
+      (error) => error.message.includes(WAIVER_WARNING_SENTENCE) === false
+        && error.message.includes('--acknowledge-not-stuck'),
+    );
+    assert.equal(fileBytes(attemptPath(dir, attempt.id)), before);
+    assert.equal(fs.existsSync(path.join(dir, '.factory/exceptions/red')), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a bare --invalid-red with no reason is refused and names the flag', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    const before = fileBytes(attemptPath(dir, attempt.id));
+    assert.throws(
+      () => waiveRed(dir, waiveOptions(attempt, { invalidRed: true, acknowledgeNotStuck: true })),
+      /--invalid-red needs a reason/,
+    );
+    const cli = await idefactory(dir, [
+      'red', 'waive', attempt.id, '--kind', 'unit', '--note', 'x', '--approver', 'human-1',
+      '--invalid-red', '--acknowledge-not-stuck',
+    ]);
+    assert.notEqual(cli.code, 0);
+    assert.match(cli.err, /--invalid-red needs a reason/);
+    assert.equal(fileBytes(attemptPath(dir, attempt.id)), before);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an edited red no longer matches the invalid-red waiver digest', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    waiveRed(dir, waiveOptions(attempt, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true }));
+    const file = attemptPath(dir, attempt.id);
+    const edited = JSON.parse(fs.readFileSync(file, 'utf8'));
+    edited.evidence.reds.unit.exitCode = 2;
+    fs.writeFileSync(file, `${JSON.stringify(edited, null, 2)}\n`);
+    assert.equal(redSatisfaction(dir, getAttempt(dir, attempt.id), 'unit'), 'missing');
+    const blocked = await transition(dir, attempt.id, 'verifying');
+    assert.notEqual(blocked.code, 0);
+    assert.match(blocked.err, /verifying requires a recorded failing CLI red for: unit/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('verify run --red is refused on a kind that already has an exception and runs no check', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    waiveRed(dir, waiveOptions(attempt, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true }));
+    const marker = path.join(dir, 'ran.marker');
+    fs.writeFileSync(
+      path.join(dir, '.factory/checks.json'),
+      `${JSON.stringify({
+        schemaVersion: 1,
+        checks: {
+          unit: {
+            argv: [process.execPath, '-e', `require('fs').writeFileSync(${JSON.stringify(marker)}, 'x'); process.exit(1)`],
+            cwdPolicy: 'project',
+            timeoutMs: 30_000,
+            artifacts: [],
+          },
+        },
+      }, null, 2)}\n`,
+    );
+    const digestBefore = redDigest(getAttempt(dir, attempt.id));
+    const rerun = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(rerun.code, 0);
+    assert.match(rerun.err, /already excepted/);
+    assert.equal(fs.existsSync(marker), false);
+    assert.equal(redDigest(getAttempt(dir, attempt.id)), digestBefore);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('reuse refuses a source red that was invalidated on the source attempt', async () => {
+  const dir = tempProject();
+  try {
+    const first = await seedAttempt(dir);
+    writeFlagRegistry(dir);
+    ensureCleanGitCommit(dir);
+    await toImplementing(dir, first.id, 'engineer-1');
+    const red = await idefactory(dir, ['verify', 'run', first.id, '--check', 'unit', '--red']);
+    assert.equal(red.code, 0, red.err + red.out);
+    const invalidated = await idefactory(dir, [
+      'red', 'waive', first.id, '--kind', 'unit', '--note', 'post-hoc', '--approver', 'human-1',
+      '--invalid-red', POST_HOC_REASON, '--acknowledge-not-stuck',
+    ]);
+    assert.equal(invalidated.code, 0, invalidated.err + invalidated.out);
+    fs.writeFileSync(path.join(dir, 'fixed.flag'), 'fixed\n');
+    ensureCleanGitCommit(dir);
+    assert.equal((await idefactory(dir, ['verify', 'run', first.id, '--check', 'unit'])).code, 0);
+    assert.equal((await transition(dir, first.id, 'verifying')).code, 0);
+    assert.equal((await transition(dir, first.id, 'awaiting-review')).code, 0);
+    assert.equal((await transition(dir, first.id, 'rejected', {
+      reviewerId: 'reviewer-1',
+      notes: 'rejected after the post-hoc red was invalidated',
+    })).code, 0);
+
+    const target = await greenTarget(dir);
+    const sourceBefore = fileBytes(attemptPath(dir, first.id));
+    const reused = await idefactory(dir, [
+      'red', 'reuse', target.id, '--from', first.id, '--kind', 'unit',
+      '--note', 'try to carry the invalidated red', '--approver', 'human-1',
+    ]);
+    assert.notEqual(reused.code, 0);
+    assert.match(reused.err, /source attempt has no failing CLI red for unit/);
+    assert.equal(fileBytes(attemptPath(dir, first.id)), sourceBefore);
+    assert.equal(getAttempt(dir, target.id).evidence.redExceptions ?? null, null);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('status rows and descriptions name the invalidated red and never say no red ran', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    waiveRed(dir, waiveOptions(attempt, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true }));
+    const [row] = listAttemptExceptions(dir, getAttempt(dir, attempt.id));
+    const [statusRow] = listAllExceptions(dir);
+    assert.equal(statusRow.invalidRedDigest, row.invalidRedDigest);
+    assert.equal(statusRow.noRedRan, false);
+    assert.equal(row.noRedRan, false);
+    assert.equal(row.invalidRedDigest, redDigest(attempt));
+    assert.equal(row.invalidRedReason, POST_HOC_REASON);
+    const text = describeException(row);
+    assert.match(text, /A red ran for unit/);
+    assert.ok(text.includes(row.invalidRedDigest));
+    assert.ok(text.includes(POST_HOC_REASON));
+    assert.match(text, /does not satisfy red/);
+    assert.doesNotMatch(text, /No red ran/);
+
+    const ordinary = describeException({ ...row, invalidRedDigest: undefined, invalidRedReason: undefined, noRedRan: true, type: 'waiver', reason: 'x', approver: 'human-1' });
+    assert.match(ordinary, /^No red ran for unit/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('end to end: a recorded post-hoc red is invalidated, the transition uses the waiver, and a new red is refused', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    const waived = await idefactory(dir, [
+      'red', 'waive', attempt.id, '--kind', 'unit', '--note', 'post-hoc red', '--approver', 'human-1',
+      '--invalid-red', POST_HOC_REASON, '--acknowledge-not-stuck',
+    ]);
+    assert.equal(waived.code, 0, waived.err + waived.out);
+    const payload = JSON.parse(waived.out);
+    assert.equal(payload.exceptions[0].type, 'waiver');
+
+    const again = await idefactory(dir, [
+      'red', 'waive', attempt.id, '--kind', 'unit', '--note', 'again', '--approver', 'human-1',
+      '--invalid-red', 'second try', '--acknowledge-not-stuck',
+    ]);
+    assert.notEqual(again.code, 0);
+
+    const pass = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit']);
+    assert.equal(pass.code, 0, pass.err + pass.out);
+    assert.equal((await transition(dir, attempt.id, 'verifying')).code, 0);
+    assert.equal(getAttempt(dir, attempt.id).evidence.reds.unit.exitCode, 1);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('shipped red guidance names --invalid-red and the limits of a waiver', () => {
+  const copies = [
+    'templates/skills/factory-build/SKILL.md',
+    'templates/skills/factory-tdd/SKILL.md',
+    'templates/skills/factory-verify/SKILL.md',
+    'templates/factory/governance.md',
+    'README.md',
+    ...['.agents', '.claude', '.cline', '.cursor', '.github'].map((dir) => `${dir}/skills/factory-build/SKILL.md`),
+  ];
+  for (const rel of copies) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    assert.match(text, /--invalid-red/, `${rel} must name --invalid-red`);
+    assert.match(text, /not test-first evidence/, `${rel} must say a post-implementation red is not test-first`);
+  }
+  for (const rel of [
+    'templates/skills/factory-build/SKILL.md',
+    '.cursor/skills/factory-build/SKILL.md',
+    'README.md',
+  ]) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    assert.match(text, /does not replace passing verification, independent review, or lockouts/, rel);
   }
 });
