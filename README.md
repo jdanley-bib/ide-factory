@@ -203,6 +203,8 @@ idefactory red waive <targetAttemptId> --kind unit --note "reason" --approver <h
 
 `red reuse` binds the rejected attempt's red to the replacement by digest. It needs a clean HEAD, a passing CLI verification on that HEAD, and an approver who is not the implementer. `red waive` records that no red exists. Waiving a red before the system is stuck is discouraged. The command refuses until the attempt has hit `vacuous-red` for that kind, and it proceeds earlier only when the human repeats it with `--acknowledge-not-stuck`. Neither command writes `evidence.reds`, and neither waives clean-revision verification, independent review, or lockouts. Status, the reviewer packet, and the verdict comment say that no red ran and name the exception, approver, and reason.
 
+A failing red recorded after implementation is not test-first evidence, and the CLI cannot detect one. A human can invalidate it on the same attempt with `--invalid-red "reason"` and `--acknowledge-not-stuck`. `red waive` then refuses any failing red it has not been told to invalidate. The invalidated red does not satisfy red; the reviewer packet, status, and verdict comment name its digest and reason. A waiver does not replace passing verification, independent review, or lockouts.
+
 ```mermaid
 flowchart TD
   start["idefactory run"]

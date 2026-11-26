@@ -49,6 +49,8 @@ When a replacement attempt starts with no red and `idefactory verify run <attemp
 
 Neither command claims a red ran. The record names the approver and reason, and the reviewer sees it. Clean-revision verification, independent review, and lockouts still apply.
 
+A red recorded after the implementation was written is not test-first evidence, and the CLI cannot detect it. Warn the human. A human can invalidate it with `idefactory red waive <targetAttemptId> --kind <kind> --note "reason" --approver <human> --invalid-red "reason it was recorded after implementation" --acknowledge-not-stuck`. The command refuses unless a failing CLI red is stored for that kind, and the invalidated red then does not satisfy red. A waiver does not replace passing verification, independent review, or lockouts.
+
 ## Review
 
 Review is a different role: the reviewer. The implementer does not approve their own work.
