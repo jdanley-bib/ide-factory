@@ -432,7 +432,7 @@ async function handleVerify(project, parsed, out) {
 }
 
 const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
-const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck]';
+const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--invalid-red "text"]';
 const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session stays closed until the human passes --new-run.';
 
 function stringFlag(flags, key) {
@@ -472,6 +472,7 @@ function handleRed(project, parsed, out) {
     : waiveRed(project, {
       ...common,
       acknowledgeNotStuck: Boolean(parsed.flags['acknowledge-not-stuck']),
+      invalidRed: parsed.flags['invalid-red'],
     });
   out(JSON.stringify({
     attemptId: targetAttemptId,

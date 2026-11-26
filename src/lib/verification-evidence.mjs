@@ -205,6 +205,9 @@ export async function verifyRun(project, attemptId, options = {}) {
 
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
+  if (asRed && attempt.evidence?.redExceptions?.[kind]) {
+    throw new Error(`red for ${kind} on attempt ${attemptId} is already excepted; a new red cannot replace it`);
+  }
 
   const registryPath = path.join(project, '.factory', 'checks.json');
   if (!fs.existsSync(registryPath)) {

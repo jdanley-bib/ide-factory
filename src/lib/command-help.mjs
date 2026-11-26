@@ -325,11 +325,19 @@ export const COMMANDS = [
         KIND_FLAG,
         NOTE_FLAG,
         APPROVER_FLAG,
-        { name: 'acknowledge-not-stuck', value: null, required: false, description: 'Waive before the attempt has hit vacuous-red. Discouraged; use it only after the human acknowledges the warning.' },
+        { name: 'acknowledge-not-stuck', value: null, required: false, description: 'Waive before the attempt has hit vacuous-red. Discouraged; use it only after the human acknowledges the warning. Required with --invalid-red.' },
+        { name: 'invalid-red', value: '"text"', required: false, description: 'Invalidate the failing red already stored for each kind as recorded after implementation. The reason is kept with the waiver; the red does not satisfy red.' },
         ...PRINCIPAL_FLAGS,
         PATH_FLAG,
       ],
-      examples: ['idefactory red waive <target> --kind test --note "code already passes" --approver human-1'],
+      examples: [
+        'idefactory red waive <target> --kind test --note "code already passes" --approver human-1',
+        'idefactory red waive <target> --kind unit --invalid-red "recorded after implementing" --note "post-hoc red" --approver human-1 --acknowledge-not-stuck',
+      ],
+      notes: [
+        'A waiver is refused while a failing CLI red is stored for the kind, unless --invalid-red names that red as recorded after implementation.',
+        'A waiver does not replace passing verification, distinct review, or lockouts.',
+      ],
     },
   ),
   leaf(
