@@ -4,7 +4,7 @@
 
 - [x] 1.1 Replace `STICKY_STOP_REASONS` with budget, spend-ceiling, and condition classes in `src/lib/run-session.mjs` and make `openOrResumeRunSession` reopen a closed condition-stop session when the condition no longer holds, keeping run id and counters and appending to `clearedStops`; verify with `test/run-session.test.mjs` asserting an `unchanged-state`, a `host-usage-unavailable`, and an `invalid-budget` session each reopen with unchanged `agentSteps` once the condition is gone and stay closed while it holds.
 - [x] 1.2 Store `stopContext` (attempt id and vacuous kinds) when `verify run --red` closes the session; verify with a test that the stored context names the attempt and the kinds.
-- [ ] 1.3 Clear a `vacuous-red` stop when every named kind has a later method proposal, waiver, reuse, valid invalidation, or genuine red, or when the work item points at another attempt, and keep it closed otherwise; verify with one test per resolution, one test with a partly resolved kind list staying closed, and one test for a session with no `stopContext`.
+- [x] 1.3 Clear a `vacuous-red` stop when every named kind has a later method proposal, waiver, reuse, valid invalidation, or genuine red, or when the work item points at another attempt, and keep it closed otherwise; verify with one test per resolution, one test with a partly resolved kind list staying closed, and one test for a session with no `stopContext`.
 - [x] 1.4 Emit `run.stop-cleared` with `runId`, `stopReason`, and `resolution`; verify with `test/event-log.test.mjs` that the event carries codes only.
 
 ## 2. Bounded new runs

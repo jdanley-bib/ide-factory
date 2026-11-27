@@ -14,7 +14,7 @@ import {
   resolveMaxNewRuns,
 } from '../src/lib/run-session.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
-import { BASIC_TASK, commitAll, readJson, seedChange, writeJson } from './factory-project.mjs';
+import { BASIC_TASK, commitAll, readJson, retireAttempt, seedChange, writeJson } from './factory-project.mjs';
 
 function runsDir(dir) {
   return path.join(dir, '.factory', 'orchestration', 'runs');
@@ -294,6 +294,24 @@ test('a vacuous-red stop clears to the same session once a method covers the kin
     const session = readRunSession(runFile);
     assert.equal(session.runId, runId);
     assert.deepEqual(session.clearedStops.map((entry) => [entry.stopReason, entry.resolution]), [['vacuous-red', 'method']]);
+    assert.deepEqual(evaluateConditionStop(dir, { stopReason: 'vacuous-red', startedAt: '2000-01-01T00:00:00.000Z' }), { holds: false, resolution: 'method' });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous-red stop clears when the work item points at a newer attempt', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, { tasks: BASIC_TASK });
+    const first = JSON.parse((await idefactory(dir, ['attempt', 'start', 'demo', '1.1'])).out);
+    retireAttempt(dir, first.id);
+    const second = JSON.parse((await idefactory(dir, ['attempt', 'start', 'demo', '1.1'])).out);
+    assert.notEqual(second.id, first.id);
+    assert.deepEqual(
+      evaluateConditionStop(dir, { stopReason: 'vacuous-red', stopContext: { attemptId: first.id, kinds: ['unit'] } }),
+      { holds: false, resolution: 'new-attempt' },
+    );
   } finally {
     cleanup(dir);
   }
