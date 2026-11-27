@@ -803,7 +803,7 @@ test('waive refuses an approver equal to the implementer and an empty approver',
     const before = fileBytes(attemptPath(dir, attempt.id));
     assert.throws(
       () => waiveRed(dir, waiveOptions(attempt, { approver: 'engineer-1' })),
-      /differ from the implementer/,
+      /an identity other than the implementer's/,
     );
     for (const approver of ['', '  ', undefined]) {
       assert.throws(() => waiveRed(dir, waiveOptions(attempt, { approver })), /approver is required/);
@@ -826,7 +826,7 @@ test('reuse refuses an approver equal to the implementer', async () => {
       source,
       target,
       reuseOptions(source, target, { approver: 'engineer-2' }),
-      /differ from the implementer/,
+      /an identity other than the implementer's/,
     );
     await assertReuseRefused(
       dir,

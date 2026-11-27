@@ -295,7 +295,7 @@ function authorize(project, plan, decisions, items, options) {
     needsPrincipal = true;
     for (const attempt of past) {
       if (typeof attempt.implementerId === 'string' && attempt.implementerId === decidedBy) {
-        throw new Error(`${why} on ${item.id} needs a --decided-by identity that differs from the implementer of attempt ${attempt.id}`);
+        throw new Error(`${why} on ${item.id} needs a --decided-by identity other than the implementer's of attempt ${attempt.id}`);
       }
     }
   }

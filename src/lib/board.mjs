@@ -391,7 +391,7 @@ export function mirroredState(project, change) {
   const pr = readPullRequestRecord(project, change);
   if (halted(project)) return { to: 'blocked', reason: 'Factory stopped: HALT is present.', pullRequest: pr };
   if (hasActiveLockout(project)) {
-    return { to: 'blocked', reason: 'Factory stopped: an active reviewer lockout needs a human resolver.', pullRequest: pr };
+    return { to: 'blocked', reason: 'Factory stopped: an active reviewer lockout needs a resolver other than the locked agent.', pullRequest: pr };
   }
   const allDone = items.length > 0 && items.every((item) => item.status === 'done');
   if (pr && allDone) {

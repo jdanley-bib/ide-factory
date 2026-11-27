@@ -227,7 +227,7 @@ function requireText(value, label) {
 function authorizeApprover(project, target, options) {
   const approver = requireText(options.approver, 'approver');
   if (typeof target.implementerId === 'string' && target.implementerId === approver) {
-    throw new Error('red exception approver must differ from the implementer');
+    throw new Error("red exception approver must be an identity other than the implementer's");
   }
   if (readPolicyVersion(project) < 2) return { approver };
   const principal = confirmPrincipal(project, {

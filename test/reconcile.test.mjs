@@ -436,7 +436,7 @@ test('classification decisions: adopt needs an independent identity, keep record
     assert.deepEqual(doc.requiredDecisions, ['1.1']);
     assert.equal(doc.drift[0].new.taskType, 'lightweight');
     await assertRefusedUnchanged(dir, () => apply(dir, { '1.1': 'keep' }, { digest: doc.digest }), /adopt-classification or keep-classification/);
-    await assertRefusedUnchanged(dir, () => apply(dir, { '1.1': 'adopt-classification' }, { digest: doc.digest, by: 'engineer-1' }), /differs from the implementer of attempt/);
+    await assertRefusedUnchanged(dir, () => apply(dir, { '1.1': 'adopt-classification' }, { digest: doc.digest, by: 'engineer-1' }), /other than the implementer's of attempt/);
     const before = fs.readFileSync(attemptPath(dir, attemptId), 'utf8');
 
     ok(await apply(dir, { '1.1': 'keep-classification' }, { digest: doc.digest, by: 'engineer-1' }));
@@ -568,7 +568,7 @@ test('end to end: an in-flight task is dropped for a replacement while another i
     };
     const refused = await apply(dir, decisions, { digest: doc.digest, by: 'engineer-1' });
     assert.notEqual(refused.code, 0);
-    assert.match(refused.err, /differs from the implementer/);
+    assert.match(refused.err, /other than the implementer's/);
     ok(await apply(dir, decisions, { digest: doc.digest, by: 'lead-1' }));
 
     assert.equal(getWorkItem(dir, 'demo', '1.1').hold.kind, 'dropped');

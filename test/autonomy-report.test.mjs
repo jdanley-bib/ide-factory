@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
-import { BLOCKED_CODES } from '../src/lib/blocked-states.mjs';
+import { BLOCKED_CODES, agentActionable, buildBlockedReport } from '../src/lib/blocked-states.mjs';
 import {
   POLICY_SET,
   SCOPE_STATEMENT,
@@ -256,6 +256,31 @@ test('secret-like notes and check output never reach the events or the report', 
     const report = (await idefactory(dir, ['autonomy', 'report', '--json'])).out;
     assert.ok(!report.includes(secret));
     assert.ok(!(await idefactory(dir, ['autonomy', 'report'])).out.includes(secret));
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a stop whose first usable option is independent or agent is handled, and a spend stop stays a human stop', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const review = buildBlockedReport(dir, {
+      code: 'needs-review',
+      attempt: { id: 'a1', change: 'demo', taskId: '1.1', state: 'awaiting-review' },
+    });
+    assert.equal(review.actor, 'independent-agent');
+    const reviewEvent = stop({ invariant: 'needs-review', actor: review.actor, agentActionable: agentActionable(review) });
+    assert.equal(classifyStop(reviewEvent), 'handled');
+
+    const budget = buildBlockedReport(dir, { code: 'budget-exhausted', change: 'demo', stopReason: 'max-tasks' });
+    assert.equal(budget.actor, 'implementing-agent');
+    const budgetEvent = stop({ invariant: 'budget-exhausted', actor: budget.actor, agentActionable: agentActionable(budget) });
+    assert.equal(classifyStop(budgetEvent), 'handled');
+
+    const spend = buildBlockedReport(dir, { code: 'budget-exhausted', change: 'demo', stopReason: 'max-cost' });
+    assert.equal(spend.actor, 'human');
+    assert.notEqual(classifyStop(stop({ invariant: 'budget-exhausted', actor: spend.actor })), 'handled');
   } finally {
     cleanup(dir);
   }

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { AUTHORITY, gateLabel } from '../src/lib/authority.mjs';
 import {
   ATTEMPT_STATES,
   SUPPLIED_EVIDENCE_TYPES,
@@ -457,4 +458,34 @@ test('each documented precondition is enforced by the command', async () => {
       cleanup(dir);
     }
   }
+});
+
+test('each gated command states its level and enforcement from the authority table', async () => {
+  const gated = [
+    [['approve'], 'record-approval'],
+    [['resume'], 'resume'],
+    [['lockout', 'resolve'], 'resolve-lockout'],
+    [['red', 'waive'], 'waive-red'],
+    [['red', 'reuse'], 'reuse-red'],
+    [['red', 'invalidate'], 'red-invalidate'],
+    [['attempt', 'reopen'], 'reopen-attempt'],
+    [['attempt', 'repoint'], 'attempt-repoint'],
+    [['method', 'review'], 'method-review'],
+  ];
+  for (const [words, gate] of gated) {
+    const result = await cli(['help', ...words]);
+    assert.equal(result.code, 0, result.err);
+    assert.ok(result.out.includes(`Authority: ${gateLabel(gate)}.`), `${words.join(' ')} shows ${gate}`);
+    assert.ok(result.out.includes(`level ${AUTHORITY[gate].level}`), words.join(' '));
+  }
+});
+
+test('run help defines the authority levels and enforcement labels', async () => {
+  const result = await cli(['help', 'run']);
+  assert.equal(result.code, 0, result.err);
+  for (const word of ['agent', 'independent', 'human', 'none', 'identity', 'principal']) {
+    assert.match(result.out, new RegExp(`\\b${word}\\b`), word);
+  }
+  assert.ok(result.out.includes(`--new-run within run.maxNewRuns: ${gateLabel('new-run')}.`));
+  assert.ok(result.out.includes(`--accept-baseline with --reason: ${gateLabel('accept-baseline')}.`));
 });

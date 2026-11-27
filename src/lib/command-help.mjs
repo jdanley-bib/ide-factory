@@ -1,4 +1,5 @@
 import { actionHelpLines, actionIds, AUTHORIZATION_REASONS } from './approval-actions.mjs';
+import { gateLabel } from './authority.mjs';
 import { ACTORS, RETRY_CLASSES } from './blocked-error.mjs';
 import { IDENTITY_FORMAT_TEXT } from './identity.mjs';
 import { LOCKOUT_CREATE_ALIAS_USAGE, LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
@@ -36,7 +37,7 @@ const APPROVER_FLAG = {
   name: 'approver',
   value: '<id>',
   required: true,
-  description: 'Id of the human who authorizes the exception. Must not be the implementer.',
+  description: 'Id of the identity that authorizes the exception. It must not be the implementer\'s.',
 };
 const PRINCIPAL_FLAGS = [
   {
@@ -261,7 +262,8 @@ export const COMMANDS = [
         { name: 'max-tasks', value: 'N', required: false, description: 'Stop after this many tasks.' },
         { name: 'max-agent-steps', value: 'N', required: false, description: 'Stop after this many agent steps.' },
         { name: 'new-run', value: null, required: false, description: 'Open a new run session after a budget stop or retry-cap, up to run.maxNewRuns session files per change (default 3). Spend ceilings are never reset by it. Condition stops such as vacuous-red clear on their own once resolved, without this flag.' },
-        { name: 'accept-baseline', value: null, required: false, description: 'Accept the current baseline for the run.' },
+        { name: 'accept-baseline', value: null, required: false, description: 'Accept a failing baseline for this HEAD only. Needs --reason.' },
+        { name: 'reason', value: '"text"', required: false, description: 'Why the baseline is accepted. Required with --accept-baseline; recorded with the HEAD and time, and shown to the reviewer.' },
         JSON_FLAG('Print one JSON object {stopReason, exitCode, request, blocked, text} instead of the text. Exit codes do not change.'),
         PATH_FLAG,
       ],
@@ -269,8 +271,8 @@ export const COMMANDS = [
       notes: [
         'Exit 2 means one IDE role should take the printed request. Exit 0 is a clean stop. Exit 1 is an error.',
         'With --json, blocked is null for a clean finish and otherwise a blocked-state report: invariant {code, message}, actor, recovery {supported, options[]}, and retry.',
-        `Actors: ${ACTORS.join(', ')}. human means the next step needs authority only a human holds. independent-agent means it needs an identity other than the implementer's.`,
-        'Each recovery option has id, supported, command (when supported), actor, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',
+        `Actors: ${ACTORS.join(', ')}. human means a person must decide. independent-agent means an identity other than the implementer's, or the locked agent's, is required. Each option names its level and enforcement; see the Authority notes.`,
+        'Each recovery option has id, supported, command (when supported), actor, authority {level, enforcement, source}, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',
         `Retry classes: ${RETRY_CLASSES.join(', ')}. safe means the condition can clear without a change. only-after-change means the same stop repeats unless something recorded changes. never means a repeat is known to be refused.`,
         'A stop on a work item is also recorded in .factory/blocked/<change>--<task>.json and marked resolved by a later run that finds the condition gone. The record never decides whether work may proceed. The same report is available from next, complete, attempt transition, and sync-tasks with --json.',
         'A packet or request lists Standing decisions: approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Do not ask for them again. Listing one grants no authority.',
@@ -938,6 +940,36 @@ export const ATTEMPT_PRECONDITIONS = [
   },
 ];
 
+const GATED_COMMANDS = {
+  approve: 'record-approval',
+  resume: 'resume',
+  'lockout resolve': 'resolve-lockout',
+  'red waive': 'waive-red',
+  'red reuse': 'reuse-red',
+  'red invalidate': 'red-invalidate',
+  'attempt reopen': 'reopen-attempt',
+  'attempt repoint': 'attempt-repoint',
+  'method review': 'method-review',
+};
+
+const GATED_NOTES = {
+  'sync-tasks': [`--apply, which decides a reconciliation: ${gateLabel('apply-reconciliation')}.`],
+  'attempt transition': [`accepted or rejected by a reviewer: ${gateLabel('review-attempt')}.`],
+  run: [
+    'Authority levels: agent means the agent doing the work may take the action. independent means an identity other than the implementer\'s is required, which may be an agent. human means a person must decide.',
+    'Enforcement labels: none means the CLI checks nothing about who acts. identity means the CLI checks that the supplied identity differs from the implementer\'s or the locked agent\'s, which does not prove a person. principal means the policy version 2 verifier confirms the identity.',
+    `--new-run within run.maxNewRuns: ${gateLabel('new-run')}.`,
+    `--new-run after max-tokens or max-cost: ${gateLabel('new-run-spend')}.`,
+    `--accept-baseline with --reason: ${gateLabel('accept-baseline')}.`,
+  ],
+};
+
+for (const entry of COMMANDS) {
+  const key = pathKey(entry);
+  if (GATED_COMMANDS[key]) entry.authority = GATED_COMMANDS[key];
+  if (GATED_NOTES[key]) entry.notes = [...(entry.notes || []), ...GATED_NOTES[key]];
+}
+
 export function pathKey(entry) {
   return entry.path.join(' ');
 }
@@ -1028,6 +1060,7 @@ export function renderText(entry) {
     return `${lines.join('\n')}\n`;
   }
   lines.push('', `Effects: ${effectsLine(entry)}`);
+  if (entry.authority) lines.push(`Authority: ${gateLabel(entry.authority)}.`);
   if (entry.arguments.length) {
     lines.push('', 'Arguments:');
     lines.push(...table(entry.arguments.map((arg) => ({
