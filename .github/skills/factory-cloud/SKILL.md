@@ -83,6 +83,21 @@ When the run exits `0` or `1`:
 
 A human gate, lockout, rejected review, or budget stop leaves the story waiting on a human or blocked. The human decides, then moves the story back to the ready state. That new claim decides `resume`.
 
+## Blocked states
+
+`run`, `next`, `complete`, `attempt transition`, and `sync-tasks` accept `--json`. When one stops without finishing its step it prints a blocked-state report: `invariant` (a `code` and a message), `actor` (`human`, `independent-agent`, `implementing-agent`, or `tooling`), `recovery.options` (each with `supported`, a `command` when supported, `actor`, `requires`, and `resolves`), and `retry` (`safe`, `only-after-change`, or `never`). Exit codes do not change. Branch on the report:
+
+- When an option with `resolves: true` is `supported` and its actor is an agent role, take it.
+- When the actor is `human`, stop. Quote the report in the `board report` comment and leave the story for the human. Do not ask for a decision listed under Standing decisions in the packet or request.
+- When `retry` is `never`, stop and do not retry. When it is `only-after-change`, retry only after something recorded has changed. When it is `safe`, retry the same command.
+- When `recovery.supported` is false, say that no supported recovery exists, name the human as the actor, and stop.
+
+Standing decisions in a packet are approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Listing one grants no authority.
+
+## External effects
+
+The ready move covers the routine steps of this run (`sync-tasks`, `run`, `verify`, and `complete`) for this change only. It does not cover an external effect. Before any action that publishes, deploys, spends, or creates an account, run `idefactory authorize --change <change> --action <publish|deploy|spend|account> --target <name>` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop, report its `reason` and the `approve` command it prints, and put that in the `board report`. Do not ask the human whether to proceed when it reports `authorized: true`.
+
 To bring human review comments into the factory, read the threads with `repo_pull_request_thread`, action `list`, save the result to a temporary file, and run `idefactory pr capture <change> --threads-file <file>`.
 
 ## Board
@@ -103,4 +118,4 @@ The agent never merges. It does not open or edit a pull request through the Curs
 - Do not edit a plan, a plan file under `.factory/mcp/`, or the arguments of its operations.
 - Do not edit the OpenSpec proposal, design, specs, or task text. Only `idefactory complete` checks a box.
 - Do not work on any change other than the one the claim named.
-- Do not publish, deploy, spend, or create accounts.
+- Do not publish, deploy, spend, or create accounts without an `authorized: true` result from `idefactory authorize` for that action and target.

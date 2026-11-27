@@ -37,6 +37,13 @@ test('init installs factory-cloud with the claim, resume-only --new-run, and nev
       assert.match(text, /Do not run `idefactory red waive` or `idefactory red reuse`/, rel);
       assert.match(text, /Do not edit a plan, a plan file under `\.factory\/mcp\/`/, rel);
       assert.match(text, /409/, rel);
+      assert.match(text, /^## Blocked states$/m, rel);
+      assert.match(text, /`run`, `next`, `complete`, `attempt transition`, and `sync-tasks` accept `--json`/, rel);
+      assert.match(text, /When the actor is `human`, stop\./, rel);
+      assert.match(text, /^## External effects$/m, rel);
+      assert.match(text, /idefactory authorize --change <change> --action <publish\|deploy\|spend\|account> --target <name>/, rel);
+      assert.match(text, /proceed only when it reports `authorized: true`/, rel);
+      assert.doesNotMatch(text, /Do not publish, deploy, spend, or create accounts\.$/m, rel);
     }
 
     const coordinator = read(dir, '.cursor/skills/factory-coordinator/SKILL.md');
