@@ -197,14 +197,14 @@ test('a relative path resolves from the supplied working directory', () => {
 async function seedAttempts(dir, count = 1) {
   assert.equal((await idefactory(dir, ['init'])).code, 0);
   fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
-  fs.writeFileSync(
-    path.join(dir, 'openspec/changes/demo/tasks.md'),
-    '- [ ] 1.1 Add parser\n  factory:\n    kind: general\n    checks: [unit]\n    verificationProfile: cli\n    roles: [engineer, reviewer, scribe]\n',
-  );
+  const tasks = Array.from({ length: count }, (_, i) => (
+    `- [ ] 1.${i + 1} Add parser ${i + 1}\n  factory:\n    kind: general\n    checks: [unit]\n    verificationProfile: cli\n    roles: [engineer, reviewer, scribe]\n`
+  )).join('');
+  fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), tasks);
   assert.equal((await idefactory(dir, ['sync-tasks', 'demo'])).code, 0);
   const ids = [];
   for (let i = 0; i < count; i += 1) {
-    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', `1.${i + 1}`]);
     assert.equal(started.code, 0, started.err);
     ids.push(JSON.parse(started.out).id);
   }

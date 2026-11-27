@@ -181,7 +181,7 @@ test('an unknown help topic exits non-zero and lists what is known', async () =>
   assert.equal(misspelled.code, 1);
   assert.equal(misspelled.out, '');
   assert.match(misspelled.err, /Unknown help topic: attempt transitoin/);
-  assert.match(misspelled.err, /Subcommands of attempt: start, transition, reopen, show/);
+  assert.match(misspelled.err, /Subcommands of attempt: start, repoint, transition, reopen, show/);
 
   const unknown = await cli(['help', 'frobnicate']);
   assert.equal(unknown.code, 1);
@@ -235,7 +235,7 @@ test('JSON help for a command has the documented shape', async () => {
 
 test('JSON help for a group lists subcommands, and the command list names every command', async () => {
   const group = JSON.parse((await cli(['help', 'attempt', '--json'])).out);
-  assert.deepEqual(group.subcommands.map((sub) => sub.command), ['attempt start', 'attempt transition', 'attempt reopen', 'attempt show']);
+  assert.deepEqual(group.subcommands.map((sub) => sub.command), ['attempt start', 'attempt repoint', 'attempt transition', 'attempt reopen', 'attempt show']);
   assert.equal(group.effects, 'varies');
 
   const list = JSON.parse((await cli(['help', '--json'])).out);

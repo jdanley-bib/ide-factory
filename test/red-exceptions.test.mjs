@@ -20,6 +20,7 @@ import { canonicalJson, resolveGitBinding } from '../src/lib/verification-eviden
 import { getWorkItem } from '../src/lib/work.mjs';
 import { createHash } from 'node:crypto';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
+import { retireAttempt } from './factory-project.mjs';
 
 function writeRegistry(dir, exitCode) {
   fs.writeFileSync(
@@ -193,6 +194,7 @@ test('a bound waiver or reuse exception satisfies red for its kind only', async 
     assert.equal(bound.evidence.reds ?? null, null, 'exception must not be stored as a CLI red');
     assert.equal(fs.existsSync(exceptionFilePath(dir, 'exc-1')), true);
 
+    retireAttempt(dir, attempt.id);
     const second = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const next = getAttempt(dir, JSON.parse(second.out).id);
     bindRedException(dir, next.id, exceptionRecord(next, {
@@ -221,6 +223,7 @@ test('an edited, deleted, or other-attempt exception file does not satisfy red',
     fs.writeFileSync(file, original);
     assert.equal(redSatisfaction(dir, getAttempt(dir, attempt.id), 'unit'), 'waiver');
 
+    retireAttempt(dir, attempt.id);
     const second = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const other = getAttempt(dir, JSON.parse(second.out).id);
     const pointer = getAttempt(dir, attempt.id).evidence.redExceptions;
@@ -899,6 +902,7 @@ test('an exception on one attempt does not satisfy a later attempt for the same 
   try {
     const attempt = await stuckAttempt(dir);
     waiveRed(dir, waiveOptions(attempt));
+    retireAttempt(dir, attempt.id);
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const later = getAttempt(dir, JSON.parse(started.out).id);
     assert.equal(redSatisfaction(dir, later, 'unit'), 'missing');
@@ -1559,6 +1563,7 @@ test('an invalid-red waiver needs a stored failing red and the acknowledgment', 
       () => waiveRed(dir, waiveOptions(stuck, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true })),
       /--invalid-red needs a failing CLI red stored on this attempt for: unit/,
     );
+    retireAttempt(dir, stuck.id);
 
     const attempt = await postHocRed(dir);
     const before = fileBytes(attemptPath(dir, attempt.id));

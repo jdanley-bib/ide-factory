@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import fs, { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getAttempt } from '../src/lib/attempt.mjs';
+import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
 import { eventLogPath } from '../src/lib/event-log.mjs';
 import { hasAnyFailingRed, redForKind } from '../src/lib/red-evidence.mjs';
 import {
@@ -875,7 +875,11 @@ test('attestation for a different attempt id is rejected with no evidence added'
   const fixture = await seedImportFixture();
   const { dir, key, argv, attempt, attestDir } = fixture;
   try {
-    const otherAttempt = await seedAttempt(dir, unitRegistryWithImportKeys([key], argv));
+    const otherAttempt = { id: randomUUID() };
+    fs.writeFileSync(
+      attemptPath(dir, otherAttempt.id),
+      `${JSON.stringify({ ...getAttempt(dir, attempt.id), id: otherAttempt.id }, null, 2)}\n`,
+    );
     const head = ensureCleanGitCommit(dir);
     const attestation = buildSignedAttestation({
       attemptId: otherAttempt.id,

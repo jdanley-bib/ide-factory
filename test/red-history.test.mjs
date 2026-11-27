@@ -15,7 +15,7 @@ import { renderWorkPacket } from '../src/lib/queue.mjs';
 import { resolveGitBinding } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
-import { commitAll, nodeCheck, writeJson } from './factory-project.mjs';
+import { commitAll, nodeCheck, retireAttempt, writeJson } from './factory-project.mjs';
 
 const RAW = { rawRegistry: true };
 const fakeForge = path.join(repoRoot, 'support/fake-forge.mjs');
@@ -157,6 +157,7 @@ test('a red after reuse or an ordinary waiver is refused without spawning the ch
     ok(await idefactory(dir, [
       'red', 'waive', waived, '--kind', 'unit', '--note', 'covered elsewhere', '--approver', 'human-1', '--acknowledge-not-stuck',
     ]));
+    retireAttempt(dir, waived);
     const reused = await implementing(dir);
     const attempt = getAttempt(dir, reused);
     bindRedException(dir, reused, {
@@ -183,6 +184,7 @@ test('a red after reuse or an ordinary waiver is refused without spawning the ch
     }
     assert.equal(fs.existsSync(marker), false);
 
+    retireAttempt(dir, reused);
     const invalidated = await implementing(dir);
     ok(await red(dir, invalidated));
     assert.equal(fs.readFileSync(marker, 'utf8'), 'x');
