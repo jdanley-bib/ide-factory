@@ -1062,6 +1062,41 @@ test('implementing request for a code item with a test kind still asks for a red
     const request = requestJson(result.out);
     assert.equal(request.nextState, 'red-confirmed');
     assert.match(result.out, /Write a failing test and report red evidence with idefactory verify run --red/);
+    assert.doesNotMatch(result.out, /already-satisfied/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an explicit-class item with a vacuous red gets the already-satisfied method in its next request', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    taskType: code',
+      '    checks: [unit]',
+      '    verificationProfile: cli',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    writeCheckRegistry(dir, { unit: 0 });
+    ensureCleanGitCommit(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err);
+    const attemptId = JSON.parse(started.out).id;
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'implementing', '--evidence', JSON.stringify({ implementerId: 'engineer-1' }),
+    ])).code, 0);
+    const red = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit', '--red']);
+    assert.match(red.err, /vacuous-red/);
+    const result = await idefactory(dir, ['run', '--change', 'demo', '--new-run', '--max-tasks', '1']);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.equal(requestJson(result.out).nextState, 'red-confirmed');
+    assert.match(result.out, /A red run reported vacuous-red for unit\. If the behavior already exists/);
+    assert.match(result.out, new RegExp(`method propose ${attemptId} .*--reason already-satisfied .*--kind unit --test-path <path>`));
+    assert.doesNotMatch(result.out, /If a failing test cannot specify the change/);
   } finally {
     cleanup(dir);
   }

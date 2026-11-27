@@ -30,7 +30,7 @@ import {
   writeRunSession,
 } from './run-session.mjs';
 import { evaluateConditionStop } from './run-stop.mjs';
-import { classifyCheckOutcome, isRequiredTestKind, retryKey } from './red-evidence.mjs';
+import { classifyCheckOutcome, isFailingRed, isRequiredTestKind, redForKind, retryKey } from './red-evidence.mjs';
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
 import { describeReopens } from './attempt-reopen.mjs';
 import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
@@ -543,6 +543,18 @@ function closeRunSession(project, session, stopReason, extra = {}) {
   return written;
 }
 
+function alreadySatisfiedHint(attempt) {
+  const kinds = [...new Set((attempt?.evidence?.redFailures || [])
+    .filter((entry) => entry.classification === 'vacuous-red')
+    .map((entry) => entry.kind))]
+    .filter((kind) => !isFailingRed(redForKind(attempt, kind)));
+  if (kinds.length === 0) return '';
+  const kindFlags = kinds.map((kind) => `--kind ${kind}`).join(' ');
+  return ` A red run reported vacuous-red for ${kinds.join(', ')}. If the behavior already exists, record an already-satisfied method: `
+    + `idefactory method propose ${attempt.id} --choice no-red --reason already-satisfied --rationale "<text>" --implementer <id> ${kindFlags} --test-path <path>. `
+    + 'Cite the tests that cover the behavior; the diff may change only those tests.';
+}
+
 function stageForState(state, item, { project, attempt } = {}) {
   const roles = item.factory?.roles || ['engineer', 'reviewer', 'scribe'];
   const implementer = item.factory?.route === 'quick'
@@ -592,7 +604,8 @@ function stageForState(state, item, { project, attempt } = {}) {
         message: 'Write a failing test and report red evidence with idefactory verify run --red.'
           + (item.factory?.taskTypeSource === 'inferred'
             ? ' If a failing test cannot specify the change, record a no-red method with idefactory method propose before editing.'
-            : ''),
+            : '')
+          + alreadySatisfiedHint(attempt),
       };
     case 'red-confirmed':
       return {
