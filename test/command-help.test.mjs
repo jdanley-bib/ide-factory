@@ -152,6 +152,21 @@ test('help states whether a command writes', async () => {
   assert.match((await cli(['help', 'setup'])).out, /Effects: writes project state, read-only with --detect/);
 });
 
+test('autonomy report help documents the coverage fields, the alias, and the completeness rule', async () => {
+  const { out, code } = await cli(['help', 'autonomy', 'report']);
+  assert.equal(code, 0);
+  assert.match(out, /schemaVersion 2/);
+  assert.match(out, /noStopEvents/);
+  assert.match(out, /noEvents \(an alias of noStopEvents/);
+  assert.match(out, /unrecordedStops/);
+  assert.match(out, /unreadableSessions/);
+  assert.match(out, /measurementComplete is false/);
+  assert.match(out, /routineClean is true only when measurementComplete is true/);
+  assert.match(out, /Effects: read-only/);
+  const json = JSON.parse((await cli(['help', 'autonomy', 'report', '--json'])).out);
+  assert.match(JSON.stringify(json), /measurementComplete/);
+});
+
 test('group help lists the subcommands', async () => {
   const { out, code } = await cli(['help', 'attempt']);
   assert.equal(code, 0);

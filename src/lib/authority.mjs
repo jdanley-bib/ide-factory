@@ -51,6 +51,39 @@ export const AUTHORITY = Object.freeze({
   'show-pending': gate('agent', 'none', 'show pending cloud operations', { actor: 'tooling' }),
 });
 
+/**
+ * The gate a control event records a decision under. A string names one gate; an object maps the
+ * event's exceptionType to a gate. An event type absent here records no authority decision.
+ */
+export const EVENT_GATES = Object.freeze({
+  'approval.issued': 'record-approval',
+  'approval.revoked': 'record-approval',
+  'halt.resumed': 'resume',
+  'lockout.resolved': 'resolve-lockout',
+  'red-exception.recorded': Object.freeze({ waiver: 'waive-red', reuse: 'reuse-red' }),
+  'attempt.reopened': 'reopen-attempt',
+  'attempt.repointed': 'attempt-repoint',
+  'decision.rejected': 'review-attempt',
+  'tasks.reconciled': 'apply-reconciliation',
+  'red.invalidated': 'red-invalidate',
+  'run.new-run': 'new-run',
+});
+
+/** Every gate id an event type can record under. */
+export function eventGateIds(type) {
+  if (!Object.hasOwn(EVENT_GATES, type)) return [];
+  const mapped = EVENT_GATES[type];
+  return typeof mapped === 'string' ? [mapped] : Object.values(mapped);
+}
+
+/** The gate id for one control event, or null when the event records no authority decision. */
+export function gateForEvent(event) {
+  if (!Object.hasOwn(EVENT_GATES, event?.type)) return null;
+  const mapped = EVENT_GATES[event.type];
+  if (typeof mapped === 'string') return mapped;
+  return Object.hasOwn(mapped, event.exceptionType) ? mapped[event.exceptionType] : null;
+}
+
 /** The reported actor for an entry: human, independent-agent, or the entry's agent actor. */
 export function actorFor(entry) {
   if (entry.level === 'human') return 'human';

@@ -237,9 +237,11 @@ test('an ordinary change runs unattended, decisions survive every role, and the 
     assert.ok(!fs.existsSync(effectFile(dir, 'production')), 'the out-of-authority effect did not run');
 
     const paused = await report(dir);
-    assert.equal(paused.counts.interventions, 1);
-    assert.equal(paused.interventions[0].category, 'policy-decision');
-    assert.equal(paused.interventions[0].task, '1.3');
+    const pausedStops = paused.interventions.filter((row) => row.invariant !== null);
+    assert.equal(pausedStops.length, 1);
+    assert.equal(pausedStops[0].category, 'policy-decision');
+    assert.equal(pausedStops[0].task, '1.3');
+    assert.equal(paused.interventions.filter((row) => row.event === 'approval.issued').length, 1);
     assert.equal(paused.routineClean, true);
 
     await recordGate(dir, 'accept-1-3', '1.3', 'accept');
@@ -252,7 +254,9 @@ test('an ordinary change runs unattended, decisions survive every role, and the 
     assert.ok(fs.existsSync(effectFile(dir, 'production')));
 
     const final = await report(dir);
-    assert.equal(final.counts.interventions, 1, 'resuming after the decision needs no second human');
+    const finalStops = final.interventions.filter((row) => row.invariant !== null);
+    assert.equal(finalStops.length, 1, 'resuming after the decision needs no second human');
+    assert.equal(final.interventions.filter((row) => row.event === 'approval.issued').length, 4);
     assert.equal(final.routineClean, true);
   } finally {
     cleanup(dir);

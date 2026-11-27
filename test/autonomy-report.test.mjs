@@ -4,11 +4,15 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { BLOCKED_CODES, agentActionable, buildBlockedReport } from '../src/lib/blocked-states.mjs';
 import {
+  HUMAN_DECISION_EVENTS,
   POLICY_SET,
   SCOPE_STATEMENT,
   buildAutonomyReport,
   classifyStop,
+  renderAutonomyText,
 } from '../src/lib/autonomy.mjs';
+import { AUTHORITY, EVENT_GATES, eventGateIds } from '../src/lib/authority.mjs';
+import { BUILTIN_RUN_BUDGETS, createRunSession, writeRunSession } from '../src/lib/run-session.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
 import { commitAll, nodeCheck, writeJson } from './factory-project.mjs';
 
@@ -78,13 +82,13 @@ test('the report counts interventions by category, invariant, and item, and hand
       stop({ task: '1.3', invariant: 'needs-review', actor: 'independent-agent' }),
     ]);
     const report = buildAutonomyReport(dir);
-    assert.equal(report.schemaVersion, 1);
+    assert.equal(report.schemaVersion, 2);
     assert.equal(report.counts.interventions, 2);
     assert.equal(report.counts.handled, 1);
-    assert.deepEqual(report.counts.byCategory, { 'policy-decision': 2, failure: 0, redundant: 0 });
+    assert.deepEqual(report.counts.byCategory, { 'policy-decision': 1, failure: 1, redundant: 0 });
     assert.deepEqual(report.counts.byInvariant, { 'approval-missing': 1, 'reviewer-lockout': 1 });
     assert.deepEqual(report.counts.byItem, { 'demo/1.1': 1, 'demo/1.2': 1 });
-    assert.equal(report.routineClean, true);
+    assert.equal(report.routineClean, false);
     assert.equal(report.scope, SCOPE_STATEMENT);
     assert.deepEqual(Object.keys(report.interventions[0]).sort(), ['category', 'change', 'invariant', 'task', 'time']);
   } finally {
@@ -281,6 +285,133 @@ test('a stop whose first usable option is independent or agent is handled, and a
     const spend = buildBlockedReport(dir, { code: 'budget-exhausted', change: 'demo', stopReason: 'max-cost' });
     assert.equal(spend.actor, 'human');
     assert.notEqual(classifyStop(stop({ invariant: 'budget-exhausted', actor: spend.actor })), 'handled');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+function closedSession(dir, { change = 'demo', stopReason, startedAt, closedAt }) {
+  const open = createRunSession(dir, { change, budgets: BUILTIN_RUN_BUDGETS, now: new Date(startedAt) });
+  return writeRunSession(dir, { ...open, status: 'closed', stopReason, lastObservedAt: closedAt });
+}
+
+test('human-level decisions count as policy-decision interventions and other levels are listed', () => {
+  const dir = tempProject();
+  try {
+    writeEvents(dir, [
+      { type: 'approval.issued', time: '2026-11-01T10:00:00.000Z', change: 'demo', task: '1.1' },
+      { type: 'halt.resumed', time: '2026-11-01T10:01:00.000Z' },
+      { type: 'lockout.resolved', time: '2026-11-01T10:02:00.000Z', change: 'demo', task: '1.2' },
+      { type: 'red-exception.recorded', time: '2026-11-01T10:03:00.000Z', change: 'demo', task: '1.3', exceptionType: 'waiver' },
+    ]);
+    const report = buildAutonomyReport(dir);
+    assert.deepEqual(report.interventions.map((row) => [row.event, row.category]), [
+      ['approval.issued', 'policy-decision'],
+      ['halt.resumed', 'policy-decision'],
+    ]);
+    assert.equal(report.counts.interventions, 2);
+    assert.deepEqual(report.decisions.map((row) => [row.event, row.level, row.gate]), [
+      ['lockout.resolved', 'independent', 'resolve-lockout'],
+      ['red-exception.recorded', 'independent', 'waive-red'],
+    ]);
+    assert.equal(report.counts.decisions, 2);
+    assert.equal(report.routineClean, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('the event gates and the human decision set agree', () => {
+  for (const [type] of Object.entries(EVENT_GATES)) {
+    const ids = eventGateIds(type);
+    for (const id of ids) assert.ok(Object.hasOwn(AUTHORITY, id), `${type} names ${id}`);
+    const expectedHuman = ids.some((id) => AUTHORITY[id].level !== 'agent');
+    assert.equal(HUMAN_DECISION_EVENTS.has(type), expectedHuman, type);
+  }
+  assert.equal(HUMAN_DECISION_EVENTS.has('run.new-run'), false);
+  assert.equal(HUMAN_DECISION_EVENTS.has('lockout.resolved'), true);
+});
+
+test('a stop from the level of its option decides its category, and a lockout is not a policy decision', () => {
+  assert.equal(classifyStop(stop({ actor: 'human', level: 'independent' })), 'handled');
+  assert.equal(classifyStop(stop({ actor: 'independent-agent', level: 'human' })), 'policy-decision');
+  assert.equal(classifyStop(stop({ invariant: 'reviewer-lockout' })), 'failure');
+  assert.equal(POLICY_SET.has('reviewer-lockout'), false);
+  assert.equal(POLICY_SET.has('new-run-cap'), true);
+});
+
+test('unrecorded stops list closed sessions without a matching stop event', () => {
+  const dir = tempProject();
+  try {
+    const t0 = '2026-11-01T10:00:00.000Z';
+    closedSession(dir, { stopReason: 'vacuous-red', startedAt: t0, closedAt: '2026-11-01T10:01:00.000Z' });
+    writeEvents(dir, [stop({ invariant: 'vacuous-red', time: '2026-11-01T10:00:30.000Z' })]);
+    let report = buildAutonomyReport(dir);
+    assert.deepEqual(report.unrecordedStops, []);
+    assert.equal(report.measurementComplete, true);
+
+    closedSession(dir, { stopReason: 'retry-cap', startedAt: '2026-11-02T10:00:00.000Z', closedAt: '2026-11-02T10:05:00.000Z' });
+    closedSession(dir, { stopReason: 'max-tasks', startedAt: '2026-11-03T10:00:00.000Z', closedAt: '2026-11-03T10:05:00.000Z' });
+    closedSession(dir, { stopReason: 'all-done', startedAt: '2026-11-04T10:00:00.000Z', closedAt: '2026-11-04T10:05:00.000Z' });
+    writeEvents(dir, [stop({ invariant: 'vacuous-red', time: '2026-11-01T10:00:30.000Z' }), stop({ invariant: 'vacuous-red', time: '2026-11-03T10:01:00.000Z' })]);
+    report = buildAutonomyReport(dir);
+    assert.deepEqual(report.unrecordedStops.map((row) => [row.change, row.stopReason, row.code]).sort(), [
+      ['demo', 'max-tasks', 'budget-exhausted'],
+      ['demo', 'retry-cap', 'retry-cap'],
+    ]);
+    assert.equal(report.measurementComplete, false);
+    assert.equal(report.routineClean, false);
+    assert.equal(Object.hasOwn(report.unrecordedStops[0], 'text'), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an unreadable session is listed as unreadable and the report still prints', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    fs.mkdirSync(path.join(dir, '.factory/orchestration/runs'), { recursive: true });
+    fs.writeFileSync(path.join(dir, '.factory/orchestration/runs/corrupt.json'), '{ not json');
+    const report = buildAutonomyReport(dir);
+    assert.deepEqual(report.unreadableSessions, [{ file: 'corrupt.json', unreadable: true }]);
+    assert.equal(report.measurementComplete, false);
+    const text = await idefactory(dir, ['autonomy', 'report']);
+    assert.equal(text.code, 0, text.err);
+    assert.match(text.out, /Unreadable run sessions: corrupt\.json/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('events with no stops keep their count, and a blind report is not clean', () => {
+  const dir = tempProject();
+  try {
+    writeEvents(dir, Array.from({ length: 486 }, (_, i) => ({ type: 'work.completed', time: `2026-11-01T10:00:${String(i % 60).padStart(2, '0')}.000Z`, change: 'demo', task: `1.${i}` })));
+    closedSession(dir, { stopReason: 'vacuous-red', startedAt: '2026-11-01T09:00:00.000Z', closedAt: '2026-11-01T09:30:00.000Z' });
+    const report = buildAutonomyReport(dir);
+    assert.equal(report.eventsRead, 486);
+    assert.equal(report.noStopEvents, true);
+    assert.equal(report.noEvents, true);
+    assert.equal(report.measurementComplete, false);
+    assert.equal(report.routineClean, false);
+    const text = renderAutonomyText(report);
+    assert.match(text, /486 events were read and none were stops\./);
+    assert.match(text, /Unrecorded stops: 1/);
+    assert.match(text, /measurementComplete: false/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an empty project reports both measures as true', () => {
+  const dir = tempProject();
+  try {
+    const report = buildAutonomyReport(dir);
+    assert.equal(report.measurementComplete, true);
+    assert.equal(report.routineClean, true);
+    assert.equal(report.noStopEvents, true);
+    assert.equal(report.schemaVersion, 2);
   } finally {
     cleanup(dir);
   }

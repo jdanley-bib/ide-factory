@@ -9,16 +9,16 @@
 
 ## 2. Count decisions
 
-- [ ] 2.1 Add `EVENT_GATES` to `src/lib/authority.mjs` (or to `autonomy.mjs` with the approval and halt types until `truthful-authority-levels` lands) and derive `HUMAN_DECISION_EVENTS` from it; verify with a test asserting both sets agree.
-- [ ] 2.2 Count `human`-level decision events as `policy-decision` interventions and list other levels under `decisions` without counting them; verify with `test/autonomy.test.mjs` for an approval, a halt resume, a lockout resolution, and a waiver.
-- [ ] 2.3 Update the intervention categories so a lockout resolution is not a human policy decision and classification reads the option's level; verify with a test pinning each category.
+- [x] 2.1 Add `EVENT_GATES` to `src/lib/authority.mjs` (or to `autonomy.mjs` with the approval and halt types until `truthful-authority-levels` lands) and derive `HUMAN_DECISION_EVENTS` from it; verify with a test asserting both sets agree.
+- [x] 2.2 Count `human`-level decision events as `policy-decision` interventions and list other levels under `decisions` without counting them; verify with `test/autonomy.test.mjs` for an approval, a halt resume, a lockout resolution, and a waiver.
+- [x] 2.3 Update the intervention categories so a lockout resolution is not a human policy decision and classification reads the option's level; verify with a test pinning each category.
 
 ## 3. Completeness
 
-- [ ] 3.1 List `unrecordedStops` from closed run session files that have no matching `blocked.recorded` event, treating an unreadable session as listed-unreadable; verify with fixtures for a recorded stop, an unrecorded stop, a stop recorded under a different code, an `all-done` session, and a corrupt file.
-- [ ] 3.2 Add `measurementComplete`, make `routineClean` depend on it, replace `noEvents` with `noStopEvents` and `eventsRead` while keeping `noEvents` as an alias, and raise the schema version to 2; verify with the report fixture from #54 (486 events, no stops, sessions with stops) producing `measurementComplete: false` and `routineClean: false`, and an empty project producing both true.
-- [ ] 3.3 Update the text output to say when events were read but none were stops and to list unrecorded stops; verify with a text-output test for each case.
+- [x] 3.1 List `unrecordedStops` from closed run session files that have no matching `blocked.recorded` event, treating an unreadable session as listed-unreadable; verify with fixtures for a recorded stop, an unrecorded stop, a stop recorded under a different code, an `all-done` session, and a corrupt file.
+- [x] 3.2 Add `measurementComplete`, make `routineClean` depend on it, replace `noEvents` with `noStopEvents` and `eventsRead` while keeping `noEvents` as an alias, and raise the schema version to 2; verify with the report fixture from #54 (486 events, no stops, sessions with stops) producing `measurementComplete: false` and `routineClean: false`, and an empty project producing both true.
+- [x] 3.3 Update the text output to say when events were read but none were stops and to list unrecorded stops; verify with a text-output test for each case.
 
 ## 4. Help
 
-- [ ] 4.1 Document the new fields, the alias, and the completeness rule in `autonomy report` help, leaving global usage unchanged; verify with `test/command-help.test.mjs`.
+- [x] 4.1 Document the new fields, the alias, and the completeness rule in `autonomy report` help, leaving global usage unchanged; verify with `test/command-help.test.mjs`.
