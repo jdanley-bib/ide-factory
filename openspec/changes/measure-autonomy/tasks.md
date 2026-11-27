@@ -29,7 +29,7 @@
 
 ## 5. Integration
 
-- [ ] 5.1 Run `npm test` and `npx openspec validate measure-autonomy --strict`; verify both exit zero.
+- [x] 5.1 Run `npm test` and `npx openspec validate measure-autonomy --strict`; verify both exit zero.
 
 ## Workflow follow-up
 
