@@ -135,6 +135,10 @@ test('comment is keyed and transition refuses the ready state, both as plans', a
       arguments: {
         action: 'add', orgName: 'contoso', project: 'Shop', workItemId: 42, comment: 'Looking good',
       },
+      repeat: 'check-first',
+      verify: {
+        tool: 'wit_work_item', action: 'get', purpose: 'list the work item comments and look for this comment',
+      },
     });
     assert.deepEqual(readRecord(dir).comments, []);
     assert.equal((await idefactory(dir, ['mcp', 'ack', commentPlan.id])).code, 0);

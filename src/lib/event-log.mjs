@@ -73,6 +73,10 @@ function sanitizeEvent(event) {
     'agentActionable',
     'resolution',
     'attemptState',
+    'operation',
+    'outcome',
+    'cause',
+    'readback',
   ];
   const clean = {};
   for (const key of allowed) {

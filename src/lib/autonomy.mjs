@@ -1,4 +1,5 @@
 import { readControlEvents } from './event-log.mjs';
+import { isRetryDecision } from './mcp-progress.mjs';
 
 export const AUTONOMY_SCHEMA_VERSION = 1;
 export const SCOPE_STATEMENT = 'This report covers interventions the factory recorded. It does not cover prompts typed into an IDE chat.';
@@ -79,6 +80,32 @@ export function buildAutonomyReport(project, options = {}) {
   let handled = 0;
   let unclassifiedEvents = 0;
   let stopEvents = 0;
+  const recoveredPlans = new Set();
+
+  selected.forEach((event, index) => {
+    if (event.type !== 'mcp-decision') return;
+    if ((event.outcome !== 'applied' && isRetryDecision(event.decision)) || event.decision === 'skip-applied') {
+      stopEvents += 1;
+      handled += 1;
+      bump(handledByInvariant, 'operation-retry');
+      const ack = selected.slice(index + 1).find((next) => next.type === 'mcp-ack' && next.planId === event.planId);
+      if (ack && !recoveredPlans.has(event.planId)) {
+        recoveredPlans.add(event.planId);
+        recoveries.push({
+          change: event.change || null,
+          task: null,
+          invariant: 'operation-retry',
+          recordedAt: event.time,
+          resolvedAt: ack.time,
+          resolution: 'mcp-ack',
+        });
+      }
+    } else if (event.cause === 'conflict' && event.decision === 'abandon') {
+      stopEvents += 1;
+      handled += 1;
+      bump(handledByInvariant, 'operation-conflict');
+    }
+  });
 
   selected.forEach((event, index) => {
     if (event.type !== 'blocked.recorded') return;

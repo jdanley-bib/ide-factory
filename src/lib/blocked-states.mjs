@@ -136,6 +136,13 @@ export const BLOCKED_TABLE = {
       NEW_RUN,
     ],
   },
+  'operation-retry-cap': {
+    retry: 'never',
+    message: 'A cloud operation used its recorded retries. A human must decide what happens to the plan.',
+    options: [
+      option('show-pending', ['mcp', 'pending'], 'idefactory mcp pending --json', 'tooling', 'a pending plan', false, () => true),
+    ],
+  },
   'retry-cap': {
     retry: 'never',
     message: 'The attempt hit its retry cap.',
