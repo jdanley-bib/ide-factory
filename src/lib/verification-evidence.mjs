@@ -10,6 +10,7 @@ import {
   describeRedFailure,
   redFailureDiagnostics,
   retryKey,
+  spawnFailureDetail,
 } from './red-evidence.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { halted, writeText } from './layout.mjs';
@@ -223,7 +224,12 @@ export async function verifyRun(project, attemptId, options = {}) {
     cwd: project,
     timeoutMs: entry.timeoutMs,
   });
-  if (spawnError && !asRed) throw spawnError;
+  if (spawnError && !asRed) {
+    throw new Error(
+      `infrastructure-failure: ${spawnFailureDetail(entry.argv[0], String(spawnError.code || 'UNKNOWN'))}`,
+      { cause: spawnError },
+    );
+  }
   const finishedAt = new Date().toISOString();
   const output = Buffer.concat([stdout, stderr]).toString('utf8');
   const classification = classifyCheckOutcome({
@@ -246,6 +252,7 @@ export async function verifyRun(project, attemptId, options = {}) {
       finishedAt,
       exitCode,
       spawnError,
+      executable: entry.argv[0],
       logDigest,
       recordedAt: finishedAt,
     });

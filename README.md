@@ -24,7 +24,10 @@ idefactory doctor
 idefactory setup --governance lightweight --map unit --argv dotnet --argv test
 idefactory setup --governance strict --map unit --argv npm --argv test --verifier-argv node --verifier-argv scripts/verify-principal.mjs
 idefactory setup --governance lightweight --no-test
+idefactory setup --governance lightweight --map unit --argv-json '["dotnet","test","--filter","Category=Unit | Category=Integration"]'
 ```
+
+`--argv-json` takes the whole command as one JSON array and stores it exactly, which is the safe form for a part that begins with `--` or holds spaces, pipes, or quotes; `--argv=--filter` is the equals form for one such part. Only a command given as a single element that contains whitespace is refused as a shell string. `idefactory checks preview` and `idefactory status` print each registered argv as a JSON array. A flag that needs a value fails rather than storing a placeholder.
 
 `--governance strict` stores policy version 2 and the `--verifier-argv` command. Strict setup writes nothing when that argv is missing. `--no-test` records that the project has no test command. `init` and `upgrade` do not ask these questions; they print the gap and leave an existing registry in place. `idefactory setup --detect` prints proposed commands and writes nothing.
 

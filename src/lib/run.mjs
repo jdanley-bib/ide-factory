@@ -519,6 +519,14 @@ export function parseArgs(argv) {
       sequence.push({ key: 'help', value: true });
       continue;
     }
+    if (token.startsWith('--') && token.indexOf('=', 2) > 2) {
+      const at = token.indexOf('=', 2);
+      const key = token.slice(2, at);
+      const value = token.slice(at + 1);
+      flags[key] = value;
+      sequence.push({ key, value });
+      continue;
+    }
     if (token.startsWith('--')) {
       const key = token.slice(2);
       const next = argv[i + 1];

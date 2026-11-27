@@ -7,6 +7,7 @@ import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
+import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
 import { resolveGitBinding } from './verification-evidence.mjs';
@@ -77,6 +78,7 @@ export function status(project, _env) {
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
   const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
+  const checkLines = Object.entries(registeredArgv(project)).map(([kind, argv]) => `- ${kind}: ${formatArgv(argv)}`);
   return [
     'Factory status',
     `HALT: ${halt ? 'yes' : 'no'}`,
@@ -84,6 +86,7 @@ export function status(project, _env) {
     `OpenSpec changes: ${changes.join(', ') || '(none)'}`,
     `Work queue: ${workLine}`,
     ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
+    ...(checkLines.length ? ['Registered checks:', ...checkLines] : []),
     '',
     team,
     '',

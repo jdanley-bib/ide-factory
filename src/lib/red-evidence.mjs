@@ -71,6 +71,7 @@ export function redFailureDiagnostics({
   finishedAt,
   exitCode,
   spawnError,
+  executable,
   logDigest,
   recordedAt,
 }) {
@@ -83,6 +84,7 @@ export function redFailureDiagnostics({
     durationMs,
     exitCode: exitCode ?? null,
     spawnError: spawnError ? String(spawnError.code || 'UNKNOWN') : null,
+    ...(spawnError && typeof executable === 'string' ? { executable } : {}),
     logDigest,
     recordedAt,
   };
@@ -94,7 +96,25 @@ export function redFailureDiagnostics({
  */
 export function describeRedFailure(entry) {
   if (entry.timedOut) return `timed out after ${entry.timeoutMs} ms, elapsed ${entry.durationMs} ms`;
-  if (entry.spawnError) return `spawn error ${entry.spawnError}`;
+  if (entry.spawnError) return spawnFailureDetail(entry.executable, entry.spawnError);
   if (entry.classification === 'vacuous-red' || entry.exitCode === 127) return `exit code ${entry.exitCode}`;
   return `no tests reported, exit code ${entry.exitCode}`;
+}
+
+const WINDOWS_SHIM = /\.(cmd|bat)$/i;
+
+/**
+ * Explain a failure to start a registered executable. Names the executable and
+ * the platform code, and says so when a Windows batch shim cannot start without
+ * a shell. Never describes a spawn failure as a test failure.
+ * @param {string|undefined} executable
+ * @param {string} code
+ */
+export function spawnFailureDetail(executable, code) {
+  const named = typeof executable === 'string' && executable.length > 0 ? ` starting ${executable}` : '';
+  const base = `spawn error ${code}${named}`;
+  if (typeof executable === 'string' && WINDOWS_SHIM.test(executable) && (code === 'EINVAL' || code === 'ENOENT')) {
+    return `${base}: ${executable} is a batch shim and cannot be started without a shell. Register the underlying executable instead.`;
+  }
+  return base;
 }

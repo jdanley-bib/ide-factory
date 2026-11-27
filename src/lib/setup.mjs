@@ -84,8 +84,8 @@ export async function setupProject(project, options = {}) {
     nextConfig.governance.testDecision = 'none';
   } else {
     for (const map of answers.maps) {
-      if (!map.kind || map.argv.some((part) => /\s/.test(part))) {
-        throw new Error('setup rejects a shell command string; pass an argv array');
+      if (!map.kind || isShellString(map.argv)) {
+        throw new Error(SHELL_STRING_MESSAGE);
       }
       nextChecks[map.kind] = {
         argv: [...map.argv],
@@ -115,9 +115,43 @@ export async function setupProject(project, options = {}) {
   return { wrote: true, text: 'Recorded factory setup.' };
 }
 
+const SHELL_STRING_MESSAGE = 'setup rejects a shell command string; pass an argv array';
+
+/**
+ * A shell string is an argv of exactly one element that contains whitespace.
+ * Later elements may hold whitespace, pipes, and quotes.
+ * @param {string[]} argv
+ */
+function isShellString(argv) {
+  return argv.length === 1 && /\s/.test(argv[0]);
+}
+
+function structuredHint(flag) {
+  return `setup --${flag} needs a value. To pass an element that begins with "--", use --${flag}=<element> or --argv-json '["cmd","--flag"]'.`;
+}
+
+function requireValue(token) {
+  if (typeof token.value !== 'string') throw new Error(structuredHint(token.key));
+  return token.value;
+}
+
+function parseArgvJson(value) {
+  let parsed;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw new Error(`setup --argv-json is not valid JSON: ${value}`);
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0
+    || !parsed.every((part) => typeof part === 'string' && part.length > 0)) {
+    throw new Error(`setup --argv-json must be a non-empty JSON array of non-empty strings: ${value}`);
+  }
+  return parsed;
+}
+
 /**
  * Build maps from an ordered flag sequence. `--map` starts a kind; following
- * `--argv` values belong to it.
+ * `--argv` values or one `--argv-json` array belong to it.
  * @param {{ key: string, value: string|boolean }[]} sequence
  */
 export function mapsFromSequence(sequence) {
@@ -126,16 +160,22 @@ export function mapsFromSequence(sequence) {
   const verifierArgv = [];
   for (const token of sequence) {
     if (token.key === 'map') {
-      current = { kind: String(token.value), argv: [] };
+      current = { kind: requireValue(token), argv: [], fromJson: false };
       maps.push(current);
     } else if (token.key === 'argv') {
       if (!current) throw new Error('setup --argv requires a preceding --map <kind>');
-      current.argv.push(String(token.value));
+      if (current.fromJson) throw new Error('setup --argv cannot follow --argv-json for the same --map');
+      current.argv.push(requireValue(token));
+    } else if (token.key === 'argv-json') {
+      if (!current) throw new Error('setup --argv-json requires a preceding --map <kind>');
+      if (current.argv.length > 0) throw new Error('setup --argv-json cannot be combined with --argv for the same --map');
+      current.argv = parseArgvJson(requireValue(token));
+      current.fromJson = true;
     } else if (token.key === 'verifier-argv') {
-      verifierArgv.push(String(token.value));
+      verifierArgv.push(requireValue(token));
     }
   }
-  return { maps, verifierArgv };
+  return { maps: maps.map(({ kind, argv }) => ({ kind, argv })), verifierArgv };
 }
 
 function assertFactory(project) {
@@ -183,8 +223,8 @@ async function resolveAnswers(project, options) {
   if (governance === 'strict' && verifierArgv.length === 0) {
     throw new Error('strict governance requires a principal verifier argv');
   }
-  if (!noTest && maps.some((map) => map.argv.some((part) => /\s/.test(part)))) {
-    throw new Error('setup rejects a shell command string; pass an argv array');
+  if (!noTest && maps.some((map) => isShellString(map.argv))) {
+    throw new Error(SHELL_STRING_MESSAGE);
   }
   return { governance, maps, noTest, verifierArgv };
 }
