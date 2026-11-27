@@ -12,7 +12,7 @@ import {
   assertPassingCliSecurityEvidence,
   requiresSecurityStage,
 } from './risk-gates.mjs';
-import { getWorkItem, updateWorkItem } from './work.mjs';
+import { describeHold, getWorkItem, isHeld, updateWorkItem } from './work.mjs';
 import { hasAnyFailingRed, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
 import { assertMethodAccepted } from './red-method.mjs';
@@ -99,6 +99,9 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   const item = getWorkItem(project, change, taskId);
   if (!item) throw new Error(`Work item not found: ${change}/${taskId}`);
   if (item.status === 'done') throw new Error(`Work item already done: ${change}/${taskId}`);
+  if (isHeld(item)) {
+    throw new Error(`Work item ${change}/${taskId} is ${describeHold(item)}; resume it with idefactory sync-tasks ${change} --apply before starting an attempt`);
+  }
   assertNoRequirementProblems(project, item);
 
   const attemptId = randomUUID();

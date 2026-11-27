@@ -1,17 +1,21 @@
+import { standingDecisionsText } from './standing-decisions.mjs';
+import { BlockedError, haltError } from './blocked-error.mjs';
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { attemptsRoot, getAttempt } from './attempt.mjs';
+import { describeReopens } from './attempt-reopen.mjs';
 import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
 import { describeProblems, redKindsFor, resolveRequirements } from './required-checks.mjs';
 import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
+import { classifyDiff, driftFor, itemHasAttempt, itemText } from './reconcile-diff.mjs';
 import {
   ensureWorkDirs,
   getWorkItem,
-  itemPath,
   listWorkItems,
+  removeWorkItemFile,
   selectReady,
   upsertWorkItem,
 } from './work.mjs';
@@ -73,9 +77,10 @@ export function loadChangeTasks(project, change) {
   });
 }
 
-export function syncTasks(project, change, _env) {
+export function syncTasks(project, change, _env, hooks = {}) {
   if (halted(project)) throw haltError();
   ensureWorkDirs(project);
+  finishPendingRenumber(project, change);
   const tasks = loadChangeTasks(project, change);
   const suggestions = [];
   for (const task of tasks) {
@@ -93,10 +98,10 @@ export function syncTasks(project, change, _env) {
   const existing = listWorkItems(project, change);
 
   if (existing.length === 0) {
-    return { ...createInitialItems(project, change, tasks), suggestions };
+    return { ...createInitialItems(project, change, tasks), suggestions, drift: [] };
   }
 
-  return { ...reconcileExistingItems(project, change, tasks, existing), suggestions };
+  return { ...reconcileExistingItems(project, change, tasks, existing, hooks), suggestions };
 }
 
 function createInitialItems(project, change, tasks) {
@@ -113,72 +118,63 @@ function createInitialItems(project, change, tasks) {
   return finishSync(project, change, created, skipped);
 }
 
-function reconcileExistingItems(project, change, tasks, existing) {
-  const currentIds = tasks.map((task) => task.id);
-  const previousIds = existing.map((item) => item.id);
-  const currentIdSet = new Set(currentIds);
-  const previousIdSet = new Set(previousIds);
-
-  if (hasDuplicateNormalizedTitles(tasks.map((task) => task.title))
-    || hasDuplicateNormalizedTitles(existing.map((item) => itemNormalizedText(item)))) {
-    throw reconciliationError(change, previousIds, currentIds);
+function reconcileExistingItems(project, change, tasks, existing, hooks) {
+  const diff = classifyDiff(tasks, existing);
+  if (diff.kind === 'ambiguous') {
+    throw reconciliationError(change, unmatchedPreviousIds(diff.tasks, diff.active), unmatchedCurrentIds(diff.tasks, diff.active));
   }
-
-  const sameIdSet = currentIdSet.size === previousIdSet.size
-    && [...currentIdSet].every((id) => previousIdSet.has(id));
-
-  if (sameIdSet) {
-    const taskById = new Map(tasks.map((task) => [task.id, task]));
-    const itemById = new Map(existing.map((item) => [item.id, item]));
-    const allTextEqual = [...currentIdSet].every((id) => (
-      normalizeTaskText(taskById.get(id).title) === itemNormalizedText(itemById.get(id))
-    ));
-
-    if (allTextEqual) {
-      return applyIdempotentSync(project, change, tasks, itemById);
-    }
-    return applyTitleUpdates(project, change, tasks, itemById);
+  if (diff.kind === 'renumber') {
+    return applyRenumbers(project, change, diff.tasks, diff.pairs, hooks);
   }
-
-  const textMatch = oneToOneTextMatch(tasks, existing);
-  if (textMatch) {
-    return applyRenumbers(project, change, tasks, textMatch);
+  const result = applyTitleAndProvenance(project, change, diff.pairs);
+  if (diff.kind === 'addition') {
+    for (const task of diff.additions) writeNewWorkItem(project, change, task);
+    return finishSync(project, change, diff.additions.length, diff.pairs.length, result.drift);
   }
-
-  throw reconciliationError(change, unmatchedPreviousIds(tasks, existing), unmatchedCurrentIds(tasks, existing));
+  return finishSync(project, change, 0, diff.pairs.length, result.drift);
 }
 
-function applyIdempotentSync(project, change, tasks, itemById) {
-  let created = 0;
-  let skipped = 0;
-  for (const task of tasks) {
-    const item = itemById.get(task.id);
+function titleHistoryEntry(item) {
+  const text = itemText(item);
+  return {
+    title: item.title,
+    text,
+    digest: item.provenance?.digest ?? provenanceForTitle(text).digest,
+    replacedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Bring titles and provenance up to date. An item that has an attempt keeps its classification,
+ * dependencies, and acceptance criteria; a difference is reported as drift instead.
+ */
+function applyTitleAndProvenance(project, change, pairs) {
+  const drift = [];
+  for (const { task, item } of pairs) {
     const provenance = provenanceForTitle(task.title);
-    const existingProv = item.provenance;
-    const provenanceEqual = existingProv
-      && existingProv.algorithm === provenance.algorithm
-      && existingProv.text === provenance.text
-      && existingProv.digest === provenance.digest;
-    if (!provenanceEqual) {
+    const wordingChanged = normalizeTaskText(task.title) !== itemNormalizedText(item);
+    const attempted = itemHasAttempt(project, item);
+    const found = driftFor(project, item, task);
+    if (!wordingChanged) {
+      const existingProv = item.provenance;
+      const provenanceEqual = existingProv
+        && existingProv.algorithm === provenance.algorithm
+        && existingProv.text === provenance.text
+        && existingProv.digest === provenance.digest;
+      if (!provenanceEqual) upsertWorkItem(project, { ...item, provenance });
+      if (found) drift.push(found);
+      continue;
+    }
+    if (attempted) {
       upsertWorkItem(project, {
         ...item,
-        id: item.id,
-        change,
-        status: item.status,
-        attemptId: item.attemptId,
+        title: task.title,
         provenance,
+        titleHistory: [...(item.titleHistory || []), titleHistoryEntry(item)],
       });
+      if (found) drift.push(found);
+      continue;
     }
-    skipped += 1;
-  }
-  return finishSync(project, change, created, skipped);
-}
-
-function applyTitleUpdates(project, change, tasks, itemById) {
-  let created = 0;
-  let skipped = 0;
-  for (const task of tasks) {
-    const item = itemById.get(task.id);
     const classified = classifyTask({
       id: task.id,
       title: task.title,
@@ -196,14 +192,18 @@ function applyTitleUpdates(project, change, tasks, itemById) {
       dependencies: classified.dependencies,
       acceptanceCriteria: defaultAcceptanceCriteria(task.title, task.acceptanceCriteria),
       factory: classified,
-      provenance: provenanceForTitle(task.title),
+      provenance,
+      titleHistory: [...(item.titleHistory || []), titleHistoryEntry(item)],
     });
-    skipped += 1;
   }
-  return finishSync(project, change, created, skipped);
+  return { drift };
 }
 
-function applyRenumbers(project, change, tasks, pairs) {
+function renumberJournalPath(project, change) {
+  return path.join(project, '.factory', 'work', 'pending', `${change}.renumber.json`);
+}
+
+function applyRenumbers(project, change, tasks, pairs, hooks = {}) {
   const planned = pairs.map(({ task, item }) => ({
     ...item,
     id: task.id,
@@ -215,24 +215,61 @@ function applyRenumbers(project, change, tasks, pairs) {
     acceptanceCriteria: Array.isArray(item.acceptanceCriteria) ? item.acceptanceCriteria : [],
     provenance: item.provenance || provenanceForTitle(task.title),
   }));
-
-  // Replace the matched set atomically enough to avoid id-swap collisions.
-  for (const item of listWorkItems(project, change)) {
-    const file = itemPath(project, change, item.id);
-    if (fs.existsSync(file)) fs.unlinkSync(file);
-  }
-  for (const next of planned) {
-    upsertWorkItem(project, next);
-  }
-  for (const { task, item } of pairs) {
-    if (task.id !== item.id) {
-      retargetAttempts(project, change, item.id, task.id);
-    }
-  }
-  return finishSync(project, change, 0, tasks.length);
+  const plannedIds = new Set(planned.map((item) => item.id));
+  const moved = new Map(pairs.filter(({ task, item }) => task.id !== item.id).map(({ task, item }) => [item.id, task.id]));
+  const journal = {
+    version: 1,
+    change,
+    items: planned,
+    removeIds: [...moved.keys()].filter((id) => !plannedIds.has(id)),
+    retargets: attemptsToRetarget(project, change, moved),
+  };
+  writeText(renumberJournalPath(project, change), JSON.stringify(journal, null, 2));
+  runRenumberJournal(project, journal, hooks);
+  return finishSync(project, change, 0, tasks.length, []);
 }
 
-function writeNewWorkItem(project, change, task) {
+function attemptsToRetarget(project, change, moved) {
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return [];
+  const rows = [];
+  for (const name of fs.readdirSync(root).sort()) {
+    if (!name.endsWith('.json')) continue;
+    const attempt = getAttempt(project, name.slice(0, -'.json'.length));
+    if (attempt && attempt.change === change && moved.has(attempt.taskId)) {
+      rows.push({ attemptId: attempt.id, to: moved.get(attempt.taskId) });
+    }
+  }
+  return rows;
+}
+
+/** Item files are written before any file is removed, so a crash never leaves the change without items. */
+function runRenumberJournal(project, journal, hooks = {}) {
+  journal.items.forEach((item, index) => {
+    upsertWorkItem(project, item);
+    hooks.afterWrite?.(index);
+  });
+  for (const id of journal.removeIds) removeWorkItemFile(project, journal.change, id);
+  for (const { attemptId, to } of journal.retargets) {
+    const attempt = getAttempt(project, attemptId);
+    if (!attempt || attempt.taskId === to) continue;
+    writeText(
+      path.join(attemptsRoot(project), `${attemptId}.json`),
+      JSON.stringify({ ...attempt, taskId: to, updatedAt: new Date().toISOString() }, null, 2),
+    );
+  }
+  const file = renumberJournalPath(project, journal.change);
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+}
+
+function finishPendingRenumber(project, change) {
+  if (!change || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(change)) return;
+  const file = renumberJournalPath(project, change);
+  if (!fs.existsSync(file)) return;
+  runRenumberJournal(project, JSON.parse(readText(file)));
+}
+
+export function writeNewWorkItem(project, change, task) {
   const classified = classifyTask({
     id: task.id,
     title: task.title,
@@ -253,49 +290,17 @@ function writeNewWorkItem(project, change, task) {
   });
 }
 
-function finishSync(project, change, created, skipped) {
+function finishSync(project, change, created, skipped, drift = []) {
   writeText(
     path.join(project, '.factory', 'active-change.json'),
     JSON.stringify({ change, updatedAt: new Date().toISOString() }, null, 2),
   );
   ledger(project, 'sync-tasks', { change, created, skipped });
-  return { created, skipped, change };
+  return { created, skipped, change, drift };
 }
 
 function itemNormalizedText(item) {
-  if (item?.provenance?.text != null) return normalizeTaskText(item.provenance.text);
-  return normalizeTaskText(item?.title || '');
-}
-
-function hasDuplicateNormalizedTitles(titles) {
-  const seen = new Set();
-  for (const title of titles) {
-    const key = normalizeTaskText(title);
-    if (seen.has(key)) return true;
-    seen.add(key);
-  }
-  return false;
-}
-
-function oneToOneTextMatch(tasks, existing) {
-  const itemsByText = new Map();
-  for (const item of existing) {
-    const key = itemNormalizedText(item);
-    if (itemsByText.has(key)) return null;
-    itemsByText.set(key, item);
-  }
-  const taskTexts = new Set();
-  const pairs = [];
-  for (const task of tasks) {
-    const key = normalizeTaskText(task.title);
-    if (taskTexts.has(key)) return null;
-    taskTexts.add(key);
-    const item = itemsByText.get(key);
-    if (!item) return null;
-    pairs.push({ task, item });
-  }
-  if (taskTexts.size !== itemsByText.size) return null;
-  return pairs;
+  return itemText(item);
 }
 
 function unmatchedPreviousIds(tasks, existing) {
@@ -315,28 +320,14 @@ function unmatchedCurrentIds(tasks, existing) {
 function reconciliationError(change, previousIds, currentIds) {
   const prev = [...new Set(previousIds)].sort().join(', ') || '(none)';
   const curr = [...new Set(currentIds)].sort().join(', ') || '(none)';
-  return new Error(
+  return new BlockedError(
     `Reconciliation failed for change ${change}: `
     + `unmatched previous checkbox ids: ${prev}; `
-    + `unmatched current checkbox ids: ${curr}`,
+    + `unmatched current checkbox ids: ${curr}. `
+    + `Run idefactory sync-tasks ${change} --plan to preview the decisions needed.`,
+    'reconciliation-required',
+    { change },
   );
-}
-
-function retargetAttempts(project, change, oldTaskId, newTaskId) {
-  const root = attemptsRoot(project);
-  if (!fs.existsSync(root)) return;
-  for (const name of fs.readdirSync(root)) {
-    if (!name.endsWith('.json')) continue;
-    const attemptId = name.slice(0, -'.json'.length);
-    const attempt = getAttempt(project, attemptId);
-    if (!attempt || attempt.change !== change || attempt.taskId !== oldTaskId) continue;
-    const next = {
-      ...attempt,
-      taskId: newTaskId,
-      updatedAt: new Date().toISOString(),
-    };
-    writeText(path.join(root, name), JSON.stringify(next, null, 2));
-  }
 }
 
 export function buildPacket(project, env, changeName) {
@@ -363,10 +354,15 @@ function selectAcrossChanges(project) {
     || null;
 }
 
+function standingBlock(project, item) {
+  const text = standingDecisionsText(project, item);
+  return text ? `\n${text}` : '';
+}
+
 function renderPacket({ role, item, modelProfile, project }) {
   const criteria = (item.acceptanceCriteria || []).map((entry) => `- ${entry}`).join('\n');
   const roles = (item.factory?.roles || []).join(', ');
-  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role) + methodBlock(project, item, role);
+  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role) + methodBlock(project, item, role) + reopenBlock(project, item, role) + standingBlock(project, item);
   return `# Work packet
 
 Role: ${role}
@@ -449,6 +445,14 @@ function methodBlock(project, item, role) {
     lines.push('A different role must record a method review before this attempt can be accepted.');
   }
   return `\nRed method:\n${lines.map((line) => `- ${line}`).join('\n')}\n`;
+}
+
+function reopenBlock(project, item, role) {
+  if (role !== 'reviewer' && role !== 'security-reviewer') return '';
+  const attempt = currentAttempt(project, item);
+  const lines = attempt ? describeReopens(attempt) : [];
+  if (lines.length === 0) return '';
+  return `\nReopened attempt (the earlier verdict does not cover the amended evidence):\n${lines.map((line) => `- ${line}`).join('\n')}\n`;
 }
 
 function requirementLines(project, item) {
@@ -544,12 +548,6 @@ function assertChangeName(change) {
   if (!change || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(change)) {
     throw new Error('Usage: idefactory sync-tasks <change-name>');
   }
-}
-
-function haltError() {
-  const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
-  error.code = 'HALT';
-  return error;
 }
 
 export { haltError };

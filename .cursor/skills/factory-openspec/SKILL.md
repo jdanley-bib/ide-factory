@@ -37,6 +37,8 @@ idefactory sync-tasks <name>
 
 `.factory/work/` is the only execution queue. OpenSpec `tasks.md` remains the human plan.
 
+When the human changes the plan after a sync, run `idefactory sync-tasks <name>` again. Appended tasks, and checked tasks that never had an item, are handled automatically. When it reports a reconciliation error, run `idefactory sync-tasks <name> --plan` (add `--json` for one document). The plan lists every unmatched item and task, work in flight, classification drift, dependents, overlapping changes, and a digest. Then record explicit decisions in a JSON file keyed by stored item id and run `idefactory sync-tasks <name> --apply --decisions-file <path> --plan-digest <digest> --decided-by <id>`. The decisions are `keep`, `renumber`, `defer`, `resume`, `drop`, `split`, `merge`, `move`, `adopt-classification`, and `keep-classification`. Do not create a separate change as a workaround, and do not guess which old task became which new task. Deferred and dropped items keep their attempts and evidence and are never selected.
+
 ## Build
 
 For each synced work item, follow `factory-build` one item at a time, or use `factory-run` for a bounded multi-item loop when the human asks.

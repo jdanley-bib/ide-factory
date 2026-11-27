@@ -1613,7 +1613,7 @@ test('an edited red no longer matches the invalid-red waiver digest', async () =
   }
 });
 
-test('verify run --red is refused on a kind that already has an exception and runs no check', async () => {
+test('verify run --red after an invalid-red waiver appends one later red and keeps the invalidated record', async () => {
   const dir = tempProject();
   try {
     const attempt = await postHocRed(dir);
@@ -1635,10 +1635,14 @@ test('verify run --red is refused on a kind that already has an exception and ru
     );
     const digestBefore = redDigest(getAttempt(dir, attempt.id));
     const rerun = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
-    assert.notEqual(rerun.code, 0);
-    assert.match(rerun.err, /already excepted/);
-    assert.equal(fs.existsSync(marker), false);
-    assert.equal(redDigest(getAttempt(dir, attempt.id)), digestBefore);
+    assert.equal(rerun.code, 0, rerun.err + rerun.out);
+    assert.equal(fs.existsSync(marker), true);
+    const after = getAttempt(dir, attempt.id);
+    assert.equal(after.evidence.redHistory.unit.length, 2);
+    assert.equal(redDigest({ evidence: { reds: { unit: after.evidence.redHistory.unit[0] } } }), digestBefore);
+    const again = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(again.code, 0);
+    assert.match(again.err, /already recorded after the invalid-red waiver/);
   } finally {
     cleanup(dir);
   }

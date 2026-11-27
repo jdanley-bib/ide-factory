@@ -1,3 +1,6 @@
+import { standingDecisionsText } from './standing-decisions.mjs';
+import { haltError } from './blocked-error.mjs';
+import { blockedReportForStop, focusItem, recordStop, resolveClearedRecords, resolveOpenForChange } from './blocked-states.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -24,6 +27,7 @@ import {
 } from './run-session.mjs';
 import { classifyCheckOutcome, isRequiredTestKind, retryKey } from './red-evidence.mjs';
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
+import { describeReopens } from './attempt-reopen.mjs';
 import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import { humanGateAllows } from './risk-gates.mjs';
 import { describeProblems, missingChecks, redKindsFor, resolveRequirements } from './required-checks.mjs';
@@ -33,13 +37,28 @@ import {
   revisionReuse,
   validateCheckRegistry,
 } from './verification-evidence.mjs';
-import { getWorkItem, listWorkItems, selectReady, workCounts } from './work.mjs';
+import { describeHold, getWorkItem, isHeld, listWorkItems, selectReady, workCounts } from './work.mjs';
 
 export const EXIT_OK = 0;
 export const EXIT_ERROR = 1;
 export const EXIT_NEEDS_AGENT = 2;
 
-export function runFactory(project, env, {
+
+export function runFactory(project, env, options = {}) {
+  const focus = {};
+  const result = runFactoryCore(project, env, options, focus);
+  const scope = { change: options.change, ...(focus.task ? { task: focus.task } : {}), ...(focus.attemptId ? { attemptId: focus.attemptId } : {}), ...(focus.action ? { action: focus.action } : {}) };
+  const blocked = blockedReportForStop(project, result, scope);
+  if (blocked) {
+    result.blocked = blocked;
+    recordStop(project, blocked);
+  } else if (result.stopReason === 'all-done') {
+    resolveOpenForChange(project, options.change, 'work-completed');
+  }
+  return result;
+}
+
+function runFactoryCore(project, env, {
   change,
   until = 'human-gate',
   maxTasks,
@@ -50,14 +69,18 @@ export function runFactory(project, env, {
   hostCost,
   newRun = false,
   acceptBaseline = false,
-} = {}) {
+} = {}, focus = {}) {
   if (halted(project)) {
-    const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
-    error.code = 'HALT';
-    throw error;
+    throw haltError();
   }
   if (!change) throw new Error('Usage: idefactory run --change <name>');
+  resolveClearedRecords(project, change);
   if (hasActiveLockout(project)) {
+    const focusItemRow = focusItem(project, change);
+    if (focusItemRow) {
+      focus.task = focusItemRow.id;
+      if (focusItemRow.attemptId) focus.attemptId = focusItemRow.attemptId;
+    }
     return {
       code: EXIT_ERROR,
       text: 'Active lockout present. Resolve before run.\n',
@@ -199,10 +222,14 @@ export function runFactory(project, env, {
 
     const inProgress = listWorkItems(project, change).find((item) => item.status === 'in_progress');
     let item = inProgress || selectReady(project, change);
+    if (item) {
+      focus.task = item.id;
+      if (item.attemptId) focus.attemptId = item.attemptId;
+    }
     if (!item) {
       return {
         code: EXIT_ERROR,
-        text: `No ready work items for ${change}. Remaining todos may be blocked by dependencies.\n`,
+        text: `No ready work items for ${change}. Remaining todos may be blocked by dependencies.\n${heldCauseText(project, change)}`,
         stopReason: 'blocked',
       };
     }
@@ -223,6 +250,7 @@ export function runFactory(project, env, {
       attempt = startAttempt(project, change, item.id, { role, modelProfile });
       item = getWorkItem(project, change, item.id);
     }
+    focus.attemptId = attempt.id;
 
     if (attempt.state === 'rejected') {
       return {
@@ -264,6 +292,7 @@ export function runFactory(project, env, {
           attempt,
           modelProfile: profileForRole(config, 'scribe'),
           message,
+          standing: standingDecisionsText(project, item),
         }),
         stopReason: 'needs-complete',
         request: { action: 'complete', change, taskId: item.id, attemptId: attempt.id },
@@ -282,6 +311,7 @@ export function runFactory(project, env, {
           implementerId: attempt.implementerId,
         })
       ) {
+        focus.action = 'accept';
         return {
           code: EXIT_OK,
           text: renderStop('human-gate', attempt, item),
@@ -356,7 +386,7 @@ export function runFactory(project, env, {
       ledger(project, 'run-needs-agent', { change, taskId: item.id, role: stage.role, state: attempt.state });
       return {
         code: EXIT_NEEDS_AGENT,
-        text: renderRequest({ ...request, item, attempt, message: withRedExceptions(project, attempt, stage) }),
+        text: renderRequest({ ...request, item, attempt, message: withRedExceptions(project, attempt, stage), standing: standingDecisionsText(project, item) }),
         stopReason: 'needs-agent',
         request,
       };
@@ -584,6 +614,10 @@ function withRedExceptions(project, attempt, stage) {
     message = `${message}\n\nRed method:\n${methodLines.join('\n')}`;
   }
   if (stage.role !== 'reviewer' && stage.role !== 'security-reviewer') return message;
+  const reopenLines = describeReopens(attempt);
+  if (reopenLines.length > 0) {
+    message = `${message}\n\nReopened attempt (the earlier verdict does not cover the amended evidence):\n${reopenLines.map((line) => `- ${line}`).join('\n')}`;
+  }
   const lines = listAttemptExceptions(project, attempt).map((row) => `- ${describeException(row)}`);
   if (lines.length === 0) return message;
   return `${message}\n\nRed exceptions:\n${lines.join('\n')}`;
@@ -606,6 +640,7 @@ function renderRequest(request) {
     '',
     request.message || '',
     '',
+    ...(request.standing ? [request.standing, ''] : []),
     '```json',
     JSON.stringify({
       action: request.action,
@@ -740,3 +775,16 @@ function bumpAttemptRetry(project, attempt, classification, kind) {
 }
 
 export { getWorkItem, transitionAttempt };
+
+function heldCauseText(project, change) {
+  const items = listWorkItems(project, change);
+  const held = items.filter(isHeld);
+  if (held.length === 0) return '';
+  const lines = held.map((item) => {
+    const blocked = items
+      .filter((entry) => entry.status === 'todo' && (entry.dependencies || []).includes(item.id))
+      .map((entry) => entry.id);
+    return `- ${item.id} is ${describeHold(item)}${blocked.length ? `; blocks ${blocked.join(', ')}` : ''}`;
+  });
+  return `Held items:\n${lines.join('\n')}\nResume or release them with idefactory sync-tasks ${change} --plan.\n`;
+}

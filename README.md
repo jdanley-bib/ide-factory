@@ -94,7 +94,7 @@ Edit or remove an extension and the next `upgrade` rewrites every unmodified cop
 ## How a change gets built
 
 1. You author an OpenSpec change (`/opsx-propose` or equivalent). The factory will not invent the product for you. `tasks.md` is the human plan.
-2. Plan with `/factory-plan`, or run `idefactory sync-tasks <change>`. Each unchecked box becomes one work item under `.factory/work/`. Optional `factory:` YAML under a checkbox sets kind, roles, checks, and dependencies.
+2. Plan with `/factory-plan`, or run `idefactory sync-tasks <change>`. Each unchecked box becomes one work item under `.factory/work/`. Optional `factory:` YAML under a checkbox sets kind, roles, checks, and dependencies. A task appended later gets its own item, and a checked task that never had an item is ignored. When the task list changes in a way sync cannot match, see "Reconciling a changed task list".
 3. Build one item with `/factory-build`, or run a bounded loop with `/factory-run` / `idefactory run --change <name> --until human-gate`. `/factory-full` is explore, then propose if needed, then plan and run. Each step names one role and only that role's charter and history.
 4. The implementer records a failing test, then CLI verification evidence. When the work item's security profile is `security-sensitive`, or its checks include a security-patterned kind such as threat-review, sast, secret, or audit, the security reviewer runs before the product reviewer. `verificationProfile` alone does not start that stage. The reviewer is a different role from the implementer.
 5. Finalize an accepted attempt with `idefactory complete <change> <id> --attempt <attemptId>`. Completion fails closed unless every required check has a passing CLI record bound to the current clean HEAD, test checks have a recorded red failure, and the reviewer id differs from the implementer. A journal under `.factory/orchestration/finalizations/` lets an interrupted finalization resume without rewriting the plan.
@@ -133,10 +133,24 @@ Cursor, Claude, and Copilot slash commands are `/factory-status`, `/factory-plan
 
 `security-sensitive` and `release` profiles ship with `humanGate: true`. The other shipped profiles do not. A missing profile, or a `humanGate` value that is not a boolean, is treated as required. When the gate is required, accept and complete need a scoped approval for that change, task, action (`accept` or `complete`), and clean source revision. The approver is not the implementer, and the approval expires within 24 hours. `idefactory approve` records that decision. It does not publish, deploy, or spend.
 
+The approvable actions are defined once: `accept`, `complete`, `publish`, `deploy`, `spend`, and `account`. The first two are gates bound to a task and revision. The other four are external effects bound to a change and a `--target`. A profile `humanGate` of false never waives an external effect. Before an external-effect step, an agent runs `idefactory authorize --change <name> --action deploy --target staging`. It is read-only and exits zero either way. It reports `authorized`, the approval id, or a `reason` (`no-approval`, `expired`, `revoked`, `revision-mismatch`, `dirty-worktree`, `same-approver`, `policy-mismatch`, `principal-required`, `target-mismatch`) with the approve command a human would run.
+
 ```bash
 idefactory approve <id> --note "what you are allowing" --change <name> --task <id> --action accept --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso>
+idefactory approve <id> --note "staging deploys" --change <name> --action deploy --target staging --standing --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso>
+idefactory revoke <id> --note "why it ended"
 idefactory reject <id> --note "why not"
 ```
+
+A standing authorization (`--standing`) needs governance policy version 2 and a verified principal, covers one external-effect action for one change and target, and is not tied to a task or revision. Its lifetime is capped by `governance.standingMaxHours` (default 168, from 1 to 720). `idefactory revoke` ends any approval without editing the original record.
+
+### Blocked states
+
+When `run`, `next`, `complete`, `attempt transition`, or `sync-tasks` stops without finishing its step, add `--json` to get a blocked-state report. It names the unmet invariant (`approval-missing`, `no-ready-work`, `attempt-rejected`, `reviewer-lockout`, `red-missing`, `completion-unmet`, `halted`, `reconciliation-required`, and others; `unclassified` when nothing maps), the actor (`human`, `independent-agent`, `implementing-agent`, or `tooling`), the recovery options (each marked `supported` with the command to run, or no supported recovery at all), and a retry class (`safe`, `only-after-change`, `never`). Exit codes and the default text do not change. A stop on a work item is also written to `.factory/blocked/<change>--<task>.json` and marked resolved by a later run that finds the condition gone; the record never decides whether work may proceed, and the directory is safe to delete. Packets and run requests list Standing decisions (approvals, standing authorizations, red exceptions, methods, reconciliation decisions) already made for the item, so an agent does not ask for them again. See `idefactory help run`.
+
+### Autonomy report
+
+`idefactory autonomy report [--change <name>] [--since <iso>] [--json]` reads `.factory/observability/events.jsonl` and writes nothing. Each stop that needed a human counts once as `policy-decision` (an intentional decision such as a missing approval), `failure` (no supported recovery), or `redundant` (an option an agent may run existed). Stops handled without a human, autonomous recoveries, and `routineClean` (no `failure` or `redundant` intervention) are reported too. It covers what the factory recorded and not prompts typed into an IDE chat. `test/autonomy-acceptance.test.mjs` runs a three-task change with a scripted agent against it. `docs/cloud-acceptance.md` is the runbook a cloud integration must pass; records live in `docs/acceptance/`.
 
 A reviewer rejection records an immutable lockout. `run` and `complete` stop while one is active. Resolve it with a resolver who is not the locked agent. Repeating the same resolution is safe. A conflicting resolution fails.
 
@@ -208,6 +222,14 @@ idefactory method review <attemptId> --verdict ACCEPT --reviewer <id> --note "co
 
 The reason class is one of `docs-or-text`, `configuration`, `behavior-preserving`, `mechanical`, or `exploratory`; `behavior-preserving` must cite an existing git-tracked test with `--test-path`. The record keeps the source revision and the number of changed files. A different role must record `method review`, and the attempt cannot be accepted without an `ACCEPT`; after a `REJECT` the item uses `red-first`. A method covers only its kinds, is never shown as a red that ran or as an exception, and does not waive passing verification, independent review, lockouts, or human gates. A proposal is refused when the work item has an explicit `factory.taskType`. `idefactory method show <attemptId>` prints the record.
 
+### Reconciling a changed task list
+
+`sync-tasks` fails closed when an edit splits, merges, removes, or reorders tasks, or adds a task together with a reword, and the error names the plan command. `idefactory sync-tasks <change> --plan [--json]` prints, without writing anything, the automatic actions, each unmatched stored item and current task, items with an attempt and its state, classification drift (old and new requirement sets), dependents of items that would be held, other active changes whose capability deltas overlap, and a plan digest.
+
+`idefactory sync-tasks <change> --apply --decisions-file <path> --plan-digest <digest> --decided-by <id>` applies explicit decisions. The file is a JSON object keyed by stored item id, each value a decision name or an object: `keep`, `renumber` (`{"to":"1.4"}`), `defer`, `resume`, `drop` (`{"supersededBy":["1.5"],"dependents":"block|release"}`), `split` (`{"into":["1.4","1.5"]}`), `merge` (`{"into":"1.3"}`), `move` (`{"to":{"change":"other","id":"2.1"}}`), `adopt-classification`, and `keep-classification`. Nothing is inferred from text similarity, and a stale digest, a missing decision, or a conflicting file changes nothing.
+
+A wording change on an item that has an attempt updates its title and keeps the earlier text in `titleHistory`; its classification, dependencies, and acceptance criteria are never rewritten silently, and a difference is reported as drift. Deferred and dropped items are stored as `blocked` with a `hold` marker, keep their attempts and evidence, are never selected by `next` or `run`, and cannot be completed; `status` lists them. `adopt-classification`, `drop`, `split`, `merge`, and `move` on an item with an attempt past `planned` need a `--decided-by` identity other than the implementer, and under governance policy version 2 a verified principal. Each apply writes a record under `.factory/work/reconciliations/`, appends a `tasks.reconciled` event, and is idempotent for the same digest and decisions. Renumbering writes the new item files before removing old ones and finishes after a crash.
+
 ### Red exceptions
 
 A `code` item needs a recorded failing CLI red before it can move to `verifying`. When a rejected attempt held a genuine red and its replacement already passes, the replacement stops with `vacuous-red` and no new red can run. A human can authorize an audited exception instead of a fake red:
@@ -219,7 +241,13 @@ idefactory red waive <targetAttemptId> --kind unit --note "reason" --approver <h
 
 `red reuse` binds the rejected attempt's red to the replacement by digest. It needs a clean HEAD, a passing CLI verification on that HEAD, and an approver who is not the implementer. `red waive` records that no red exists. Waiving a red before the system is stuck is discouraged. The command refuses until the attempt has hit `vacuous-red` for that kind, and it proceeds earlier only when the human repeats it with `--acknowledge-not-stuck`. Neither command writes `evidence.reds`, and neither waives clean-revision verification, independent review, or lockouts. Status, the reviewer packet, and the verdict comment say that no red ran and name the exception, approver, and reason.
 
+### Reopening an accepted attempt
+
+Completion can find a required red missing on an attempt that was already accepted, for example when a profile added a check after acceptance. `idefactory attempt reopen <attemptId> --kind <kind> --for method|exception --by <id> --reason "text"` moves the attempt back to `awaiting-review` for the named kinds without editing evidence. The identity must differ from the implementer, and under governance policy version 2 it must equal a verified principal. An attempt can be reopened at most twice, never after finalization starts or when a finalization journal exists, and only for kinds that have no satisfying red, method, or exception. The earlier review moves to `evidence.reviewHistory` and does not count; every stored red, verification, and exception record is unchanged. While reopened, `red reuse`, `red waive`, and `method propose` accept only the named kinds, a waiver for a reopened kind needs no `--acknowledge-not-stuck`, and a reviewer must accept the amended attempt again. Status, the reviewer packet, the review request, and the verdict comment show each reopen with the earlier verdict. `attempt transition` still refuses `accepted` to `awaiting-review`.
+
 A failing red recorded after implementation is not test-first evidence, and the CLI cannot detect one. A human can invalidate it on the same attempt with `--invalid-red "reason"` and `--acknowledge-not-stuck`. `red waive` then refuses any failing red it has not been told to invalidate. The invalidated red does not satisfy red; the reviewer packet, status, and verdict comment name its digest and reason. A waiver does not replace passing verification, independent review, or lockouts.
+
+Red records are append-only. Every `verify run --red` for a kind is kept in `evidence.redHistory[kind]`, `evidence.reds[kind]` stays the current (latest) red, and an attempt stored without a history reads as one entry per red. `idefactory red list <attemptId> [--json]` is read-only and prints each red with its digest, the current marker, the exception that references it, and what satisfies red for the kind. After an invalid-red waiver, `verify run --red` is allowed once more for that kind; the later red satisfies red only when it is a failing CLI red that started after the waiver and the invalidated digest is still in the history. A kind can be invalidated once on an attempt. Reuse and ordinary waivers still refuse `--red`. Status, the reviewer packet, and the verdict comment show both digests and say the later red does not prove the test came first.
 
 ```mermaid
 flowchart TD
@@ -261,10 +289,11 @@ flowchart TD
 | `idefactory sync-tasks <change>` | Create work items from unchecked OpenSpec boxes |
 | `idefactory next` | Print one role-scoped work packet. Does not launch a model |
 | `idefactory run` | Resume the persisted run and print the next request or stop reason |
-| `idefactory attempt …` | Start, transition, or show an execution attempt |
+| `idefactory attempt …` | Start, transition, reopen, or show an execution attempt |
 | `idefactory verify run` | Run a registered check and store CLI evidence |
 | `idefactory verify status` | Report each required check as valid, stale, missing, failed, or untrusted. Read-only |
 | `idefactory red reuse` / `waive` | Record an audited red exception for a verification-only retry. Does not write a red |
+| `idefactory red list` | List every recorded red with its digest and what satisfies red. Read-only |
 | `idefactory complete` | Journal the finalization and mark an accepted attempt done |
 | `idefactory approve` / `reject` | Record a human decision. Does not publish or spend |
 | `idefactory lockout` | Create or resolve a reviewer lockout |

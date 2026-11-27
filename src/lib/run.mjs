@@ -2,7 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { completeWorkItem } from './complete.mjs';
-import { approve, createLockout, doctor, reject, resolveLockout, status } from './govern.mjs';
+import { approve, createLockout, doctor, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
+import { blockedReportForError, buildBlockedReport, recordStop } from './blocked-states.mjs';
+import { buildAutonomyReport, renderAutonomyText } from './autonomy.mjs';
+import { authorizeRequest, renderAuthorizeText } from './authorize.mjs';
 import { buildStatusDocument } from './read-model.mjs';
 import { previewChecks } from './checks-preview.mjs';
 import { formatReport } from './adapter-sync.mjs';
@@ -16,6 +19,10 @@ import { capturePullRequestComments, commentOnPullRequest, openPullRequest } fro
 import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mjs';
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
+import { reopenAttempt } from './attempt-reopen.mjs';
+import { applyReconciliation, buildReconciliationPlan, renderPlanText } from './reconcile.mjs';
+import { describeDrift } from './reconcile-diff.mjs';
+import { listReds, renderRedList } from './red-list.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { describeAttemptMethod, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
@@ -110,8 +117,38 @@ export async function run(argv, io = {}) {
     if (warning) err(warning);
     return code;
   } catch (error) {
+    const blocked = blockedFailure(project, commandKey, parsed, error);
+    if (blocked && parsed.flags.json) {
+      out(JSON.stringify({ ok: false, message: error.message || String(error), blocked }, null, 2));
+      return 1;
+    }
     err(error.message || String(error));
     return 1;
+  }
+}
+
+const BLOCKED_COMMANDS = new Set(['run', 'next', 'complete', 'attempt transition', 'sync-tasks']);
+
+function blockedFailure(project, commandKey, parsed, error) {
+  if (!BLOCKED_COMMANDS.has(commandKey)) return null;
+  const scope = {};
+  if (commandKey === 'complete') {
+    scope.change = parsed.rest[0];
+    scope.task = parsed.rest[1];
+    scope.attemptId = typeof parsed.flags.attempt === 'string' ? parsed.flags.attempt : undefined;
+  } else if (commandKey === 'attempt transition') {
+    scope.attemptId = parsed.rest[1];
+  } else if (commandKey === 'sync-tasks') {
+    scope.change = parsed.rest[0];
+  } else {
+    scope.change = (typeof parsed.flags.change === 'string' && parsed.flags.change) || parsed.rest[0];
+  }
+  try {
+    const report = blockedReportForError(project, error, scope);
+    if (report.invariant.code !== 'unclassified' && report.change && report.task) recordStop(project, report);
+    return report;
+  } catch {
+    return null;
   }
 }
 
@@ -199,6 +236,15 @@ async function dispatchCommand(cmd, ctx) {
       }
       out(previewChecks(project));
       return 0;
+    case 'autonomy': {
+      if (parsed.rest[0] !== 'report') throw new Error('Usage: idefactory autonomy report [--change <name>] [--since <iso>] [--json]');
+      const report = buildAutonomyReport(project, {
+        change: typeof parsed.flags.change === 'string' ? parsed.flags.change : undefined,
+        since: typeof parsed.flags.since === 'string' ? parsed.flags.since : (parsed.flags.since === true ? '' : undefined),
+      });
+      out(parsed.flags.json ? JSON.stringify(report, null, 2) : renderAutonomyText(report));
+      return 0;
+    }
     case 'requirements': {
       const [change, taskId] = parsed.rest;
       if (!change || !taskId) throw new Error('Usage: idefactory requirements <change> <task> [--json]');
@@ -207,15 +253,65 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     }
     case 'sync-tasks': {
-      const change = parsed.rest[0];
+      const change = parsed.rest[0]
+        || (typeof parsed.flags.plan === 'string' ? parsed.flags.plan : '')
+        || (typeof parsed.flags.apply === 'string' ? parsed.flags.apply : '');
+      if (parsed.flags.plan && parsed.flags.apply) throw new Error('Give only one of --plan and --apply');
+      if (parsed.flags.plan) {
+        const plan = buildReconciliationPlan(project, change);
+        out(parsed.flags.json ? JSON.stringify(plan, null, 2) : renderPlanText(plan));
+        return 0;
+      }
+      if (parsed.flags.apply) {
+        const result = applyReconciliation(project, change, {
+          decisionsFile: stringFlag(parsed.flags, 'decisions-file') ? path.resolve(cwd, stringFlag(parsed.flags, 'decisions-file')) : '',
+          planDigest: stringFlag(parsed.flags, 'plan-digest'),
+          decidedBy: stringFlag(parsed.flags, 'decided-by'),
+          principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+          principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+        });
+        if (parsed.flags.json) {
+          out(JSON.stringify({ ok: true, change: result.record.change, reconciliation: result.record.id, unchanged: Boolean(result.unchanged) }, null, 2));
+          return 0;
+        }
+        out(result.unchanged
+          ? `Reconciliation ${result.record.id} was already applied; nothing changed.`
+          : `Applied reconciliation ${result.record.id} for ${result.record.change}.`);
+        return 0;
+      }
       const result = syncTasks(project, change, env);
+      if (parsed.flags.json) {
+        out(JSON.stringify({
+          ok: true,
+          change: result.change,
+          created: result.created,
+          skipped: result.skipped,
+          suggestions: result.suggestions || [],
+          drift: result.drift || [],
+        }, null, 2));
+        return 0;
+      }
       out(`Synced ${result.change}: created ${result.created}, skipped ${result.skipped}.`);
       for (const line of result.suggestions || []) out(line);
+      for (const row of result.drift || []) out(describeDrift(row));
       for (const line of requirementWarnings(project, result.change)) err(line);
       return 0;
     }
     case 'next': {
       const packet = buildPacket(project, env, parsed.flags.change || '');
+      if (parsed.flags.json) {
+        const blocked = packet.empty
+          ? buildBlockedReport(project, { code: 'no-ready-work', change: parsed.flags.change || undefined })
+          : null;
+        out(JSON.stringify({
+          ok: !packet.empty,
+          empty: Boolean(packet.empty),
+          text: packet.text,
+          ...(packet.item ? { change: packet.item.change, task: packet.item.id } : {}),
+          blocked,
+        }, null, 2));
+        return 0;
+      }
       out(packet.text);
       return 0;
     }
@@ -232,6 +328,16 @@ async function dispatchCommand(cmd, ctx) {
         newRun: Boolean(parsed.flags['new-run']),
         acceptBaseline: Boolean(parsed.flags['accept-baseline']),
       });
+      if (parsed.flags.json) {
+        out(JSON.stringify({
+          stopReason: result.stopReason,
+          exitCode: result.code,
+          request: result.request ?? null,
+          blocked: result.blocked ?? null,
+          text: result.text,
+        }, null, 2));
+        return result.code;
+      }
       out(result.text);
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
@@ -250,6 +356,10 @@ async function dispatchCommand(cmd, ctx) {
         throw new Error('Usage: idefactory complete <change> <taskId> --attempt <id>');
       }
       const result = completeWorkItem(project, change, taskId, attemptId, env);
+      if (parsed.flags.json) {
+        out(JSON.stringify({ ok: true, change, task: taskId, attemptId: result.attempt.id, blocked: null }, null, 2));
+        return 0;
+      }
       out(`Completed ${change}/${taskId} attempt ${result.attempt.id}`);
       return 0;
     }
@@ -264,10 +374,26 @@ async function dispatchCommand(cmd, ctx) {
         action: parsed.flags.action,
         approver: parsed.flags.approver,
         expiry: parsed.flags.expiry,
+        target: parsed.flags.target,
+        standing: parsed.flags.standing === true,
         principalProvider: parsed.flags['principal-provider'],
         principalSubject: parsed.flags['principal-subject'],
       });
       out(`Recorded approval ${file}`);
+      return 0;
+    }
+    case 'revoke': {
+      const file = revokeApproval(project, parsed.rest[0], parsed.flags.note || '', {
+        revoker: parsed.flags.revoker,
+        principalProvider: parsed.flags['principal-provider'],
+        principalSubject: parsed.flags['principal-subject'],
+      });
+      out(`Recorded revocation ${file}`);
+      return 0;
+    }
+    case 'authorize': {
+      const doc = authorizeRequest(project, parsed.flags);
+      out(parsed.flags.json ? JSON.stringify(doc, null, 2) : renderAuthorizeText(doc));
       return 0;
     }
     case 'reject': {
@@ -358,6 +484,27 @@ function handleAttempt(project, parsed, env, out, cwd) {
     out(JSON.stringify(attempt, null, 2));
     return 0;
   }
+  if (sub === 'reopen') {
+    const attemptId = parsed.rest[1];
+    const kinds = (parsed.sequence || [])
+      .filter((entry) => entry.key === 'kind' && typeof entry.value === 'string')
+      .map((entry) => entry.value);
+    const purpose = stringFlag(parsed.flags, 'for');
+    const by = stringFlag(parsed.flags, 'by');
+    const reason = stringFlag(parsed.flags, 'reason');
+    if (!attemptId || kinds.length === 0 || !purpose || !by || !reason) throw new Error(REOPEN_USAGE);
+    const attempt = reopenAttempt(project, {
+      attemptId,
+      kinds,
+      purpose,
+      by,
+      reason,
+      principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+      principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+    });
+    out(JSON.stringify(attempt, null, 2));
+    return 0;
+  }
   if (sub === 'show') {
     const attemptId = parsed.rest[1];
     if (!attemptId) throw new Error('Usage: idefactory attempt show <attemptId>');
@@ -366,7 +513,7 @@ function handleAttempt(project, parsed, env, out, cwd) {
     out(JSON.stringify(attempt, null, 2));
     return 0;
   }
-  throw new Error('Usage: idefactory attempt start|transition|show ...');
+  throw new Error('Usage: idefactory attempt start|transition|reopen|show ...');
 }
 
 function handleCi(project, parsed, out) {
@@ -457,6 +604,7 @@ async function handleVerify(project, parsed, out) {
   );
 }
 
+const REOPEN_USAGE = 'Usage: idefactory attempt reopen <attemptId> --kind <kind>... --for method|exception --by <id> --reason "text" [--principal-provider <id> --principal-subject <id>]';
 const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
 const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--invalid-red "text"]';
 const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session stays closed until the human passes --new-run.';
@@ -550,12 +698,21 @@ function handleMethod(project, parsed, out) {
 }
 
 function handleRed(project, parsed, out) {
+  if (parsed.rest[0] === 'list') {
+    const attemptId = parsed.rest[1] || (typeof parsed.flags.json === 'string' ? parsed.flags.json : '');
+    if (!attemptId) throw new Error('Usage: idefactory red list <attemptId> [--json]');
+    const attempt = getAttempt(project, attemptId);
+    if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
+    const doc = listReds(project, attempt);
+    out(parsed.flags.json ? `${JSON.stringify(doc, null, 2)}\n` : `${renderRedList(doc)}\n`);
+    return 0;
+  }
   if (halted(project)) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
   const sub = parsed.rest[0];
   if (sub !== 'reuse' && sub !== 'waive') {
-    throw new Error(`${REUSE_USAGE}\n       ${WAIVE_USAGE}`);
+    throw new Error(`${REUSE_USAGE}\n       ${WAIVE_USAGE}\n       Usage: idefactory red list <attemptId> [--json]`);
   }
   const usage = sub === 'reuse' ? REUSE_USAGE : WAIVE_USAGE;
   const targetAttemptId = parsed.rest[1];

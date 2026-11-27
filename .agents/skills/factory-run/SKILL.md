@@ -50,6 +50,23 @@ Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human 
 
 Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, `unchanged-state`, `vacuous-red`, `infrastructure-failure`, `baseline`, and `retry-cap`. `infrastructure-failure` and `baseline` can be retried by the next human-started run. `vacuous-red` and `retry-cap` wait until the human passes `--new-run`. Other clean stops include all work items done or human-gate (true profile `humanGate`). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
 
+## Blocked states
+
+`run`, `next`, `complete`, `attempt transition`, and `sync-tasks` accept `--json`. When one stops without finishing its step it prints a blocked-state report: `invariant` (a `code` and a message), `actor` (`human`, `independent-agent`, `implementing-agent`, or `tooling`), `recovery.options` (each with `supported`, a `command` when supported, `actor`, `requires`, and `resolves`), and `retry` (`safe`, `only-after-change`, or `never`). Exit codes do not change. Branch on the report:
+
+- When an option with `resolves: true` is `supported` and its actor is an agent role, take it.
+- When the actor is `human`, ask only when the option needs authority, and quote the report. Do not ask for a decision listed under Standing decisions in the packet or request.
+- When `retry` is `never`, stop and do not retry. When it is `only-after-change`, retry only after something recorded has changed. When it is `safe`, retry the same command.
+- When `recovery.supported` is false, say that no supported recovery exists, name the human as the actor, and stop.
+
+Standing decisions in a packet are approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Listing one grants no authority.
+
+`idefactory autonomy report [--change <name>] [--since <iso>] [--json]` is read-only. It reads the control event log and counts each stop that needed a human as one intervention: `policy-decision` (an intentional human decision), `failure` (no supported recovery), or `redundant` (an agent could have resolved it). Stops handled without a human and autonomous recoveries are listed separately. It does not see prompts typed into an IDE chat.
+
+## External effects
+
+Before a step that publishes, deploys, spends, or opens an account, run `idefactory authorize --change <name> --action <publish|deploy|spend|account> --target <name>`. Continue when it reports `authorized: true`. Stop and report its `reason` and the `approve` command it prints when it reports false.
+
 ## New session (human only)
 
 After a sticky budget stop, `vacuous-red`, or `retry-cap`, the closed session stays in force until the **human** explicitly opens a new run, for example:
@@ -66,6 +83,8 @@ The only legal pull-request steps are `idefactory pr open <change>`, `idefactory
 The agent never merges. It does not open or edit a pull request through the Cursor pull-request tool or a hand-written `gh pr create` or `gh pr edit`.
 
 `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.
+
+Held items (deferred or dropped by a reconciliation) are never selected by `run`. When `run` reports no ready work and names a held item, run `idefactory sync-tasks <change> --plan` instead of editing the queue by hand.
 
 ## Never
 

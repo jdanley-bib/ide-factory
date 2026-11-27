@@ -49,10 +49,11 @@ export function buildStatusDocument(project) {
   const approvalsDir = path.join(project, '.factory', 'approvals');
   if (fs.existsSync(approvalsDir)) {
     for (const name of fs.readdirSync(approvalsDir)) {
-      if (!name.endsWith('.json')) continue;
+      if (!name.endsWith('.json') || name.endsWith('.revoked.json')) continue;
       const record = readJson(path.join(approvalsDir, name));
       if (!record) continue;
-      if (record.schemaVersion === 2) approvals.schema2 += 1;
+      if (record.schemaVersion === 3) approvals.schema3 = (approvals.schema3 || 0) + 1;
+      else if (record.schemaVersion === 2) approvals.schema2 += 1;
       else approvals.schema1 += 1;
     }
   }

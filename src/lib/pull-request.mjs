@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
+import { describeReopens } from './attempt-reopen.mjs';
 import { describeAttemptMethod, describeMethod } from './red-method.mjs';
 import {
   buildCommentPullRequestArgv,
@@ -139,8 +140,11 @@ export function postVerdictComment(project, stored, env = process.env) {
   }
 
   const postedVerdicts = Array.isArray(record.postedVerdicts) ? record.postedVerdicts : [];
+  const reopenCount = Array.isArray(attempt.evidence?.reopens) ? attempt.evidence.reopens.length : 0;
   const alreadyPosted = postedVerdicts.some(
-    (item) => item?.attemptId === attempt.id && item?.role === stored.role,
+    (item) => item?.attemptId === attempt.id
+      && item?.role === stored.role
+      && (item?.reopenCount ?? 0) === reopenCount,
   );
   if (alreadyPosted) return { record };
 
@@ -157,6 +161,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   const build = (withReason) => {
     const body = `${[
       ...lines,
+      ...describeReopens(attempt, { withReason }),
       ...(method ? [describeMethod(method, { withText: withReason })] : []),
       ...exceptions.map((row) => describeException(row, { withReason })),
     ].join('\n')}\n`;
@@ -168,7 +173,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   try {
     argv = build(true);
   } catch (error) {
-    if (exceptions.length === 0 && !method) throw error;
+    if (exceptions.length === 0 && !method && describeReopens(attempt).length === 0) throw error;
     argv = build(false);
   }
   const result = runForge(project, argv, env);
@@ -181,6 +186,7 @@ export function postVerdictComment(project, stored, env = process.env) {
     verdict: stored.verdict,
     role: stored.role,
     reviewerId: stored.reviewerId || null,
+    ...(reopenCount > 0 ? { reopenCount } : {}),
   };
   const next = {
     ...record,

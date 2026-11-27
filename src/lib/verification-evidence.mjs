@@ -6,12 +6,14 @@ import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from './attempt.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import {
+  appendRed,
   classifyCheckOutcome,
   describeRedFailure,
   redFailureDiagnostics,
   retryKey,
   spawnFailureDetail,
 } from './red-evidence.mjs';
+import { laterRedFor, readBoundException } from './red-exceptions.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { halted, writeText } from './layout.mjs';
 
@@ -184,6 +186,21 @@ function validateCheckEntry(kind, entry, projectRoot) {
 }
 
 /**
+ * A red for an excepted kind is refused, except one later red after an invalid-red waiver.
+ * Throws before any check process starts.
+ */
+function assertLaterRedAllowed(project, attempt, kind) {
+  const refusal = `red for ${kind} on attempt ${attempt.id} is already excepted; a new red cannot replace it`;
+  const bound = readBoundException(project, attempt, kind);
+  if (!bound?.invalidRed) throw new Error(refusal);
+  if (laterRedFor(attempt, kind, bound)) {
+    throw new Error(
+      `a later red for ${kind} on attempt ${attempt.id} was already recorded after the invalid-red waiver ${bound.id}`,
+    );
+  }
+}
+
+/**
  * Run a registered check and store derived evidence on the attempt.
  * `passed` is always derived from exitCode, timedOut, and artifact presence.
  * Caller-supplied `red` objects are ignored. `--red` stores an assertion
@@ -207,7 +224,7 @@ export async function verifyRun(project, attemptId, options = {}) {
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
   if (asRed && attempt.evidence?.redExceptions?.[kind]) {
-    throw new Error(`red for ${kind} on attempt ${attemptId} is already excepted; a new red cannot replace it`);
+    assertLaterRedAllowed(project, attempt, kind);
   }
 
   const registryPath = path.join(project, '.factory', 'checks.json');
@@ -304,7 +321,7 @@ export async function verifyRun(project, attemptId, options = {}) {
   validateCheckRecord(record);
 
   if (asRed) {
-    attempt.evidence.reds = { ...(attempt.evidence.reds || {}), [kind]: record };
+    appendRed(attempt, kind, record);
   } else if (isSecurityPatternedCheck(kind)) {
     attempt.evidence.security = [...(attempt.evidence.security || []), record];
   } else {
@@ -553,6 +570,7 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/approvals/',
   '.factory/exceptions/',
   '.factory/methods/',
+  '.factory/blocked/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',

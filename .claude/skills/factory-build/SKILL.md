@@ -49,7 +49,9 @@ When a replacement attempt starts with no red and `idefactory verify run <attemp
 
 Neither command claims a red ran. The record names the approver and reason, and the reviewer sees it. Clean-revision verification, independent review, and lockouts still apply.
 
-A red recorded after the implementation was written is not test-first evidence, and the CLI cannot detect it. Warn the human. A human can invalidate it with `idefactory red waive <targetAttemptId> --kind <kind> --note "reason" --approver <human> --invalid-red "reason it was recorded after implementation" --acknowledge-not-stuck`. The command refuses unless a failing CLI red is stored for that kind, and the invalidated red then does not satisfy red. A waiver does not replace passing verification, independent review, or lockouts.
+If completion finds a required red missing on an `accepted` attempt (for example a profile added a check after acceptance), run `idefactory attempt reopen <attemptId> --kind <kind> --for method|exception --by <id> --reason "text"` with an identity other than the implementer. It moves the attempt back to `awaiting-review` for the named kinds, at most twice and never once finalization has started. The earlier verdict moves to the review history and does not count, and every stored red, verification, and exception record is unchanged. While the attempt is reopened, `red reuse`, `red waive`, and `method propose` accept only those kinds. A reviewer must then accept it again. Reopen is not a substitute for review, a fabricated failing test, or any other gate.
+
+A red recorded after the implementation was written is not test-first evidence, and the CLI cannot detect it. Warn the human. A human can invalidate it with `idefactory red waive <targetAttemptId> --kind <kind> --note "reason" --approver <human> --invalid-red "reason it was recorded after implementation" --acknowledge-not-stuck`. The command refuses unless a failing CLI red is stored for that kind, and the invalidated red then does not satisfy red. A waiver does not replace passing verification, independent review, or lockouts. Reds are append-only: every `--red` for a kind is kept, the latest is the current red, and `idefactory red list <attemptId> [--json]` prints all of them with their digests. After an invalid-red waiver, one later failing `--red` is allowed for that kind and satisfies red when it starts after the waiver. It does not prove the test came first, so the reviewer judges that from the recorded evidence. A kind is invalidated at most once, and reuse and ordinary waivers still refuse `--red`.
 
 ## Review
 
@@ -72,3 +74,16 @@ Do not hand-edit backlog status. `complete` marks the work item done and checks 
 Ask the scribe only if complete cannot update histories. Do not truncate older notes.
 
 The IDE session model does the work. Do not publish, deploy, or spend.
+
+Before any step that publishes, deploys, spends, or opens an account, run `idefactory authorize --change <name> --action <action> --target <name>`. Continue when it reports `authorized: true`. Stop and report the `reason` and the `approve` command it prints when it reports false.
+
+## Blocked states
+
+`run`, `next`, `complete`, `attempt transition`, and `sync-tasks` accept `--json`. When one stops without finishing its step it prints a blocked-state report: `invariant` (a `code` and a message), `actor` (`human`, `independent-agent`, `implementing-agent`, or `tooling`), `recovery.options` (each with `supported`, a `command` when supported, `actor`, `requires`, and `resolves`), and `retry` (`safe`, `only-after-change`, or `never`). Exit codes do not change. Branch on the report:
+
+- When an option with `resolves: true` is `supported` and its actor is an agent role, take it.
+- When the actor is `human`, ask only when the option needs authority, and quote the report. Do not ask for a decision listed under Standing decisions in the packet or request.
+- When `retry` is `never`, stop and do not retry. When it is `only-after-change`, retry only after something recorded has changed. When it is `safe`, retry the same command.
+- When `recovery.supported` is false, say that no supported recovery exists, name the human as the actor, and stop.
+
+Standing decisions in a packet are approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Listing one grants no authority.

@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { attemptPath, getAttempt } from './attempt.mjs';
+import { openReopen } from './attempt-reopen.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { ledger, readText, writeText } from './layout.mjs';
@@ -177,8 +178,16 @@ export function proposeMethod(project, options) {
 
   const attempt = getAttempt(project, options.attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${options.attemptId}`);
+  const reopened = openReopen(attempt);
+  const reopenedKinds = reopened ? reopened.kinds : [];
   if (!PROPOSAL_STATES.includes(attempt.state)) {
-    throw new Error(`a method can be proposed only before red-confirmed or verifying (attempt state=${attempt.state})`);
+    if (!reopened) {
+      throw new Error(`a method can be proposed only before red-confirmed or verifying (attempt state=${attempt.state})`);
+    }
+    const outside = (options.kinds || []).filter((kind) => !reopenedKinds.includes(kind));
+    if (outside.length > 0) {
+      throw new Error(`attempt was reopened for ${reopenedKinds.join(', ')}; ${outside.join(', ')} is outside that reopen`);
+    }
   }
   if (attempt.evidence?.method) throw new Error('attempt already has a method record');
   if (typeof attempt.implementerId === 'string' && attempt.implementerId !== proposer) {
