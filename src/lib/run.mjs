@@ -25,6 +25,7 @@ import { applyReconciliation, buildReconciliationPlan, renderPlanText } from './
 import { describeDrift } from './reconcile-diff.mjs';
 import { listReds, renderRedList } from './red-list.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
+import { recordRedInvalidation } from './red-invalidation.mjs';
 import { describeAttemptMethod, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { renderVerifyStatusText, verifyStatus } from './verification-status.mjs';
@@ -829,7 +830,35 @@ async function handleVerify(project, parsed, out) {
 const REOPEN_USAGE = 'Usage: idefactory attempt reopen <attemptId> --kind <kind>... --for method|exception --by <id> --reason "text" [--principal-provider <id> --principal-subject <id>]';
 const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
 const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--invalid-red "text"]';
+const INVALIDATE_USAGE = 'Usage: idefactory red invalidate <attemptId> --kind <kind> --class <post-implementation|wrong-failure> --note "text" --by <identity>';
 const EXCEPTION_NEW_RUN_NOTE = 'The closed vacuous-red run session reopens on the next run once the red is resolved. A retry-cap session needs --new-run within run.maxNewRuns.';
+
+function handleRedInvalidate(project, parsed, out) {
+  const attemptId = parsed.rest[1];
+  const kind = stringFlag(parsed.flags, 'kind');
+  const invalidationClass = stringFlag(parsed.flags, 'class');
+  const note = stringFlag(parsed.flags, 'note');
+  const by = stringFlag(parsed.flags, 'by');
+  if (!attemptId || !kind || !invalidationClass || !note || !by) throw new Error(INVALIDATE_USAGE);
+  const { record, file } = recordRedInvalidation(project, {
+    attemptId,
+    kind,
+    class: invalidationClass,
+    note,
+    by,
+  });
+  out(JSON.stringify({
+    attemptId,
+    invalidation: {
+      id: record.id,
+      kind: record.kind,
+      class: record.class,
+      file: path.relative(project, file),
+    },
+    note: 'The red ran and is withdrawn as not genuine. It does not satisfy red; a reviewed method, an exception, or a later failing red is still needed.',
+  }, null, 2));
+  return 0;
+}
 
 function stringFlag(flags, key) {
   return typeof flags[key] === 'string' && flags[key].length > 0 ? flags[key] : '';
@@ -933,6 +962,7 @@ function handleRed(project, parsed, out) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
   const sub = parsed.rest[0];
+  if (sub === 'invalidate') return handleRedInvalidate(project, parsed, out);
   if (sub !== 'reuse' && sub !== 'waive') {
     throw new Error(`${REUSE_USAGE}\n       ${WAIVE_USAGE}\n       Usage: idefactory red list <attemptId> [--json]`);
   }

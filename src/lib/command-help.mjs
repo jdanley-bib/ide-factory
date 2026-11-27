@@ -465,6 +465,29 @@ export const COMMANDS = [
     },
   ),
   leaf(
+    ['red', 'invalidate'],
+    'Withdraw a stored failing CLI red as not genuine. Grants nothing: the kind still needs a reviewed method, an exception, or a later failing red. Does not edit the red.',
+    'idefactory red invalidate <attemptId> --kind <kind> --class <post-implementation|wrong-failure> --note "text" --by <identity> [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt whose failing red is withdrawn.' }],
+      flags: [
+        { name: 'kind', value: '<kind>', required: true, description: 'Test kind whose current failing red is withdrawn.' },
+        { name: 'class', value: 'post-implementation|wrong-failure', required: true, description: 'post-implementation: the red was recorded after implementation began. wrong-failure: the test failed on a fixture or unrelated fault, not the behavior under test.' },
+        { name: 'note', value: '"text"', required: true, description: 'Why the red is not genuine. Kept in the record, never in the event log.' },
+        { name: 'by', value: '<identity>', required: true, description: 'Identity recorded with the withdrawal. It need not differ from the implementer.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory red invalidate <attemptId> --kind unit --class post-implementation --note "recorded after the implementation was written" --by engineer-1',
+      ],
+      notes: [
+        'At most two invalidations per kind on an attempt. After that, a human waiver with --invalid-red is the exit.',
+        'An invalidated red does not satisfy red and does not block a method proposal. A failing CLI red recorded after the invalidation does satisfy red.',
+        'The command is refused while HALT is present and requires the writer lease.',
+      ],
+    },
+  ),
+  leaf(
     ['red', 'waive'],
     'Record that no red exists for a kind. Does not write a red.',
     'idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--principal-provider <id> --principal-subject <id>] [--path dir]',
@@ -484,7 +507,7 @@ export const COMMANDS = [
         'idefactory red waive <target> --kind unit --invalid-red "recorded after implementing" --note "post-hoc red" --approver human-1 --acknowledge-not-stuck',
       ],
       notes: [
-        'A waiver is refused while a failing CLI red is stored for the kind, unless --invalid-red names that red as recorded after implementation.',
+        'A waiver is refused while a failing CLI red is stored for the kind. To withdraw a red that is not genuine, use red invalidate first; --invalid-red is the human acceptance of such a red.',
         'A kind can be invalidated once. After that, verify run --red may append one later red, which does not prove the test came first.',
         'A waiver does not replace passing verification, distinct review, or lockouts.',
       ],

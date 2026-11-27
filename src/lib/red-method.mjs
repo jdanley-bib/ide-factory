@@ -9,6 +9,7 @@ import { assertIdentity } from './identity.mjs';
 import { ledger, readText, writeText } from './layout.mjs';
 import { confirmPrincipal, readPolicyVersion } from './principal.mjs';
 import { isFailingRed, redForKind } from './red-evidence.mjs';
+import { redInvalidated } from './red-invalidation.mjs';
 import { redKindsFor } from './required-checks.mjs';
 import { isFactoryRunStatePath, resolveGitBinding } from './verification-evidence.mjs';
 import { getWorkItem } from './work.mjs';
@@ -210,8 +211,8 @@ export function proposeMethod(project, options) {
     if (!required.includes(kind)) {
       throw new Error(`${kind} is not a required test kind of ${attempt.change}/${attempt.taskId}`);
     }
-    if (isFailingRed(redForKind(attempt, kind))) {
-      throw new Error(`a failing red is already stored for ${kind}; a method cannot replace it`);
+    if (isFailingRed(redForKind(attempt, kind)) && !redInvalidated(project, attempt, kind)) {
+      throw new Error(`a failing red is already stored for ${kind}; withdraw it with idefactory red invalidate, or a method cannot replace it`);
     }
     if (attempt.evidence?.redExceptions?.[kind]) {
       throw new Error(`attempt already has a red exception for ${kind}`);

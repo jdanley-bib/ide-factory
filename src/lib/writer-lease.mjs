@@ -42,6 +42,7 @@ const MUTATING = new Set([
   'verify import',
   'red reuse',
   'red waive',
+  'red invalidate',
   'method propose',
   'method review',
   'complete',
