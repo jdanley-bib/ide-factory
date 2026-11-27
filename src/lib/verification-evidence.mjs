@@ -14,7 +14,7 @@ import {
   spawnFailureDetail,
 } from './red-evidence.mjs';
 import { laterRedFor, readBoundException } from './red-exceptions.mjs';
-import { closeLatestRunSession } from './run-session.mjs';
+import { closeLatestRunSession, latestRunSession } from './run-session.mjs';
 import { halted, writeText } from './layout.mjs';
 
 const SUPPORTED_SCHEMA_VERSION = 1;
@@ -282,7 +282,11 @@ export async function verifyRun(project, attemptId, options = {}) {
       throw new Error(`retry-cap: ${classification} for ${kind} (${detail})`);
     }
     if (classification === 'vacuous-red') {
-      closeLatestRunSession(project, attempt.change, 'vacuous-red');
+      const prior = latestRunSession(project, attempt.change)?.stopContext;
+      const priorKinds = prior?.attemptId === attemptId ? prior.kinds : [];
+      closeLatestRunSession(project, attempt.change, 'vacuous-red', {
+        stopContext: { attemptId, kinds: [...new Set([...priorKinds, kind])].sort() },
+      });
     }
     throw new Error(`${classification}: red run did not record an assertion failure for ${kind} (${detail})`);
   }

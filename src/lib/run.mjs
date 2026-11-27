@@ -829,7 +829,7 @@ async function handleVerify(project, parsed, out) {
 const REOPEN_USAGE = 'Usage: idefactory attempt reopen <attemptId> --kind <kind>... --for method|exception --by <id> --reason "text" [--principal-provider <id> --principal-subject <id>]';
 const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
 const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--invalid-red "text"]';
-const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session stays closed until the human passes --new-run.';
+const EXCEPTION_NEW_RUN_NOTE = 'The closed vacuous-red run session reopens on the next run once the red is resolved. A retry-cap session needs --new-run within run.maxNewRuns.';
 
 function stringFlag(flags, key) {
   return typeof flags[key] === 'string' && flags[key].length > 0 ? flags[key] : '';

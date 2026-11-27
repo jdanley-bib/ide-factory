@@ -173,6 +173,13 @@ export const BLOCKED_TABLE = {
     message: 'A run budget is exhausted.',
     options: [NEW_RUN],
   },
+  'new-run-cap': {
+    retry: 'never',
+    message: 'The change reached its new-run cap. A human must raise run.maxNewRuns or decide what happens next.',
+    options: [
+      option('raise-new-run-cap', ['config'], 'set run.maxNewRuns in .factory/config.json', 'human', 'a human raising run.maxNewRuns', true, (ctx) => Boolean(ctx.change)),
+    ],
+  },
   'unchanged-state': {
     retry: 'only-after-change',
     message: 'The run made no progress since the last request.',
@@ -229,6 +236,7 @@ export const STOP_REASON_CODES = {
   'host-usage-unavailable': 'budget-exhausted',
   'max-tokens': 'budget-exhausted',
   'max-cost': 'budget-exhausted',
+  'new-run-cap': 'new-run-cap',
   'vacuous-red': 'vacuous-red',
   'infrastructure-failure': 'infrastructure-failure',
   baseline: 'baseline',

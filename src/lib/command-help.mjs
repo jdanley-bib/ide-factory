@@ -260,7 +260,7 @@ export const COMMANDS = [
         { name: 'until', value: 'human-gate', required: false, description: 'Where to stop. Defaults to human-gate.' },
         { name: 'max-tasks', value: 'N', required: false, description: 'Stop after this many tasks.' },
         { name: 'max-agent-steps', value: 'N', required: false, description: 'Stop after this many agent steps.' },
-        { name: 'new-run', value: null, required: false, description: 'Start a new run session after a sticky stop. Human only.' },
+        { name: 'new-run', value: null, required: false, description: 'Open a new run session after a budget stop or retry-cap, up to run.maxNewRuns session files per change (default 3). Spend ceilings are never reset by it. Condition stops such as vacuous-red clear on their own once resolved, without this flag.' },
         { name: 'accept-baseline', value: null, required: false, description: 'Accept the current baseline for the run.' },
         JSON_FLAG('Print one JSON object {stopReason, exitCode, request, blocked, text} instead of the text. Exit codes do not change.'),
         PATH_FLAG,

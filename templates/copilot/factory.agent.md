@@ -18,7 +18,7 @@ The agent never merges. It does not open or edit a pull request through the Curs
 
 When the human asks you to run, or to run the full pipeline, for a change, that request covers `sync-tasks`, `run`, `verify`, and `complete` for that change, with the attempt, red, and method records they involve. Do not ask again before each of them. The cover ends when the run stops and does not extend to another change.
 
-These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Only a human passes `--new-run` after a budget stop, `vacuous-red`, or `retry-cap`.
+These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Pass `--new-run` only after a budget stop or `retry-cap`, and only while the change is under `run.maxNewRuns`.
 
 The cover does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review.
 

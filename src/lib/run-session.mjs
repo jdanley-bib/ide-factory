@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { attemptsRoot } from './attempt.mjs';
+import { appendControlEvent } from './event-log.mjs';
 import { ledger } from './layout.mjs';
 import { listWorkItems } from './work.mjs';
 
@@ -22,21 +23,42 @@ export const BUILTIN_RUN_BUDGETS = {
   maxFailures: 5,
 };
 
-/** Stop reasons that stay exhausted until `--new-run` (design.md). */
-export const STICKY_STOP_REASONS = new Set([
+/** Budget stops: a budget was consumed. Stay closed until a bounded `--new-run`. */
+export const BUDGET_STOP_REASONS = new Set([
   'max-agent-steps',
   'max-tasks',
   'wall-clock',
   'max-failures',
-  'unchanged-state',
-  'max-tokens',
-  'max-cost',
-  'invalid-budget',
-  'invalid-session',
-  'host-usage-unavailable',
-  'vacuous-red',
   'retry-cap',
 ]);
+
+/** Configured spend ceilings: stay closed until a human opens a new session. */
+export const SPEND_STOP_REASONS = new Set(['max-tokens', 'max-cost']);
+
+/** Condition stops: describe project state, so every run re-evaluates them. */
+export const CONDITION_STOP_REASONS = new Set([
+  'vacuous-red',
+  'unchanged-state',
+  'host-usage-unavailable',
+  'invalid-budget',
+]);
+
+/** Stop reasons that keep a closed session closed without a condition check (design.md D1). */
+export const STICKY_STOP_REASONS = new Set([
+  ...BUDGET_STOP_REASONS,
+  ...SPEND_STOP_REASONS,
+  'invalid-session',
+]);
+
+export const DEFAULT_MAX_NEW_RUNS = 3;
+const MIN_MAX_NEW_RUNS = 1;
+const MAX_MAX_NEW_RUNS = 20;
+
+export function resolveMaxNewRuns(config = {}) {
+  const raw = config.run?.maxNewRuns;
+  if (Number.isInteger(raw) && raw >= MIN_MAX_NEW_RUNS && raw <= MAX_MAX_NEW_RUNS) return raw;
+  return DEFAULT_MAX_NEW_RUNS;
+}
 
 export class InvalidBudgetError extends Error {
   constructor(message = 'invalid-budget') {
@@ -89,6 +111,7 @@ export function validateRunSession(session) {
   if (!('stopReason' in session)) {
     throw new Error('run session requires stopReason');
   }
+  const clearedStops = Array.isArray(session.clearedStops) ? session.clearedStops : [];
 
   return {
     schemaVersion: SUPPORTED_SCHEMA_VERSION,
@@ -117,6 +140,9 @@ export function validateRunSession(session) {
       : [],
     lastRequestFingerprint: session.lastRequestFingerprint ?? null,
     stopReason: session.stopReason ?? null,
+    clearedStops: clearedStops.map((entry) => ({ ...entry })),
+    pendingStopCheck: session.pendingStopCheck ?? null,
+    ...(session.stopContext ? { stopContext: session.stopContext } : {}),
     ...(session.testBaseline ? { testBaseline: session.testBaseline } : {}),
     ...(session.hostTokens !== undefined ? { hostTokens: session.hostTokens } : {}),
     ...(session.hostCost !== undefined ? { hostCost: session.hostCost } : {}),
@@ -174,15 +200,57 @@ export function writeRunSession(project, session) {
  * @param {string} change
  * @returns {object|null}
  */
-export function closeLatestRunSession(project, change, stopReason) {
+export function closeLatestRunSession(project, change, stopReason, extra = {}) {
   const existing = latestRunSession(project, change);
   if (!existing) return null;
   return writeRunSession(project, {
     ...existing,
+    ...extra,
     status: 'closed',
     stopReason,
+    pendingStopCheck: null,
     lastObservedAt: new Date().toISOString(),
   });
+}
+
+/** Session files on disk for a change, counted for the new-run cap. */
+export function sessionFilesFor(project, change) {
+  const dir = runsDir(project);
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => readRunSession(path.join(dir, name)))
+    .filter((session) => session.change === change);
+}
+
+/**
+ * Why `--new-run` must not open a session now, or null when it may.
+ * Spend ceilings are refused outright. Otherwise session files for the change
+ * must number at most `run.maxNewRuns`.
+ *
+ * @param {string} project
+ * @param {string} change
+ * @param {object|null} existing latest session for the change
+ * @param {object} [config]
+ * @returns {{ stopReason: string, text: string }|null}
+ */
+export function newRunRefusal(project, change, existing, config = {}) {
+  if (!existing) return null;
+  if (existing.status === 'closed' && SPEND_STOP_REASONS.has(existing.stopReason)) {
+    return {
+      stopReason: existing.stopReason,
+      text: `Run stopped (${existing.stopReason}) for ${change}. --new-run is refused after a spend ceiling; a human must decide.\n`,
+    };
+  }
+  const cap = resolveMaxNewRuns(config);
+  const files = sessionFilesFor(project, change).length;
+  if (files > cap) {
+    return {
+      stopReason: 'new-run-cap',
+      text: `Run stopped (new-run-cap) for ${change}: ${files} session files reach run.maxNewRuns ${cap}. A human must raise the cap or decide what happens next.\n`,
+    };
+  }
+  return null;
 }
 
 export function latestRunSession(project, change) {
@@ -572,6 +640,8 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
     countedFailureIds: [],
     lastRequestFingerprint: null,
     stopReason: null,
+    clearedStops: [],
+    pendingStopCheck: null,
   });
   // Best-effort: ledger() swallows write errors and must not block the run.
   ledger(project, 'run-session-opened', { change, runId: session.runId });
@@ -581,11 +651,13 @@ export function createRunSession(project, { change, budgets, now = new Date() } 
 /**
  * Resume the latest session for a change, or create one when none exists.
  * Resume preserves run id and counters; budgets are only applied on create.
+ * A closed condition stop is re-evaluated through `condition(session)`; when it
+ * no longer holds the same session reopens and the cleared stop is recorded.
  * Ledger tripwire: unmatched opened ids with no file refuse create; ledger
  * agent-step high-water above the file refuses resume (file left unchanged).
  *
  * @param {string} project
- * @param {{ change: string, budgets: object, now?: Date, newRun?: boolean, resumeFlags?: object, config?: object }} options
+ * @param {{ change: string, budgets: object, now?: Date, newRun?: boolean, resumeFlags?: object, config?: object, condition?: (session: object) => { holds: boolean, resolution?: string } }} options
  * @returns {object}
  */
 export function openOrResumeRunSession(project, {
@@ -595,25 +667,50 @@ export function openOrResumeRunSession(project, {
   newRun = false,
   resumeFlags = {},
   config = {},
+  condition = () => ({ holds: false, resolution: 'state-changed' }),
 } = {}) {
   if (!change) throw new Error('openOrResumeRunSession requires change');
   const existing = latestRunSession(project, change);
   if (newRun && existing) {
-    return createRunSession(project, { change, budgets, now });
+    const created = createRunSession(project, { change, budgets, now });
+    appendControlEvent(project, {
+      type: 'run.new-run',
+      time: created.startedAt,
+      runId: created.runId,
+      change,
+      ...(existing.stopReason ? { stopReason: existing.stopReason } : {}),
+    });
+    return created;
   }
-  if (existing) {
-    if (existing.status === 'closed' && STICKY_STOP_REASONS.has(existing.stopReason)) {
-      return existing;
+  let session = existing;
+  if (session && session.status === 'closed') {
+    if (session.stopReason === 'unchanged-state') {
+      session = writeRunSession(project, {
+        ...session,
+        status: 'open',
+        stopReason: null,
+        pendingStopCheck: 'unchanged-state',
+        lastObservedAt: now.toISOString(),
+      });
+    } else if (CONDITION_STOP_REASONS.has(session.stopReason)) {
+      const verdict = condition(session);
+      if (verdict.holds) return session;
+      session = reopenRunSession(project, session, { budgets, now, resolution: verdict.resolution });
     }
-    const highWater = ledgerAgentStepHighWater(project, existing.runId);
-    if (highWater > existing.agentSteps) {
+  }
+  if (session) {
+    if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
+      return session;
+    }
+    const highWater = ledgerAgentStepHighWater(project, session.runId);
+    if (highWater > session.agentSteps) {
       throw new Error(
-        `invalid-session: ledger agent-step high-water ${highWater} exceeds session file agentSteps ${existing.agentSteps}`,
+        `invalid-session: ledger agent-step high-water ${highWater} exceeds session file agentSteps ${session.agentSteps}`,
       );
     }
-    const mergedBudgets = mergeResumeBudgets(existing.budgets, resumeFlags, config);
+    const mergedBudgets = mergeResumeBudgets(session.budgets, resumeFlags, config);
     return writeRunSession(project, {
-      ...existing,
+      ...session,
       budgets: mergedBudgets,
       lastObservedAt: now.toISOString(),
     });
@@ -625,6 +722,40 @@ export function openOrResumeRunSession(project, {
     );
   }
   return createRunSession(project, { change, budgets, now });
+}
+
+/**
+ * Reopen a closed condition-stop session in place: same run id and counters,
+ * current spend ceilings, and one `clearedStops` entry plus a `run.stop-cleared` event.
+ */
+export function reopenRunSession(project, session, { budgets, now = new Date(), resolution }) {
+  const cleared = {
+    stopReason: session.stopReason,
+    clearedAt: now.toISOString(),
+    resolution,
+  };
+  const reopenBudgets = { ...session.budgets };
+  delete reopenBudgets.maxTokens;
+  delete reopenBudgets.maxCost;
+  if (budgets?.maxTokens !== undefined) reopenBudgets.maxTokens = budgets.maxTokens;
+  if (budgets?.maxCost !== undefined) reopenBudgets.maxCost = budgets.maxCost;
+  const written = writeRunSession(project, {
+    ...session,
+    status: 'open',
+    stopReason: null,
+    budgets: reopenBudgets,
+    clearedStops: [...(session.clearedStops || []), cleared],
+    lastObservedAt: now.toISOString(),
+  });
+  appendControlEvent(project, {
+    type: 'run.stop-cleared',
+    time: written.lastObservedAt,
+    runId: written.runId,
+    change: written.change,
+    stopReason: cleared.stopReason,
+    resolution,
+  });
+  return written;
 }
 
 function resolveCliBudget(flagValue, configValue, fallback, label) {
