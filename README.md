@@ -304,7 +304,7 @@ flowchart TD
 | `idefactory halt` / `resume` | Set or clear the kill switch |
 | `idefactory forge configure` | Choose `github` (default) or `azure-devops` for `idefactory pr` |
 | `idefactory board …` | Optional Azure DevOps board mirror: `configure`, `publish`, `claim`, `report`, `comment`, `transition` |
-| `idefactory mcp ack` / `pending` | Record, or list, plans the agent applied through the Azure DevOps MCP |
+| `idefactory mcp ack` / `record` / `pending` | Record a plan the agent applied through the Azure DevOps MCP, record the agent's decision about a failed operation, or list pending plans with each operation's outcome and retry count |
 | `idefactory help <command>` | Print usage, flags, and examples for one command. Also `idefactory <command> --help`, `-h`, and `help --json` |
 
 ### Contextual help
@@ -318,6 +318,8 @@ Add `--json` for structured help: `idefactory help verify run --json` prints one
 Local use is the default and needs none of this. With no `board` entry in `.factory/config.json`, every `board` command refuses and nothing talks to Azure DevOps.
 
 `idefactory` never contacts Azure DevOps with the default `mcp` transport, so no Azure DevOps secret is on the VM. A command that would write prints a plan: numbered operations for Cursor's Azure DevOps MCP connection, each a tool name and a full argument object. The cloud agent calls them exactly as printed and then runs `idefactory mcp ack <planId>`, and only then does the CLI record the result in `.factory/boards/` or `.factory/pull-requests/`. Reads go the other way: the agent saves the MCP result to a file in the temporary directory and passes it with `board claim --snapshot` or `pr capture --threads-file`. Plans name only these tools: `wit_work_item_write`, `wit_work_item_comment_write`, `wit_work_item_link_write`, `repo_pull_request_write` (create, or update the description), and `repo_pull_request_thread_write`. The plan builder refuses `autoComplete`, `bypassReason`, `vote`, `status`, and the other completion arguments. A claim's state change starts with a `Test` of the story revision, so two cloud runs cannot both claim one story. The MCP cannot push commits, so the cloud agent pushes `factory/<change>` with its own git access.
+
+When an operation fails, the agent judges the cause and records its decision with `idefactory mcp record`. The CLI refuses a retry that could repeat an effect the read-back shows already landed, and it caps retries per operation at `mcp.maxOperationAttempts` (default 3). Past the cap, the refusal is a blocked report for a human. `mcp ack` refuses while an operation's latest outcome is failed or unknown.
 
 To let the factory pick up work by itself:
 
