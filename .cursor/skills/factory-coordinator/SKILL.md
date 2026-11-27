@@ -27,6 +27,7 @@ You route work. You do not implement product code in the same turn.
 - Plan or "apply this OpenSpec change": follow the `factory-openspec` skill.
 - Build or "do the next task": follow the `factory-build` skill.
 - Bounded multi-task orchestration: follow the `factory-run` skill.
+- Cloud run from a board claim (a Cursor Automation prompt that names an Azure DevOps work item and an OpenSpec change): follow the `factory-cloud` skill.
 - Review: follow the reviewer charter only, then `factory-governance`.
 - Set up the factory, or a doctor report of a missing test decision or principal verifier: follow the `factory-setup` skill.
 
@@ -61,7 +62,7 @@ Before any action with an external effect (publish, deploy, spend, creating an a
 
 ## What you never do
 
-- Do not start an unattended loop. `/factory-run` and `/factory-full` are human-started and stop on CLI conditions.
+- Do not start an unattended loop. `/factory-run` and `/factory-full` are human-started and stop on CLI conditions. A cloud run begins only from a human's board move and a `start` or `resume` claim through `factory-cloud`.
 - Do not create a human task board that replaces OpenSpec. `.factory/work/` is the machine execution graph only.
 - Do not archive an OpenSpec change. Tell the human to use OpenSpec's archive skill.
 - Do not modify `.squad/` if present.

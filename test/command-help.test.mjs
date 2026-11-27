@@ -24,7 +24,7 @@ import { parseArgs, run } from '../src/lib/run.mjs';
 import { cliCommandKey, isMutatingCommand } from '../src/lib/writer-lease.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 
-const GLOBAL_HELP_DIGEST = '78a7c99aed8fcaf531bcd65add807a86f39c817b5098ae84bc919e044e3561be';
+const GLOBAL_HELP_DIGEST = 'c31d77f91c84e7cfe683e0ec67c23ba01e54be8e7eb07228cbf6729ff36dcf32';
 
 async function cli(args, cwd = os.tmpdir()) {
   let out = '';

@@ -569,6 +569,9 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/observability/',
   '.factory/approvals/',
   '.factory/exceptions/',
+  '.factory/boards/',
+  '.factory/pull-requests/',
+  '.factory/mcp/',
   '.factory/methods/',
   '.factory/blocked/',
 ];

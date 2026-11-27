@@ -96,7 +96,7 @@ Before any action with an external effect (publish, deploy, spend, creating an a
 
 ## Never
 
-- Do not start this loop unattended or on a timer.
+- Do not start this loop unattended or on a timer. A cloud run follows `factory-cloud`, where a human's board move and a `start` or `resume` claim begin the loop.
 - Do not wrap `s4c watch` or any Ralph execute loop.
 - Do not modify `.squad/` if present.
 - Do not invent an OpenSpec product change.

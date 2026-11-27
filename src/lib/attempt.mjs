@@ -5,6 +5,7 @@ import { assertIdentity } from './identity.mjs';
 import { ledger, writeText } from './layout.mjs';
 import {
   commentOnPullRequest,
+  forgeDefersWrites,
   postVerdictComment,
   readPullRequestRecord,
 } from './pull-request.mjs';
@@ -206,12 +207,14 @@ export function transitionAttempt(project, attemptId, nextState, {
 
   // Task 1.1: post the stored accept/reject verdict once a pull request record exists.
   // Missing-record and dedupe behavior are covered by later tasks; skip when absent.
-  if (mainReviewerVerdict) {
+  // With MCP plans the agent applies each post, so an explicit `pr comment` does it.
+  const deferred = forgeDefersWrites(project);
+  if (mainReviewerVerdict && !deferred) {
     if (readPullRequestRecord(project, attempt.change)) {
       commentOnPullRequest(project, attemptId, env);
     }
   }
-  if (securityVerdict && readPullRequestRecord(project, attempt.change)) {
+  if (securityVerdict && !deferred && readPullRequestRecord(project, attempt.change)) {
     postVerdictComment(project, {
       attemptId,
       verdict: securityVerdict,

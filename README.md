@@ -302,6 +302,9 @@ flowchart TD
 | `idefactory approve` / `reject` | Record a human decision. Does not publish or spend |
 | `idefactory lockout` | Create or resolve a reviewer lockout |
 | `idefactory halt` / `resume` | Set or clear the kill switch |
+| `idefactory forge configure` | Choose `github` (default) or `azure-devops` for `idefactory pr` |
+| `idefactory board …` | Optional Azure DevOps board mirror: `configure`, `publish`, `claim`, `report`, `comment`, `transition` |
+| `idefactory mcp ack` / `pending` | Record, or list, plans the agent applied through the Azure DevOps MCP |
 | `idefactory help <command>` | Print usage, flags, and examples for one command. Also `idefactory <command> --help`, `-h`, and `help --json` |
 
 ### Contextual help
@@ -309,6 +312,22 @@ flowchart TD
 `idefactory help` prints the full usage list. For one command, run `idefactory help <command>`, `idefactory <command> --help`, or `idefactory <command> -h`. The help names the usage line, arguments, flags, examples, and whether the command writes project state. A command group such as `attempt`, `verify`, `red`, `pr`, `adapters`, `ci`, or `lockout` lists its subcommands. `idefactory help attempt transition` also lists every attempt state, the transitions each state allows, the evidence keys with their types, and what each state needs before an attempt can enter it.
 
 Add `--json` for structured help: `idefactory help verify run --json` prints one JSON document with `schemaVersion` 1, and `idefactory help --json` lists every command. Help is read-only. It needs no project, takes no writer lease, and works while `HALT` exists. An unknown topic, as in `idefactory help attempt transitoin`, exits 1 and lists the valid names. The installed factory skills point agents to this help instead of the CLI source.
+
+## Cloud runs from an Azure DevOps board
+
+Local use is the default and needs none of this. With no `board` entry in `.factory/config.json`, every `board` command refuses and nothing talks to Azure DevOps.
+
+`idefactory` never contacts Azure DevOps with the default `mcp` transport, so no Azure DevOps secret is on the VM. A command that would write prints a plan: numbered operations for Cursor's Azure DevOps MCP connection, each a tool name and a full argument object. The cloud agent calls them exactly as printed and then runs `idefactory mcp ack <planId>`, and only then does the CLI record the result in `.factory/boards/` or `.factory/pull-requests/`. Reads go the other way: the agent saves the MCP result to a file in the temporary directory and passes it with `board claim --snapshot` or `pr capture --threads-file`. Plans name only these tools: `wit_work_item_write`, `wit_work_item_comment_write`, `wit_work_item_link_write`, `repo_pull_request_write` (create, or update the description), and `repo_pull_request_thread_write`. The plan builder refuses `autoComplete`, `bypassReason`, `vote`, `status`, and the other completion arguments. A claim's state change starts with a `Test` of the story revision, so two cloud runs cannot both claim one story. The MCP cannot push commits, so the cloud agent pushes `factory/<change>` with its own git access.
+
+To let the factory pick up work by itself:
+
+1. A human authors an OpenSpec change, runs `idefactory sync-tasks <change>` and `idefactory board publish <change>`, and pushes. Publish creates one User Story per change, tagged `factory`, with `Custom.OpenSpecChange` set to the change name.
+2. Moving that story to `Ready for Factory` is the request. An Azure DevOps service hook posts to the reference filter in [`tools/ado-bridge/`](tools/ado-bridge/README.md), which forwards only that transition to a Cursor Automation webhook.
+3. The Automation's cloud agent follows the `factory-cloud` skill. `idefactory board claim` decides `start`, `resume`, `skip`, `duplicate`, `not-ready`, or `halted`, so a repeated delivery does not run twice.
+4. The agent runs `idefactory run --until human-gate` on `factory/<change>`, mirrors progress with `idefactory board report`, and opens the pull request with `idefactory pr open`.
+5. A gate, lockout, or rejected review moves the story to `Waiting on Human` or `Blocked`. The human decides, then moves the story back to `Ready for Factory` to resume.
+
+The agent never merges, never approves, never clears `HALT`, and never moves a story to the ready state or a done state. The CLI cannot prove the agent applied a plan or read a story honestly, so enforce the gates in Azure DevOps too: the identity behind the MCP connection should not hold "Bypass policies when completing pull requests" or "Bypass policies when pushing", and `main` should require a reviewer and block self-approval. `--transport az` on `board configure` and `forge configure` keeps the Azure CLI path for use outside a cloud agent: it needs `az` with the `azure-devops` extension and the runtime secret `ADO_TOKEN`, which reaches the CLI only as `AZURE_DEVOPS_EXT_PAT` in its environment, never on argv. `idefactory` itself never launches a model and never polls the board.
 
 ## What gets installed
 

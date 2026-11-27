@@ -48,6 +48,14 @@ const MUTATING = new Set([
   'pr comment',
   'pr capture',
   'ci scaffold',
+  'forge configure',
+  'board configure',
+  'board publish',
+  'board claim',
+  'board report',
+  'board comment',
+  'board transition',
+  'mcp ack',
   'approve',
   'revoke',
   'reject',
@@ -119,6 +127,18 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     const sub = String(rest[0] || '').trim();
     if (sub === 'scaffold') return 'ci scaffold';
     return sub ? `ci ${sub}` : 'ci';
+  }
+  if (head === 'board') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `board ${sub}` : 'board';
+  }
+  if (head === 'mcp') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `mcp ${sub}` : 'mcp';
+  }
+  if (head === 'forge') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `forge ${sub}` : 'forge';
   }
   if (head === 'autonomy') return 'autonomy report';
   if (head === 'sync-tasks' && flags.plan) return 'sync-tasks plan';
