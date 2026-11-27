@@ -331,6 +331,9 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     }
     case 'run': {
+      if (parsed.flags['accept-baseline'] && !stringFlag(parsed.flags, 'reason')) {
+        throw new Error('run --accept-baseline needs --reason "<text>" to record why the baseline is accepted');
+      }
       const result = runFactory(project, env, {
         change: parsed.flags.change || parsed.rest[0],
         until: parsed.flags.until || 'human-gate',
@@ -342,6 +345,7 @@ async function dispatchCommand(cmd, ctx) {
         hostCost: parsed.flags['host-cost'],
         newRun: Boolean(parsed.flags['new-run']),
         acceptBaseline: Boolean(parsed.flags['accept-baseline']),
+        acceptReason: stringFlag(parsed.flags, 'reason') || undefined,
       });
       if (parsed.flags.json) {
         out(JSON.stringify({

@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { attemptsRoot, getAttempt } from './attempt.mjs';
 import { describeReopens } from './attempt-reopen.mjs';
+import { latestRunSession } from './run-session.mjs';
 import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
@@ -362,7 +363,7 @@ function standingBlock(project, item) {
 function renderPacket({ role, item, modelProfile, project }) {
   const criteria = (item.acceptanceCriteria || []).map((entry) => `- ${entry}`).join('\n');
   const roles = (item.factory?.roles || []).join(', ');
-  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role) + methodBlock(project, item, role) + reopenBlock(project, item, role) + standingBlock(project, item);
+  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role) + methodBlock(project, item, role) + reopenBlock(project, item, role) + acceptedBaselineBlock(project, item, role) + standingBlock(project, item);
   return `# Work packet
 
 Role: ${role}
@@ -445,6 +446,13 @@ function methodBlock(project, item, role) {
     lines.push('A different role must record a method review before this attempt can be accepted.');
   }
   return `\nRed method:\n${lines.map((line) => `- ${line}`).join('\n')}\n`;
+}
+
+function acceptedBaselineBlock(project, item, role) {
+  if (!project || (role !== 'reviewer' && role !== 'security-reviewer')) return '';
+  const baseline = latestRunSession(project, item.change)?.testBaseline;
+  if (baseline?.result !== 'accepted') return '';
+  return `\nAccepted baseline (a failing baseline the run accepted for this HEAD only):\n- HEAD: ${baseline.sourceRevision}\n- Reason: ${baseline.reason || '(none recorded)'}\n- Accepted at: ${baseline.acceptedAt || 'unknown'}\n`;
 }
 
 function reopenBlock(project, item, role) {

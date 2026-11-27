@@ -75,6 +75,7 @@ function runFactoryCore(project, env, {
   hostCost,
   newRun = false,
   acceptBaseline = false,
+  acceptReason,
 } = {}, focus = {}) {
   if (halted(project)) {
     throw haltError();
@@ -358,7 +359,7 @@ function runFactoryCore(project, env, {
         };
       }
       if ((attempt.state === 'planned' || attempt.state === 'assigned') && stage.nextState === 'implementing') {
-        const baseline = applyTestBaseline(project, session, attempt, { acceptBaseline });
+        const baseline = applyTestBaseline(project, session, attempt, { acceptBaseline, acceptReason });
         session = baseline.session;
         if (baseline.stop) {
           session = closeRunSession(project, session, baseline.stop);
@@ -754,7 +755,7 @@ function readConfig(project) {
   }
 }
 
-function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
+function applyTestBaseline(project, session, attempt, { acceptBaseline, acceptReason }) {
   const mapped = mappedTestChecks(project);
   if (mapped.length === 0) return { session, stop: null };
   const snapshot = gitSnapshot(project);
@@ -781,7 +782,13 @@ function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
         return {
           session: writeRunSession(project, {
             ...session,
-            testBaseline: { sourceRevision: revision, configDigest, result: 'accepted' },
+            testBaseline: {
+              sourceRevision: revision,
+              configDigest,
+              result: 'accepted',
+              reason: acceptReason,
+              acceptedAt: new Date().toISOString(),
+            },
           }),
           stop: null,
         };
