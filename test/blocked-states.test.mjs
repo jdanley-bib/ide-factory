@@ -133,6 +133,32 @@ test('actors follow who holds the authority', async () => {
   }
 });
 
+test('a vacuous red offers the already-satisfied proposal first, and each proposal names the states it accepts', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const vacuous = { id: 'a1', change: 'demo', taskId: '1.1', state: 'implementing', evidence: { redFailures: [{ kind: 'unit', classification: 'vacuous-red' }] } };
+    const report = buildBlockedReport(dir, { code: 'vacuous-red', attempt: vacuous });
+    const first = report.recovery.options[0];
+    assert.equal(first.id, 'propose-already-satisfied');
+    assert.equal(first.supported, true);
+    for (const flag of ['--reason already-satisfied', '--test-path', '--kind']) assert.match(first.command, new RegExp(flag));
+    const propose = report.recovery.options.find((entry) => entry.id === 'propose-method');
+    assert.match(propose.requires, /planned, assigned, or implementing/);
+    assert.doesNotMatch(propose.requires, /before verification/);
+
+    const verifying = buildBlockedReport(dir, { code: 'vacuous-red', attempt: { ...vacuous, state: 'verifying' } });
+    assert.equal(verifying.recovery.options.find((entry) => entry.id === 'propose-already-satisfied').supported, false);
+    assert.equal(verifying.recovery.options.find((entry) => entry.id === 'propose-method').supported, false);
+
+    const noVacuous = buildBlockedReport(dir, { code: 'red-missing', attempt: { ...vacuous, evidence: {} } });
+    assert.equal(noVacuous.recovery.options.find((entry) => entry.id === 'propose-already-satisfied'), undefined);
+    assert.equal(noVacuous.recovery.options.find((entry) => entry.id === 'propose-method').supported, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('a stop with no supported resolving option says so and names the human', async () => {
   const dir = tempProject();
   try {

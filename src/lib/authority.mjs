@@ -37,6 +37,7 @@ export const AUTHORITY = Object.freeze({
   'start-new-attempt': gate('agent', 'none', 'start a new attempt on a rejected item', { actor: 'implementing-agent' }),
   'run-verify': gate('agent', 'none', 'run verification checks', { actor: 'implementing-agent' }),
   'propose-method': gate('agent', 'none', 'propose a no-red method', { actor: 'implementing-agent' }),
+  'propose-already-satisfied': gate('agent', 'none', 'propose an already-satisfied method from a vacuous red', { actor: 'implementing-agent' }),
   complete: gate('agent', 'none', 'complete an accepted attempt without a human gate', { actor: 'implementing-agent' }),
   'resume-complete': gate('agent', 'none', 'resume a finalization journal', { actor: 'implementing-agent' }),
 

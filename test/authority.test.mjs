@@ -58,6 +58,7 @@ test('each design gate has the stated level and enforcement', () => {
     'new-run-human': ['human', 'none'],
     'accept-baseline': ['agent', 'none'],
     'propose-method': ['agent', 'none'],
+    'propose-already-satisfied': ['agent', 'none'],
     'red-invalidate': ['agent', 'none'],
     'start-new-attempt': ['agent', 'none'],
     'run-verify': ['agent', 'none'],
