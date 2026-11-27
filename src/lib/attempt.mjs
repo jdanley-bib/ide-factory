@@ -18,6 +18,7 @@ import { describeHold, getWorkItem, isHeld, updateWorkItem } from './work.mjs';
 import { hasAnyFailingRed, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
 import { assertMethodAccepted, hasMethodRecord } from './red-method.mjs';
+import { resolveGitBinding } from './verification-evidence.mjs';
 import {
   MISSING_RECORD_PREFIX,
   assertNoRequirementProblems,
@@ -180,6 +181,7 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
     implementerRole: role,
     implementerId: null,
     reviewerId: null,
+    startRevision: resolveGitBinding(project).sourceRevision ?? null,
     modelProfile,
     evidence: {
       red: null,

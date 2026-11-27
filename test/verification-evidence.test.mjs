@@ -320,6 +320,23 @@ test('verify run --red stores red only on non-zero exit', async () => {
   }
 });
 
+test('a vacuous red entry binds the registered command digest and the source revision', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 0);
+    const head = ensureCleanGitCommit(dir);
+    const red = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(red.code, 0);
+    const [entry] = getAttempt(dir, attempt.id).evidence.redFailures;
+    assert.equal(entry.classification, 'vacuous-red');
+    assert.equal(entry.commandDigest, commandDigest(registryForExit(0).checks.unit.argv));
+    assert.equal(entry.sourceRevision, head);
+    assert.equal(JSON.stringify(entry).includes('stdout'), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
 test('a vacuous red throws a BlockedError with the unchanged message', async () => {
   const dir = tempProject();
   try {

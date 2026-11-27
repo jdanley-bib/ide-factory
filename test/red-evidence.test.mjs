@@ -33,7 +33,16 @@ test('a timed-out outcome records the limit and elapsed time', () => {
     spawnError: null,
     logDigest: DIGEST,
     recordedAt: FINISHED,
+    commandDigest: null,
+    sourceRevision: null,
   });
+});
+
+test('a red entry binds to the command digest and source revision when given', () => {
+  const entry = entryFor({ exitCode: 0, commandDigest: 'sha256:abc', sourceRevision: 'deadbeef' });
+  assert.equal(entry.commandDigest, 'sha256:abc');
+  assert.equal(entry.sourceRevision, 'deadbeef');
+  assert.equal(entryFor({ exitCode: 0 }).sourceRevision, null);
 });
 
 test('a spawn error keeps only its code and never its message', () => {

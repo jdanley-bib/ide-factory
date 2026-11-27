@@ -2,8 +2,8 @@
 
 ## 1. Evidence binding
 
-- [ ] 1.1 Add `commandDigest` and `sourceRevision` to red failure diagnostics in `src/lib/verification-evidence.mjs`, with null revision outside git; verify with `test/verification-evidence.test.mjs` asserting both fields on a vacuous entry and a null revision in a non-git directory.
-- [ ] 1.2 Record `startRevision` in `startAttempt` (HEAD or null) without changing `baseRev`; verify with `test/attempt.test.mjs` asserting the revision in a git project and null otherwise.
+- [x] 1.1 Add `commandDigest` and `sourceRevision` to red failure diagnostics in `src/lib/verification-evidence.mjs`, with null revision outside git; verify with `test/verification-evidence.test.mjs` asserting both fields on a vacuous entry and a null revision in a non-git directory.
+- [x] 1.2 Record `startRevision` in `startAttempt` (HEAD or null) without changing `baseRev`; verify with `test/attempt.test.mjs` asserting the revision in a git project and null otherwise.
 
 ## 2. The reason class
 

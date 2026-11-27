@@ -273,6 +273,8 @@ export async function verifyRun(project, attemptId, options = {}) {
       executable: entry.argv[0],
       logDigest,
       recordedAt: finishedAt,
+      commandDigest: commandDigest(entry.argv),
+      sourceRevision: resolveGitBinding(project).sourceRevision ?? null,
     });
     const detail = describeRedFailure(diagnostics);
     const count = noteRetry(attempt, classification, kind);
