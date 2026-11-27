@@ -50,7 +50,10 @@ async function seed(dir) {
   ok(await idefactory(dir, ['sync-tasks', 'demo'], {}, RAW));
 }
 
-/** Every file under .factory, keyed by relative path, for byte-identical comparisons. */
+/**
+ * Every file under .factory, keyed by relative path, for byte-identical comparisons. The stop
+ * trail is written on refusal by design, so it is left out.
+ */
 function snapshot(dir) {
   const files = new Map();
   const walk = (current) => {
@@ -62,6 +65,9 @@ function snapshot(dir) {
     }
   };
   walk(path.join(dir, '.factory'));
+  for (const key of [...files.keys()]) {
+    if (key.startsWith(`.factory${path.sep}observability${path.sep}`) || key.startsWith(`.factory${path.sep}blocked${path.sep}`)) files.delete(key);
+  }
   return files;
 }
 
