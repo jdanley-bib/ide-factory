@@ -8,7 +8,7 @@ import { redStates } from './verification-status.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
-import { describeMethod, listAllMethods } from './red-method.mjs';
+import { describeCoverage, describeMethod, listAllMethods } from './red-method.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
@@ -98,7 +98,10 @@ export function status(project, _env) {
   const orphanNotices = orphanAttemptLines(project, change || undefined);
   const heldLines = listWorkItems(project, change || undefined).filter(isHeld).map((item) => `- ${item.change}/${item.id} ${describeHold(item)}${item.hold.supersededBy?.length ? ` (superseded by ${item.hold.supersededBy.map((ref) => `${ref.change}/${ref.id}`).join(', ')})` : ''}`);
   const reopenLines = listReopenLines(project);
-  const methodLines = listAllMethods(project).map((row) => `- ${describeMethod(row)}`);
+  const methodLines = listAllMethods(project).flatMap((row) => [
+    `- ${describeMethod(row)}`,
+    ...describeCoverage(row).map((line) => `  - ${line}`),
+  ]);
   const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
   const checkLines = Object.entries(registeredArgv(project)).map(([kind, argv]) => `- ${kind}: ${formatArgv(argv)}`);
   return [

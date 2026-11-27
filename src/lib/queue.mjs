@@ -10,7 +10,7 @@ import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './cl
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
 import { describeProblems, redKindsFor, resolveRequirements } from './required-checks.mjs';
-import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import { classifyDiff, driftFor, itemHasAttempt, itemText } from './reconcile-diff.mjs';
 import {
   ensureWorkDirs,
@@ -436,7 +436,7 @@ function methodBlock(project, item, role) {
   const attempt = currentAttempt(project, item);
   const row = attempt ? describeAttemptMethod(project, attempt) : null;
   if (!row) return '';
-  const lines = [describeMethod(row)];
+  const lines = [describeMethod(row), ...describeCoverage(row)];
   if (role === 'reviewer' || role === 'security-reviewer') {
     lines.push(
       `Record a method review: idefactory method review ${row.attemptId} --verdict ACCEPT|REJECT --reviewer <id> --note "text". `

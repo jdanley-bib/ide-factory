@@ -6,7 +6,8 @@ import { getAttempt } from '../src/lib/attempt.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 import { readBoundMethod, assertMethodAccepted, describeAttemptMethod, describeCoverage } from '../src/lib/red-method.mjs';
 import { commandDigest, resolveGitBinding } from '../src/lib/verification-evidence.mjs';
-import { cleanup, idefactory, tempProject } from './helpers.mjs';
+import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
+import { renderWorkPacket } from '../src/lib/queue.mjs';
 import { commitAll, git, nodeCheck, writeJson } from './factory-project.mjs';
 
 const FORBIDDEN_CLAIMS = /red ran/i;
@@ -447,5 +448,59 @@ test('complete refuses an already-satisfied attempt whose production file change
     assert.notEqual(getWorkItem(dir, 'demo', '1.1').status, 'done');
   } finally {
     cleanup(dir);
+  }
+});
+
+test('the packets, status, show, and the verdict comment state the observed passes and the diff check', async () => {
+  const dir = tempProject();
+  const forgeDir = tempProject();
+  const forgeEnv = {
+    IDEFACTORY_FORGE: path.join(repoRoot, 'support/fake-forge.mjs'),
+    IDEFACTORY_FORGE_LOG: path.join(forgeDir, 'forge-argv.log'),
+    IDEFACTORY_FORGE_DB: path.join(forgeDir, 'forge-db.json'),
+  };
+  try {
+    await seed(dir);
+    const attemptId = await startAttempt(dir);
+    await vacuousRed(dir, attemptId);
+    writeTestFile(dir);
+    assert.equal((await propose(dir, attemptId)).code, 0);
+    const opened = await idefactory(dir, ['pr', 'open', 'demo'], forgeEnv);
+    assert.equal(opened.code, 0, opened.err + opened.out);
+    await toReviewedMethod(dir, attemptId);
+    const accepted = await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'accepted', '--evidence', JSON.stringify({ reviewerId: 'reviewer-1', verdict: 'ACCEPT' }),
+    ], forgeEnv);
+    assert.equal(accepted.code, 0, accepted.err + accepted.out);
+
+    const item = getWorkItem(dir, 'demo', '1.1');
+    const engineer = renderWorkPacket(dir, item, 'engineer');
+    const reviewer = renderWorkPacket(dir, item, 'reviewer');
+    for (const text of [engineer, reviewer]) {
+      assert.match(text, /Observed passes: unit \(log sha256:/);
+      assert.match(text, /Cited test paths: test\/new\.test\.mjs/);
+      assert.match(text, /Diff check at proposal: 1 path\(s\) changed/);
+      assert.doesNotMatch(text, /red ran/i);
+    }
+    assert.match(reviewer, /reject the method if they do not/);
+
+    const status = await idefactory(dir, ['status']);
+    assert.match(status.out, /Observed passes: unit/);
+    const statusDoc = JSON.parse((await idefactory(dir, ['status', '--json'])).out);
+    assert.equal(statusDoc.redMethods[0].observedPass.unit.logDigest.startsWith('sha256:'), true);
+
+    const shown = await idefactory(dir, ['method', 'show', attemptId]);
+    assert.match(shown.out, /Observed passes: unit/);
+    assert.match(shown.out, /Cited test paths: test\/new\.test\.mjs/);
+
+    const bodies = fs.readFileSync(forgeEnv.IDEFACTORY_FORGE_LOG, 'utf8').split('\n').filter(Boolean)
+      .map((line) => JSON.parse(line))
+      .filter((argv) => argv[0] === 'pr' && argv[1] === 'comment')
+      .map((argv) => argv[argv.indexOf('--body') + 1]);
+    assert.ok(bodies.some((body) => /Method no-red for unit/.test(body) && /Observed passes: unit/.test(body)), bodies.join('\n'));
+    assert.ok(bodies.every((body) => !/red ran/i.test(body)));
+  } finally {
+    cleanup(dir);
+    cleanup(forgeDir);
   }
 });

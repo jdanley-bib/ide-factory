@@ -6,7 +6,7 @@ import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { describeReopens } from './attempt-reopen.mjs';
-import { describeAttemptMethod, describeMethod } from './red-method.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod } from './red-method.mjs';
 import {
   assertSafeForgeArgv,
   azurePullRequestUrl,
@@ -161,7 +161,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   const build = (withReason) => `${[
     ...lines,
     ...describeReopens(attempt, { withReason }),
-    ...(method ? [describeMethod(method, { withText: withReason })] : []),
+    ...(method ? [describeMethod(method, { withText: withReason }), ...describeCoverage(method)] : []),
     ...exceptions.map((row) => describeException(row, { withReason })),
   ].join('\n')}\n`;
   let body = build(true);

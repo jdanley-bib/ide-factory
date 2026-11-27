@@ -33,7 +33,7 @@ import { evaluateConditionStop } from './run-stop.mjs';
 import { classifyCheckOutcome, isFailingRed, isRequiredTestKind, redForKind, retryKey } from './red-evidence.mjs';
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
 import { describeReopens } from './attempt-reopen.mjs';
-import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import { humanGateAllows } from './risk-gates.mjs';
 import { describeProblems, missingChecks, redKindsFor, resolveRequirements } from './required-checks.mjs';
 import {
@@ -687,7 +687,7 @@ function withRedExceptions(project, attempt, stage) {
   const method = describeAttemptMethod(project, attempt);
   let message = stage.message;
   if (method) {
-    const methodLines = [`- ${describeMethod(method)}`];
+    const methodLines = [describeMethod(method), ...describeCoverage(method)].map((line) => `- ${line}`);
     if (stage.role === 'reviewer' || stage.role === 'security-reviewer') {
       methodLines.push(
         `- Record a method review: idefactory method review ${attempt.id} --verdict ACCEPT|REJECT --reviewer <id> --note "text". Reject it when the reason class does not fit the diff.`,

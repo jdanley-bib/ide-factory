@@ -26,7 +26,7 @@ import { describeDrift } from './reconcile-diff.mjs';
 import { listReds, renderRedList } from './red-list.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
 import { recordRedInvalidation } from './red-invalidation.mjs';
-import { describeAttemptMethod, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { renderVerifyStatusText, verifyStatus } from './verification-status.mjs';
 import { answerHelp } from './command-help.mjs';
@@ -903,7 +903,7 @@ function handleMethod(project, parsed, out) {
     const attempt = getAttempt(project, attemptId);
     if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
     const row = describeAttemptMethod(project, attempt);
-    out(row ? `${describeMethod(row)}\n` : `Attempt ${attemptId} uses the red-first method.\n`);
+    out(row ? `${[describeMethod(row), ...describeCoverage(row)].join('\n')}\n` : `Attempt ${attemptId} uses the red-first method.\n`);
     return 0;
   }
   if (halted(project)) {
