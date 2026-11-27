@@ -130,3 +130,56 @@ The usage text in every lockout error SHALL match the usage of the corresponding
 #### Scenario: Unknown lockout subcommand
 - **WHEN** `idefactory lockout bogus` runs
 - **THEN** the error lists the usage of both `lockout create` and `lockout resolve` as shown in their help entries
+
+### Requirement: Setup help documents structured argv
+The help for `setup` SHALL name the JSON array form and the equals form of the argv input, and SHALL show one example whose argv contains a flag that begins with `--` and a quoted expression containing `|`.
+
+#### Scenario: Setup help names the structured form
+- **WHEN** the user runs `idefactory help setup`
+- **THEN** the output names the JSON array form and the equals form
+- **AND** it shows an example with `--filter` and a quoted expression containing `|`
+
+#### Scenario: Machine-readable setup help
+- **WHEN** the user runs `idefactory help setup --json`
+- **THEN** the document lists the JSON array flag alongside the repeated element flag
+
+### Requirement: Requirements help
+Help SHALL document `idefactory requirements`, its `--json` form, its read-only effect, and the meaning of each field. The attempt lifecycle help SHALL state that the gate into `verifying` requires red for every test kind in the resolved requirement set.
+
+#### Scenario: Requirements help
+- **WHEN** the user runs `idefactory help requirements`
+- **THEN** the output says the command is read-only and names the check sources, the red kinds, the human decisions, and the problems
+
+#### Scenario: Lifecycle names the full set
+- **WHEN** the user runs `idefactory help attempt transition`
+- **THEN** the precondition for `verifying` refers to the resolved requirement set
+
+### Requirement: Authorization help
+Help SHALL document `idefactory authorize` and `idefactory revoke`, state that `authorize` is read-only and never performs the action, and list the closed set of `reason` values. The global usage text SHALL stay unchanged, and both commands SHALL be reachable through `help <command>` and `help --json`.
+
+#### Scenario: Authorize help
+- **WHEN** the user runs `idefactory help authorize`
+- **THEN** the output says the command is read-only and lists every reason value
+
+#### Scenario: Revoke help
+- **WHEN** the user runs `idefactory help revoke`
+- **THEN** the output says the original record is left unchanged
+
+#### Scenario: Global help unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text
+
+### Requirement: Blocked-state help
+Help for `run`, `next`, `complete`, `attempt transition`, and `sync-tasks` SHALL document `--json`. The `run` help SHALL also describe each report field, the actors, the retry classes, and the durable record path. The global usage text SHALL stay unchanged.
+
+#### Scenario: Run help names json
+- **WHEN** the user runs `idefactory help run`
+- **THEN** the output documents `--json` and says exit codes do not change
+
+#### Scenario: Run help describes the report
+- **WHEN** the user runs `idefactory help run`
+- **THEN** the output lists the actors, the retry classes, and the record path
+
+#### Scenario: Global help unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text

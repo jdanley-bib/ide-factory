@@ -14,7 +14,7 @@ Gives the IDE one role-scoped packet for the next factory work item and requires
 - **AND** it does not include other agents' charters as required reading
 
 ### Requirement: Method and review
-The work packet and factory skills SHALL require a failing test before production code only when the work item's task class is `code` and its verification profile includes a test check. A `lightweight` item SHALL NOT require a failing test. For a `code` item the skills SHALL name `idefactory verify run --check <kind> --red` for the failing test and `idefactory verify run --check <kind>` for the passing run. The skills SHALL NOT tell the session to attach a pass boolean to an attempt transition. Verification evidence SHALL still be produced by the verification command before review, and review SHALL still be a role other than the implementer.
+The work packet and factory skills SHALL require a failing test before production code only when the work item's task class is `code`, its verification profile includes a test check, and the attempt has no recorded `no-red` method covering that check kind. A `lightweight` item SHALL NOT require a failing test. For a `code` item the skills SHALL name `idefactory verify run --check <kind> --red` for the failing test and `idefactory verify run --check <kind>` for the passing run. The skills SHALL NOT tell the session to attach a pass boolean to an attempt transition. Verification evidence SHALL still be produced by the verification command before review, and review SHALL still be a role other than the implementer.
 
 #### Scenario: Build skill
 - **WHEN** the factory-build skill is read for a `code` work item whose profile includes a test check
@@ -23,6 +23,11 @@ The work packet and factory skills SHALL require a failing test before productio
 #### Scenario: Build skill for a lightweight item
 - **WHEN** the factory-build skill is read for a `lightweight` work item
 - **THEN** it does not require a failing test before production code
+
+#### Scenario: Packet with a recorded method
+- **WHEN** a packet is rendered for a `code` attempt whose `no-red` method covers `unit`
+- **THEN** it does not require a failing test for `unit`
+- **AND** it states the method and that a method review is required
 
 ### Requirement: No autonomous loop
 The CLI SHALL NOT launch an IDE agent, a model process, or a continuous build loop. Human-started orchestration SHALL return one role-scoped request only when the persisted session still has remaining budget and the work state changed since the previous request.
@@ -54,7 +59,7 @@ When a file named `HALT` exists in the project root, next, sync-tasks, run, atte
 - **THEN** the command exits with an error and does not emit an agent request
 
 ### Requirement: Attempt lifecycle
-Each started work item SHALL have a persisted attempt whose state transitions reject illegal stage changes. Review notes are accepted from the reviewer. Red, verification, and security check records SHALL be retained only when the verification command wrote them. A `code` attempt SHALL NOT enter `verifying` until each required test kind has a stored failing red record or a valid red exception from the red-evidence-exceptions capability. A `lightweight` attempt MAY enter `verifying` from `implementing` with no red record.
+Each started work item SHALL have a persisted attempt whose state transitions reject illegal stage changes. Review notes are accepted from the reviewer. Red, verification, and security check records SHALL be retained only when the verification command wrote them. A `code` attempt SHALL NOT enter `verifying` until each required test kind has a stored failing red record, a valid red exception from the red-evidence-exceptions capability, or a recorded `no-red` method from the red-method capability that covers it. A `lightweight` attempt MAY enter `verifying` from `implementing` with no red record.
 
 #### Scenario: Illegal transition
 - **WHEN** an attempt transition skips from assigned directly to accepted
@@ -70,6 +75,10 @@ Each started work item SHALL have a persisted attempt whose state transitions re
 
 #### Scenario: Exception satisfies one kind
 - **WHEN** a `code` attempt requires `unit` and `integration`, has a stored failing red record for `unit`, and has a valid red exception for `integration`
+- **THEN** the transition into `verifying` is accepted
+
+#### Scenario: Method satisfies one kind
+- **WHEN** a `code` attempt requires `unit` and `integration`, has a stored failing red record for `unit`, and has a recorded `no-red` method covering `integration`
 - **THEN** the transition into `verifying` is accepted
 
 #### Scenario: Lightweight attempt skips red
@@ -100,7 +109,7 @@ Completion SHALL require recorded implementer and reviewer identifiers and SHALL
 - **THEN** completion fails and the work item remains unfinished
 
 ### Requirement: Finalize accepted work
-Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD. A `code` item SHALL also have, for each required test kind, a stored failing CLI red record or a valid red exception from the red-evidence-exceptions capability. A `lightweight` item SHALL NOT require a red record.
+Complete SHALL require an accepted attempt, or a matching recoverable finalization journal, and, for every required check, a schema-valid passing attestation whose exit code is zero and whose source revision equals the current clean HEAD. A `code` item SHALL also have, for each required test kind, a stored failing CLI red record, a valid red exception from the red-evidence-exceptions capability, or an accepted `no-red` method from the red-method capability that covers it. A `lightweight` item SHALL NOT require a red record.
 
 #### Scenario: Successful completion
 - **WHEN** complete receives an accepted `code` attempt with distinct role identifiers, a schema-valid passing attestation for every required check at the current clean HEAD, a stored failing red record or valid red exception for each required test kind, and a verification profile whose `humanGate` is false
@@ -139,6 +148,15 @@ Complete SHALL require an accepted attempt, or a matching recoverable finalizati
 
 #### Scenario: Altered exception at completion
 - **WHEN** the attempt's only red for a required kind is an exception whose file no longer matches its stored digest
+- **THEN** complete fails and the work item remains unfinished
+
+#### Scenario: Code completion with an accepted method
+- **WHEN** a `code` item requires `unit` and the accepted attempt has a `no-red` method covering `unit` with an `ACCEPT` method review and every other completion requirement
+- **THEN** complete succeeds
+- **AND** the attempt still has no CLI red record for `unit`
+
+#### Scenario: Altered method at completion
+- **WHEN** the attempt's only satisfier for a required kind is a method whose file no longer matches its stored digest
 - **THEN** complete fails and the work item remains unfinished
 
 ### Requirement: Journaled completion commit
@@ -364,7 +382,7 @@ The engineer and reviewer charters that init writes for a new project SHALL stat
 - **AND** the reviewer charter accepts a valid recorded red exception in place of a red
 
 ### Requirement: Packet states the red requirement
-The work packet SHALL state the work item's task class and the check kinds that need red evidence, or that none do. A `lightweight` item and a `code` item with no test kind SHALL show none.
+The work packet SHALL state the work item's task class, every required check with its source (profile or item), and the check kinds that need red evidence, or that none do. The kinds needing red SHALL be derived from the full required set. A `lightweight` item and a `code` item with no test kind in that set SHALL show none.
 
 #### Scenario: Code item with a test check
 - **WHEN** a packet is rendered for a `code` item whose checks are `unit` and `build`
@@ -375,8 +393,13 @@ The work packet SHALL state the work item's task class and the check kinds that 
 - **THEN** it states task class `lightweight` and that no red is required
 
 #### Scenario: No test kind
-- **WHEN** a packet is rendered for a `code` item whose checks are `build`
+- **WHEN** a packet is rendered for a `code` item whose checks are `build` and whose profile adds no test kind
 - **THEN** it states task class `code` and that no red is required
+
+#### Scenario: Profile adds a test kind
+- **WHEN** a packet is rendered for a `code` item that lists only `unit` and whose profile also requires `contract`
+- **THEN** it lists `unit` as an item check and `contract` as a profile check
+- **AND** it states red required for `unit` and `contract`
 
 ### Requirement: Run request matches the red gate
 An implementing-stage run request for a `code` attempt whose checks include no test kind SHALL say that a failing test is not required and SHALL name `verifying` as the next state. A `code` attempt whose checks include a test kind SHALL still be asked for a red, unless every such kind already has a red or a valid exception.
@@ -465,3 +488,64 @@ The required checks for a work item's attempt SHALL be the checks of its `verifi
 #### Scenario: Stored identity is not re-checked
 - **WHEN** an attempt already stores an `implementerId` outside the format and a later transition supplies only a valid `reviewerId`
 - **THEN** the transition succeeds and the stored implementer id is unchanged
+
+### Requirement: One resolved requirement set
+Each work item SHALL have one resolved requirement set made of its required checks with their sources, the kinds that need red evidence, the human decisions it needs, and its dependencies. The packet, reviewer packet, status, run request, the gate into `verifying`, red exceptions, the review handoff, and completion SHALL all use that set.
+
+#### Scenario: Consumers agree
+- **WHEN** a profile adds `contract` to an item that lists only `unit`
+- **THEN** the packet, the run request, the gate into `verifying`, and completion each require red evidence for `contract`
+
+#### Scenario: Print the set
+- **WHEN** the user runs `idefactory requirements <change> <task> --json`
+- **THEN** stdout is one JSON document with `schemaVersion` 1
+- **AND** it lists each required check with its source, each kind needing red, each human decision, and any problems
+- **AND** nothing is written
+
+### Requirement: Requirements are validated before an attempt starts
+An attempt SHALL NOT start while its requirement set has a problem. A problem is an undefined verification profile, a required check kind with no registered argv, a human gate that the configured policy cannot satisfy, or a dependency that does not exist. Each problem SHALL name the unmet invariant and the file or setting that fixes it.
+
+#### Scenario: Unmapped required kind
+- **WHEN** a profile requires `contract` and the check registry has no `contract` argv
+- **AND** a run reaches the point of starting an attempt for that item
+- **THEN** no attempt is created
+- **AND** the output names `contract` and the registry
+
+#### Scenario: Unsatisfiable human gate
+- **WHEN** an item's profile requires a human gate and the configured policy has no way to verify an approver
+- **THEN** no attempt is created
+- **AND** the output names the gate and the policy setting
+
+#### Scenario: Valid set starts normally
+- **WHEN** every required kind is registered and no problem exists
+- **THEN** the attempt starts as before
+
+### Requirement: Unmet requirements are reported together
+The review handoff and completion SHALL name every unmet required check and every missing red in one message, not only the first.
+
+#### Scenario: Two checks missing
+- **WHEN** completion is requested and both `build` and `contract` have no passing record
+- **THEN** the failure names both
+
+#### Scenario: Check and red missing
+- **WHEN** completion is requested and `unit` passes but `build` has no record and `contract` has no red
+- **THEN** the failure names `build` and the missing red for `contract`
+
+### Requirement: Packets carry standing decisions
+The work packet and the run request for a work item SHALL include a standing-decisions section listing each decision still valid for that item: approvals and standing authorizations with their action, expiry, and approver; red exceptions with kind and reason; and reconciliation decisions. A decision that has expired, been revoked, or no longer matches the current revision SHALL NOT be listed. The section SHALL be omitted when there are none. Listing a decision SHALL NOT authorize anything.
+
+#### Scenario: Valid approval listed
+- **WHEN** a valid approval exists for the item and a packet is printed
+- **THEN** the packet lists its action, expiry, and approver
+
+#### Scenario: Expired approval omitted
+- **WHEN** the only approval for the item has expired
+- **THEN** the packet has no standing-decisions section
+
+#### Scenario: Handoff keeps the decision
+- **WHEN** the implementer packet and the reviewer packet are printed for the same item
+- **THEN** both list the same valid decisions
+
+#### Scenario: Listing is not authority
+- **WHEN** a decision is listed in a packet
+- **THEN** authorization still depends on the approval check
