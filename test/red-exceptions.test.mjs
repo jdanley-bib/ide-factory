@@ -1190,7 +1190,7 @@ test('run keeps the red request when one required kind is still missing', async 
   }
 });
 
-test('a closed vacuous-red session stays closed after a waiver until --new-run', async () => {
+test('a closed vacuous-red session reopens on the next run after a waiver, without --new-run', async () => {
   const dir = tempProject();
   try {
     const started = await seedAttempt(dir);
@@ -1201,20 +1201,26 @@ test('a closed vacuous-red session stays closed after a waiver until --new-run',
     await toImplementing(dir, started.id);
     const vacuous = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
     assert.notEqual(vacuous.code, 0);
+    const stoppedRuns = path.join(dir, '.factory/orchestration/runs');
+    const stopped = JSON.parse(fs.readFileSync(path.join(stoppedRuns, fs.readdirSync(stoppedRuns)[0]), 'utf8'));
+    assert.equal(stopped.stopReason, 'vacuous-red');
+    assert.deepEqual(stopped.stopContext, { attemptId: started.id, kinds: ['unit'] });
 
+    const runsRoot = path.join(dir, '.factory/orchestration/runs');
+    const runFile = path.join(runsRoot, fs.readdirSync(runsRoot).find((name) => name.endsWith('.json')));
+    const closedBytes = fs.readFileSync(runFile, 'utf8');
     const waived = await idefactory(dir, [
       'red', 'waive', started.id, '--kind', 'unit', '--note', 'n', '--approver', 'human-1',
     ]);
     assert.equal(waived.code, 0, waived.err + waived.out);
+    assert.equal(fs.readFileSync(runFile, 'utf8'), closedBytes);
 
-    const stillClosed = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
-    assert.equal(stillClosed.code, 0, stillClosed.err + stillClosed.out);
-    assert.match(stillClosed.out, /vacuous-red/);
-    assert.doesNotMatch(stillClosed.out, /Orchestration request/);
-
-    const reopened = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1', '--new-run']);
+    const reopened = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
     assert.equal(reopened.code, 2, reopened.err + reopened.out);
     assert.equal(parseRequest(reopened.out).nextState, 'verifying');
+    const session = JSON.parse(fs.readFileSync(runFile, 'utf8'));
+    assert.equal(session.status, 'open');
+    assert.deepEqual(session.clearedStops.map((entry) => [entry.stopReason, entry.resolution]), [['vacuous-red', 'exception']]);
   } finally {
     cleanup(dir);
   }

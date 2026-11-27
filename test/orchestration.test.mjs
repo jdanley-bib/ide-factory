@@ -9,6 +9,7 @@ import {
   createFinalizationJournal,
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
+import { readRunSession } from '../src/lib/run-session.mjs';
 import { commandDigest } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem, itemPath } from '../src/lib/work.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
@@ -352,7 +353,15 @@ test('verificationProfile alone does not route to security-reviewer or block awa
   }
 });
 
-test('security-reviewer route in fresh session after sticky unchanged-state with remaining budget', async () => {
+function listRunSessionFiles(project) {
+  const runsDir = path.join(project, '.factory', 'orchestration', 'runs');
+  if (!fs.existsSync(runsDir)) return [];
+  return fs.readdirSync(runsDir)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => path.join(runsDir, name));
+}
+
+test('security-reviewer route after unchanged-state clears in the same session', async () => {
   const dir = tempProject();
   try {
     await seedChange(dir, [
@@ -381,23 +390,21 @@ test('security-reviewer route in fresh session after sticky unchanged-state with
 
     await advanceToVerifying(dir, attempt.id, { passChecks: SECURITY_PROFILE_CHECKS });
 
-    const stickyResume = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
-    assert.equal(stickyResume.code, 0, stickyResume.err + stickyResume.out);
-    assert.match(`${stickyResume.err}\n${stickyResume.out}`, /unchanged-state/);
-    assert.doesNotMatch(`${stickyResume.err}\n${stickyResume.out}`, /# Orchestration request/);
-
-    const securityRun = await idefactory(dir, [
-      'run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps), '--new-run',
-    ]);
-    assert.equal(securityRun.code, 2, securityRun.err + securityRun.out);
-    const securityRoleLines = [...securityRun.out.matchAll(/^Role: security-reviewer$/gm)];
+    const runId = readRunSession(listRunSessionFiles(dir)[0]).runId;
+    const resumed = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
+    assert.equal(resumed.code, 2, resumed.err + resumed.out);
+    const securityRoleLines = [...resumed.out.matchAll(/^Role: security-reviewer$/gm)];
     assert.equal(securityRoleLines.length, 1, 'must print exactly one security-reviewer request');
-    assert.match(securityRun.out, /\.factory\/agents\/security-reviewer\/charter\.md/);
-    assert.doesNotMatch(securityRun.out, /\.factory\/agents\/reviewer\/charter\.md/);
-    const request = parseOrchestrationJson(securityRun.out);
+    assert.match(resumed.out, /\.factory\/agents\/security-reviewer\/charter\.md/);
+    assert.doesNotMatch(resumed.out, /\.factory\/agents\/reviewer\/charter\.md/);
+    const request = parseOrchestrationJson(resumed.out);
     assert.equal(request.role, 'security-reviewer');
     assert.equal(request.state, 'verifying');
     assert.equal(request.nextState, 'security-checking');
+    const session = readRunSession(listRunSessionFiles(dir)[0]);
+    assert.equal(session.runId, runId);
+    assert.equal(session.status, 'open');
+    assert.deepEqual(session.clearedStops.map((entry) => entry.stopReason), ['unchanged-state']);
   } finally {
     cleanup(dir);
   }
