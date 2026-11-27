@@ -3,7 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
-import { getAttempt, recordedAttemptIdentities } from './attempt.mjs';
+import { getAttempt, orphanAttempts, recordedAttemptIdentities } from './attempt.mjs';
 import { redStates } from './verification-status.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
@@ -91,6 +91,7 @@ export function status(project, _env) {
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
   const attemptLines = openAttemptRedLines(project, change || undefined);
+  const orphanNotices = orphanAttemptLines(project, change || undefined);
   const heldLines = listWorkItems(project, change || undefined).filter(isHeld).map((item) => `- ${item.change}/${item.id} ${describeHold(item)}${item.hold.supersededBy?.length ? ` (superseded by ${item.hold.supersededBy.map((ref) => `${ref.change}/${ref.id}`).join(', ')})` : ''}`);
   const reopenLines = listReopenLines(project);
   const methodLines = listAllMethods(project).map((row) => `- ${describeMethod(row)}`);
@@ -104,6 +105,7 @@ export function status(project, _env) {
     `Work queue: ${workLine}`,
     ...(heldLines.length ? ['Held items:', ...heldLines] : []),
     ...(attemptLines.length ? ['Open attempts:', ...attemptLines] : []),
+    ...(orphanNotices.length ? ['Orphan attempts:', ...orphanNotices] : []),
     ...(reopenLines.length ? ['Reopened attempts:', ...reopenLines.map((line) => `- ${line}`)] : []),
     ...(methodLines.length ? ['Red methods:', ...methodLines] : []),
     ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
@@ -114,6 +116,17 @@ export function status(project, _env) {
     now,
     '',
   ].join('\n');
+}
+
+/** Notices only; nothing is repaired or written. */
+export function orphanAttemptLines(project, change) {
+  const lines = [];
+  for (const item of listWorkItems(project, change)) {
+    for (const orphan of orphanAttempts(project, item)) {
+      lines.push(`- ${orphan.attemptId} ${item.change}/${item.id} (${orphan.state}) is not referenced by its work item. If it should be current, run idefactory attempt repoint ${item.change} ${item.id} --attempt ${orphan.attemptId}.`);
+    }
+  }
+  return lines;
 }
 
 function openAttemptRedLines(project, change) {

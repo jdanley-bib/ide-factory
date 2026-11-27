@@ -44,6 +44,13 @@ const RUN_AGAIN = option(
  * supported now from the command registry and the option's precondition.
  */
 export const BLOCKED_TABLE = {
+  'attempt-active': {
+    retry: 'only-after-change',
+    message: 'The work item\'s current attempt is live and has recorded evidence. Starting another attempt would orphan that evidence.',
+    options: [
+      option('continue-attempt', ['next'], 'idefactory next --change {change}', 'implementing-agent', 'the named attempt is still the current attempt for its work item', true, hasAttempt),
+    ],
+  },
   'approval-missing': {
     retry: 'only-after-change',
     message: 'A human approval is required and none matches.',

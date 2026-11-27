@@ -54,6 +54,7 @@ function sanitizeEvent(event) {
     'change',
     'task',
     'attemptId',
+    'previousAttemptId',
     'runId',
     'commandDigest',
     'exitCode',

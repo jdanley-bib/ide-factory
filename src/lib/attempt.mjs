@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { BlockedError } from './blocked-error.mjs';
 import { assertIdentity } from './identity.mjs';
 import { ledger, writeText } from './layout.mjs';
 import {
@@ -16,7 +17,7 @@ import {
 import { describeHold, getWorkItem, isHeld, updateWorkItem } from './work.mjs';
 import { hasAnyFailingRed, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
-import { assertMethodAccepted } from './red-method.mjs';
+import { assertMethodAccepted, hasMethodRecord } from './red-method.mjs';
 import {
   MISSING_RECORD_PREFIX,
   assertNoRequirementProblems,
@@ -96,6 +97,58 @@ export function getAttempt(project, attemptId) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
 }
 
+/** Attempt states a new attempt may replace. Every other state is live. */
+const REPLACEABLE_STATES = new Set(['rejected']);
+
+/**
+ * Counts of the evidence an attempt holds, in a fixed key order so digests over them are stable.
+ * @returns {{ red: number, verification: number, method: number, exception: number, review: number }}
+ */
+export function evidenceCounts(attempt) {
+  const evidence = attempt?.evidence || {};
+  return {
+    red: Object.keys(evidence.reds || {}).length
+      + (evidence.red ? 1 : 0)
+      + (evidence.redFailures || []).length,
+    verification: (evidence.verification || []).length + (evidence.security || []).length,
+    method: hasMethodRecord(attempt) ? 1 : 0,
+    exception: Object.keys(evidence.redExceptions || {}).length,
+    review: (evidence.review ? 1 : 0) + (evidence.securityReview ? 1 : 0),
+  };
+}
+
+export function hasEvidence(counts) {
+  return Object.values(counts).some((count) => count > 0);
+}
+
+/**
+ * Attempt files for a work item that its pointer and history do not reference. Attempts
+ * that predate the history are reported too; repairing the pointer records them.
+ * @returns {{ attemptId: string, state: string }[]}
+ */
+export function orphanAttempts(project, item) {
+  const referenced = new Set([
+    item.attemptId,
+    ...(item.attemptHistory || []).flatMap((entry) => [entry.previousAttemptId, entry.attemptId]),
+  ].filter(Boolean));
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return [];
+  const orphans = [];
+  for (const name of fs.readdirSync(root).sort()) {
+    if (!name.endsWith('.json')) continue;
+    let attempt;
+    try {
+      attempt = JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    if (attempt?.change !== item.change || attempt?.taskId !== item.id) continue;
+    if (referenced.has(attempt.id)) continue;
+    orphans.push({ attemptId: attempt.id, state: attempt.state });
+  }
+  return orphans;
+}
+
 export function startAttempt(project, change, taskId, { role = 'engineer', modelProfile = 'coding-standard' } = {}) {
   const item = getWorkItem(project, change, taskId);
   if (!item) throw new Error(`Work item not found: ${change}/${taskId}`);
@@ -104,6 +157,19 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
     throw new Error(`Work item ${change}/${taskId} is ${describeHold(item)}; resume it with idefactory sync-tasks ${change} --apply before starting an attempt`);
   }
   assertNoRequirementProblems(project, item);
+
+  const current = item.attemptId ? getAttempt(project, item.attemptId) : null;
+  if (current && !REPLACEABLE_STATES.has(current.state)) {
+    const evidence = evidenceCounts(current);
+    if (hasEvidence(evidence)) {
+      throw new BlockedError(
+        `attempt ${current.id} for ${change}/${taskId} is ${current.state} and has recorded evidence. Continue it; a second attempt would orphan that evidence.`,
+        'attempt-active',
+        { change, task: taskId, attemptId: current.id, attemptState: current.state, evidence },
+      );
+    }
+    return { ...current, reused: true };
+  }
 
   const attemptId = randomUUID();
   const attempt = {
@@ -129,7 +195,18 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   };
   fs.mkdirSync(attemptsRoot(project), { recursive: true });
   writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
-  updateWorkItem(project, change, taskId, { status: 'in_progress', attemptId });
+  const at = new Date().toISOString();
+  const historyEntry = {
+    previousAttemptId: current ? current.id : null,
+    attemptId,
+    cause: current ? 'after-rejection' : 'first',
+    at,
+  };
+  updateWorkItem(project, change, taskId, {
+    status: 'in_progress',
+    attemptId,
+    attemptHistory: [...(item.attemptHistory || []), historyEntry],
+  });
   ledger(project, 'attempt-start', { attemptId, change, taskId });
   return transitionAttempt(project, attemptId, 'assigned', {
     evidence: { assignedRole: role },

@@ -1,8 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
+import { REPOINT_USAGE, applyRepoint, repointPreview } from './attempt-repoint.mjs';
 import { completeWorkItem } from './complete.mjs';
-import { approve, createLockout, doctor, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
+import { approve, createLockout, doctor, orphanAttemptLines, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
 import { blockedReportForError, buildBlockedReport, recordStop } from './blocked-states.mjs';
 import { buildAutonomyReport, renderAutonomyText } from './autonomy.mjs';
 import { authorizeRequest, renderAuthorizeText } from './authorize.mjs';
@@ -351,6 +352,8 @@ async function dispatchCommand(cmd, ctx) {
         }, null, 2));
         return result.code;
       }
+      const orphans = orphanAttemptLines(project, parsed.flags.change || parsed.rest[0] || undefined);
+      if (orphans.length) out(['Orphan attempts:', ...orphans].join('\n'));
       out(result.text);
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
@@ -484,6 +487,42 @@ function handleAttempt(project, parsed, env, out, cwd) {
     out(JSON.stringify(attempt, null, 2));
     return 0;
   }
+  if (sub === 'repoint') {
+    const change = parsed.rest[1];
+    const taskId = parsed.rest[2];
+    const targetId = stringFlag(parsed.flags, 'attempt');
+    if (!change || !taskId || !targetId) throw new Error(REPOINT_USAGE);
+    const principalFlags = {
+      principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+      principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+    };
+    if (!parsed.flags.apply) {
+      const plan = repointPreview(project, change, taskId, targetId);
+      const shown = {
+        change: plan.change,
+        task: plan.task,
+        currentAttemptId: plan.currentAttemptId,
+        targetAttemptId: plan.targetAttemptId,
+        current: plan.current,
+        target: plan.target,
+        planDigest: plan.planDigest,
+        applyWith: `idefactory attempt repoint ${change} ${taskId} --attempt ${targetId} --apply --plan-digest ${plan.planDigest} --decided-by <id> --reason "<text>"`,
+      };
+      out(JSON.stringify(shown, null, 2));
+      return 0;
+    }
+    const result = applyRepoint(project, {
+      change,
+      task: taskId,
+      attemptId: targetId,
+      planDigest: stringFlag(parsed.flags, 'plan-digest'),
+      decidedBy: stringFlag(parsed.flags, 'decided-by'),
+      reason: stringFlag(parsed.flags, 'reason'),
+      ...principalFlags,
+    });
+    out(JSON.stringify(result, null, 2));
+    return 0;
+  }
   if (sub === 'transition') {
     const attemptId = parsed.rest[1];
     const state = parsed.rest[2];
@@ -538,7 +577,7 @@ function handleAttempt(project, parsed, env, out, cwd) {
     out(JSON.stringify(attempt, null, 2));
     return 0;
   }
-  throw new Error('Usage: idefactory attempt start|transition|reopen|show ...');
+  throw new Error('Usage: idefactory attempt start|transition|reopen|repoint|show ...');
 }
 
 function handleCi(project, parsed, out) {

@@ -19,7 +19,7 @@ Run `idefactory help <command>` for a command's usage, flags, and examples. `ide
 ## Scope
 
 1. Run `idefactory next` or use the work item the human named.
-2. Start or resume an attempt: `idefactory attempt start <change> <id>` when needed.
+2. Start or resume an attempt: `idefactory attempt start <change> <id>` when needed. A second start returns the live attempt unchanged when it has no evidence. When the live attempt already has reds, verification, a method, an exception, or a review, the start is refused with `attempt-active`: continue that attempt with `idefactory next --change <change>`, and do not start another. If the work item points at the wrong attempt, `idefactory attempt repoint <change> <id> --attempt <attemptId>` prints a preview with a plan digest. Apply it only with `--apply --plan-digest <digest> --decided-by <id> --reason "text"`, using an identity other than the implementer of the attempt it displaces. Repoint never edits an attempt's evidence.
 3. Read only the implementing role's charter and history. The packet names the path. Do not read other charters.
 4. Read the OpenSpec proposal, design, and the delta spec that covers the task.
 5. If `HALT` exists, stop.

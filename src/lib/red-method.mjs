@@ -331,6 +331,10 @@ export function reviewMethod(project, options) {
  * Throw unless an attempt that has a no-red method also has an ACCEPT review from a
  * reviewer other than the implementer. A pointer whose file was altered also refuses.
  */
+export function hasMethodRecord(attempt) {
+  return Boolean(attempt?.evidence?.method);
+}
+
 export function assertMethodAccepted(project, attempt) {
   if (!attempt?.evidence?.method) return;
   const method = readBoundMethod(project, attempt);

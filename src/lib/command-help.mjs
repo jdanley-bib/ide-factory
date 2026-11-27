@@ -279,8 +279,8 @@ export const COMMANDS = [
   ),
   group(
     ['attempt'],
-    'Start, transition, reopen, or show an execution attempt.',
-    'idefactory attempt start|transition|reopen|show ...',
+    'Start, transition, reopen, repoint, or show an execution attempt.',
+    'idefactory attempt start|transition|reopen|repoint|show ...',
   ),
   leaf(
     ['attempt', 'start'],
@@ -293,6 +293,35 @@ export const COMMANDS = [
       ],
       flags: [PATH_FLAG],
       examples: ['idefactory attempt start add-auth 1.1'],
+      notes: [
+        'A live attempt with recorded evidence blocks a second start with invariant attempt-active. Continue that attempt instead.',
+        'An empty live attempt is returned unchanged with reused: true.',
+      ],
+    },
+  ),
+  leaf(
+    ['attempt', 'repoint'],
+    'Point a work item at a different attempt, after previewing the repair.',
+    'idefactory attempt repoint <change> <taskId> --attempt <id> [--apply --plan-digest <digest> --decided-by <id> --reason "<text>"] [--path dir]',
+    {
+      arguments: [
+        CHANGE_ARG,
+        { name: 'taskId', required: true, description: 'Work item task id.' },
+      ],
+      flags: [
+        { name: 'attempt', value: '<id>', required: true, description: 'Attempt to make current.' },
+        { name: 'apply', value: null, required: false, description: 'Write the repair. Without it the command only previews.' },
+        { name: 'plan-digest', value: '<digest>', required: false, description: 'Digest printed by the preview. Required with --apply.' },
+        { name: 'decided-by', value: '<id>', required: false, description: 'Identity recording the repair. Required with --apply.' },
+        { name: 'reason', value: '<text>', required: false, description: 'Why the pointer is wrong. Required with --apply; stored in the repair record, not in events.' },
+        PATH_FLAG,
+      ],
+      notes: [
+        'Only the work item pointer and its history change. No attempt file, and no evidence on any attempt, is edited.',
+        'When the attempt being displaced has evidence, --decided-by must differ from its implementer. Under policy version 2 it must also be the verified principal.',
+        'The target must belong to the same change and task, must not be the current attempt, and must not be rejected.',
+      ],
+      examples: ['idefactory attempt repoint add-auth 1.1 --attempt 3f2c'],
     },
   ),
   leaf(

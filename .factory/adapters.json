@@ -3,7 +3,7 @@
   "tool": "0.2.0",
   "files": {
     ".agents/skills/factory-build/SKILL.md": {
-      "digest": "50746307f036f27fe70e54b9cbc25562b8fa25ec12363cba8a888d032bc80e9a"
+      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
     },
     ".agents/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -57,7 +57,7 @@
       "digest": "c9be810c358414a1aba11bb56a0b1f94f348aea0930634fcb72f41b7a82ad2d0"
     },
     ".claude/skills/factory-build/SKILL.md": {
-      "digest": "50746307f036f27fe70e54b9cbc25562b8fa25ec12363cba8a888d032bc80e9a"
+      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
     },
     ".claude/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -93,7 +93,7 @@
       "digest": "02c4441d4476ff2f4ead1a86161baf20f85fcb3ede4fd284c39b17e4ea8a2f68"
     },
     ".cline/skills/factory-build/SKILL.md": {
-      "digest": "50746307f036f27fe70e54b9cbc25562b8fa25ec12363cba8a888d032bc80e9a"
+      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
     },
     ".cline/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -171,7 +171,7 @@
       "digest": "5bdb3bb50abf631f4b421b85ee929fc57602be5d5c87d04ae0c3e8c04a4fc332"
     },
     ".cursor/skills/factory-build/SKILL.md": {
-      "digest": "50746307f036f27fe70e54b9cbc25562b8fa25ec12363cba8a888d032bc80e9a"
+      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
     },
     ".cursor/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -231,7 +231,7 @@
       "digest": "f79bcaa6c90b43aec9c28f221bfbf4ba344868ae6ab71bcfba03a4bef3b2a0b6"
     },
     ".github/skills/factory-build/SKILL.md": {
-      "digest": "50746307f036f27fe70e54b9cbc25562b8fa25ec12363cba8a888d032bc80e9a"
+      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
     },
     ".github/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
