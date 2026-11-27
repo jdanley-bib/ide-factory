@@ -504,3 +504,16 @@ test('run help defines the authority levels and enforcement labels', async () =>
   assert.ok(result.out.includes(`--new-run within run.maxNewRuns: ${gateLabel('new-run')}.`));
   assert.ok(result.out.includes(`--accept-baseline with --reason: ${gateLabel('accept-baseline')}.`));
 });
+
+test('method propose help names the six reason classes and the already-satisfied flags', async () => {
+  const dir = tempProject();
+  try {
+    const text = (await idefactory(dir, ['help', 'method', 'propose'])).out;
+    assert.match(text, /docs-or-text, configuration, behavior-preserving, mechanical, exploratory, already-satisfied/);
+    assert.match(text, /--reason already-satisfied/);
+    assert.match(text, /--test-path <path>/);
+    assert.match(text, /except for already-satisfied/);
+  } finally {
+    cleanup(dir);
+  }
+});

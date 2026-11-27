@@ -504,3 +504,27 @@ test('the packets, status, show, and the verdict comment state the observed pass
     cleanup(forgeDir);
   }
 });
+
+test('shipped guidance names the six reason classes and answers vacuous-red with an already-satisfied proposal', () => {
+  const files = [
+    'templates/skills/factory-build/SKILL.md',
+    'templates/skills/factory-tdd/SKILL.md',
+    'templates/skills/factory-verify/SKILL.md',
+    'templates/factory/agents/engineer/charter.md',
+    'templates/factory/agents/reviewer/charter.md',
+    'templates/commands/factory-review.md',
+  ];
+  for (const rel of files) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    assert.match(text, /docs-or-text/, rel);
+    assert.match(text, /already-satisfied/, rel);
+  }
+  for (const rel of ['templates/skills/factory-build/SKILL.md', 'templates/skills/factory-tdd/SKILL.md', 'templates/skills/factory-verify/SKILL.md']) {
+    const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
+    assert.match(text, /vacuous-red[\s\S]*?already-satisfied/, rel);
+    assert.match(text, /Only when that proposal is refused, ask the human/, rel);
+    assert.match(text, /red-first/, rel);
+  }
+  const reviewer = fs.readFileSync(path.join(repoRoot, 'templates/factory/agents/reviewer/charter.md'), 'utf8');
+  assert.match(reviewer, /reject a method whose reason class does not fit the diff/);
+});
