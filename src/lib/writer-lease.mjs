@@ -16,6 +16,12 @@ const READ_ONLY = new Set([
   'help',
   'attempt show',
   'verify status',
+  'method show',
+  'sync-tasks plan',
+  'red list',
+  'requirements',
+  'authorize',
+  'autonomy report',
   'setup detect',
   'init dry-run',
   'upgrade dry-run',
@@ -30,16 +36,20 @@ const MUTATING = new Set([
   'run',
   'attempt start',
   'attempt transition',
+  'attempt reopen',
   'verify run',
   'verify import',
   'red reuse',
   'red waive',
+  'method propose',
+  'method review',
   'complete',
   'pr open',
   'pr comment',
   'pr capture',
   'ci scaffold',
   'approve',
+  'revoke',
   'reject',
   'lockout create',
   'lockout resolve',
@@ -83,6 +93,10 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'waive') return 'red waive';
     return sub ? `red ${sub}` : 'red';
   }
+  if (head === 'method') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `method ${sub}` : 'method';
+  }
   if (head === 'lockout') {
     const sub = String(rest[0] || '').trim();
     if (sub === 'resolve') return 'lockout resolve';
@@ -106,6 +120,8 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'scaffold') return 'ci scaffold';
     return sub ? `ci ${sub}` : 'ci';
   }
+  if (head === 'autonomy') return 'autonomy report';
+  if (head === 'sync-tasks' && flags.plan) return 'sync-tasks plan';
   if (head === 'setup' && flags.detect) return 'setup detect';
   if ((head === 'init' || head === 'upgrade') && flags['dry-run']) return `${head} dry-run`;
   return head;

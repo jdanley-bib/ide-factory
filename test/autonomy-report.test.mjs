@@ -1,0 +1,262 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { test } from 'node:test';
+import { BLOCKED_CODES } from '../src/lib/blocked-states.mjs';
+import {
+  POLICY_SET,
+  SCOPE_STATEMENT,
+  buildAutonomyReport,
+  classifyStop,
+} from '../src/lib/autonomy.mjs';
+import { cleanup, idefactory, tempProject } from './helpers.mjs';
+import { commitAll, nodeCheck, writeJson } from './factory-project.mjs';
+
+function stop(overrides = {}) {
+  return {
+    type: 'blocked.recorded',
+    time: '2026-11-01T10:00:00.000Z',
+    change: 'demo',
+    task: '1.1',
+    invariant: 'approval-missing',
+    actor: 'human',
+    retry: 'only-after-change',
+    agentActionable: false,
+    ...overrides,
+  };
+}
+
+function resolved(overrides = {}) {
+  return {
+    type: 'blocked.resolved',
+    time: '2026-11-01T10:05:00.000Z',
+    change: 'demo',
+    task: '1.1',
+    resolution: 'superseded',
+    ...overrides,
+  };
+}
+
+function writeEvents(dir, events) {
+  const file = path.join(dir, '.factory/observability/events.jsonl');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, events.map((event) => JSON.stringify(event)).join('\n') + '\n');
+}
+
+function digest(dir) {
+  const rows = [];
+  const walk = (current) => {
+    for (const name of fs.readdirSync(current).sort()) {
+      if (name === '.git') continue;
+      const full = path.join(current, name);
+      if (fs.statSync(full).isDirectory()) walk(full);
+      else rows.push(`${path.relative(dir, full)}:${fs.readFileSync(full, 'utf8')}`);
+    }
+  };
+  walk(dir);
+  return rows.join('\n');
+}
+
+test('classification table covers every invariant code in the stated order', () => {
+  for (const code of BLOCKED_CODES) {
+    assert.equal(classifyStop(stop({ invariant: code, actor: 'tooling' })), 'handled', code);
+    assert.equal(classifyStop(stop({ invariant: code, actor: 'independent-agent' })), 'handled', code);
+    assert.equal(classifyStop(stop({ invariant: code, agentActionable: true })), 'redundant', code);
+    const expected = POLICY_SET.has(code) ? 'policy-decision' : 'failure';
+    assert.equal(classifyStop(stop({ invariant: code })), expected, code);
+  }
+  assert.equal(classifyStop(stop({ invariant: 'unclassified' })), 'failure');
+  assert.equal(classifyStop(stop({ invariant: 'approval-missing', agentActionable: true })), 'redundant');
+});
+
+test('the report counts interventions by category, invariant, and item, and handled stops', async () => {
+  const dir = tempProject();
+  try {
+    writeEvents(dir, [
+      stop({ task: '1.1' }),
+      stop({ task: '1.2', invariant: 'reviewer-lockout' }),
+      stop({ task: '1.3', invariant: 'needs-review', actor: 'independent-agent' }),
+    ]);
+    const report = buildAutonomyReport(dir);
+    assert.equal(report.schemaVersion, 1);
+    assert.equal(report.counts.interventions, 2);
+    assert.equal(report.counts.handled, 1);
+    assert.deepEqual(report.counts.byCategory, { 'policy-decision': 2, failure: 0, redundant: 0 });
+    assert.deepEqual(report.counts.byInvariant, { 'approval-missing': 1, 'reviewer-lockout': 1 });
+    assert.deepEqual(report.counts.byItem, { 'demo/1.1': 1, 'demo/1.2': 1 });
+    assert.equal(report.routineClean, true);
+    assert.equal(report.scope, SCOPE_STATEMENT);
+    assert.deepEqual(Object.keys(report.interventions[0]).sort(), ['category', 'change', 'invariant', 'task', 'time']);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a failure or a redundant prompt makes routineClean false', async () => {
+  const dir = tempProject();
+  try {
+    writeEvents(dir, [stop({ invariant: 'unclassified' })]);
+    assert.equal(buildAutonomyReport(dir).routineClean, false);
+    writeEvents(dir, [stop({ agentActionable: true })]);
+    assert.equal(buildAutonomyReport(dir).routineClean, false);
+    writeEvents(dir, [stop()]);
+    assert.equal(buildAutonomyReport(dir).routineClean, true);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an autonomous recovery needs a resolution with no human decision between', async () => {
+  const dir = tempProject();
+  try {
+    const infra = stop({ invariant: 'infrastructure-failure', actor: 'tooling', retry: 'safe' });
+    writeEvents(dir, [infra, resolved()]);
+    let report = buildAutonomyReport(dir);
+    assert.equal(report.counts.autonomousRecoveries, 1);
+    assert.equal(report.counts.interventions, 0);
+    assert.equal(report.autonomousRecoveries[0].invariant, 'infrastructure-failure');
+
+    writeEvents(dir, [infra, { type: 'approval.issued', time: '2026-11-01T10:02:00.000Z', change: 'demo', task: '1.1' }, resolved()]);
+    assert.equal(buildAutonomyReport(dir).counts.autonomousRecoveries, 0);
+
+    writeEvents(dir, [infra]);
+    report = buildAutonomyReport(dir);
+    assert.equal(report.counts.autonomousRecoveries, 0);
+    assert.equal(report.counts.handled, 1);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('events without an actor are skipped and counted', async () => {
+  const dir = tempProject();
+  try {
+    const old = stop();
+    delete old.actor;
+    writeEvents(dir, [old, stop({ task: '1.2' })]);
+    const report = buildAutonomyReport(dir);
+    assert.equal(report.unclassifiedEvents, 1);
+    assert.equal(report.counts.interventions, 1);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('autonomy report prints text and JSON, writes nothing, and states its scope', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeEvents(dir, [stop(), stop({ task: '1.2', invariant: 'needs-review', actor: 'independent-agent' })]);
+    const before = digest(dir);
+    const text = await idefactory(dir, ['autonomy', 'report']);
+    assert.equal(text.code, 0, text.err);
+    assert.match(text.out, /Interventions: 1/);
+    assert.match(text.out, /Handled without a human: 1/);
+    assert.match(text.out, /routineClean: true/);
+    assert.ok(text.out.includes(SCOPE_STATEMENT));
+    const json = await idefactory(dir, ['autonomy', 'report', '--json']);
+    const doc = JSON.parse(json.out);
+    assert.equal(doc.counts.interventions, 1);
+    assert.equal(doc.scope, SCOPE_STATEMENT);
+    assert.equal(digest(dir), before);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('--change and --since limit the report and bad values are refused', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    writeEvents(dir, [
+      stop({ time: '2026-10-01T00:00:00.000Z' }),
+      stop({ time: '2026-11-02T00:00:00.000Z', task: '1.2' }),
+      stop({ time: '2026-11-03T00:00:00.000Z', change: 'other' }),
+    ]);
+    const since = await idefactory(dir, ['autonomy', 'report', '--since', '2026-11-01T00:00:00Z', '--json']);
+    assert.equal(JSON.parse(since.out).counts.interventions, 2);
+    const change = await idefactory(dir, ['autonomy', 'report', '--change', 'demo', '--json']);
+    assert.equal(JSON.parse(change.out).counts.interventions, 2);
+    const both = await idefactory(dir, ['autonomy', 'report', '--change', 'demo', '--since', '2026-11-01T00:00:00Z', '--json']);
+    assert.equal(JSON.parse(both.out).counts.interventions, 1);
+
+    const bad = await idefactory(dir, ['autonomy', 'report', '--since', 'yesterday']);
+    assert.notEqual(bad.code, 0);
+    assert.match(bad.err, /--since must be an ISO 8601 time/);
+    const badChange = await idefactory(dir, ['autonomy', 'report', '--change', 'Bad Name']);
+    assert.notEqual(badChange.code, 0);
+    const unknown = await idefactory(dir, ['autonomy', 'summary']);
+    assert.notEqual(unknown.code, 0);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a missing or empty log reports zero with a reason', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    fs.rmSync(path.join(dir, '.factory/observability'), { recursive: true, force: true });
+    const missing = JSON.parse((await idefactory(dir, ['autonomy', 'report', '--json'])).out);
+    assert.equal(missing.counts.interventions, 0);
+    assert.equal(missing.noEvents, true);
+    assert.match(missing.reason, /no events were recorded/);
+    writeEvents(dir, []);
+    fs.writeFileSync(path.join(dir, '.factory/observability/events.jsonl'), '');
+    const empty = JSON.parse((await idefactory(dir, ['autonomy', 'report', '--json'])).out);
+    assert.equal(empty.noEvents, true);
+    const text = await idefactory(dir, ['autonomy', 'report']);
+    assert.match(text.out, /Interventions: 0 \(no events were recorded\)/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('secret-like notes and check output never reach the events or the report', async () => {
+  const dir = tempProject();
+  const secret = 'sk-live-ABCDEF0123456789SECRET';
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const profilesFile = path.join(dir, '.factory/profiles.json');
+    fs.writeFileSync(profilesFile, JSON.stringify({
+      ...JSON.parse(fs.readFileSync(profilesFile, 'utf8')),
+      gated: { checks: ['unit'], humanGate: true },
+    }, null, 2));
+    writeJson(dir, '.factory/checks.json', {
+      schemaVersion: 1,
+      checks: { unit: nodeCheck(`console.log('${secret}'); process.exit(1)`) },
+    });
+    fs.mkdirSync(path.join(dir, 'openspec/changes/demo'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'openspec/changes/demo/tasks.md'), [
+      '- [ ] 1.1 Item',
+      '  factory:',
+      '    kind: general',
+      '    dependencies: []',
+      '    checks: [unit]',
+      '    verificationProfile: gated',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    assert.equal((await idefactory(dir, ['sync-tasks', 'demo'], {}, { rawRegistry: true })).code, 0);
+    commitAll(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err + started.out);
+    const { id } = JSON.parse(started.out);
+    await idefactory(dir, ['attempt', 'transition', id, 'implementing', '--evidence', '{"implementerId":"engineer-1"}']);
+    await idefactory(dir, ['verify', 'run', id, '--check', 'unit', '--red']);
+    const approved = await idefactory(dir, [
+      'approve', 'g1', '--note', `token ${secret}`, '--change', 'demo', '--task', '1.1', '--action', 'accept',
+      '--approver', 'human-1', '--expiry', new Date(Date.now() + 3_600_000).toISOString(),
+    ]);
+    assert.equal(approved.code, 0, approved.err);
+    await idefactory(dir, ['run', '--change', 'demo', '--json']);
+    const events = fs.readFileSync(path.join(dir, '.factory/observability/events.jsonl'), 'utf8');
+    assert.ok(events.length > 0);
+    assert.ok(!events.includes(secret));
+    const report = (await idefactory(dir, ['autonomy', 'report', '--json'])).out;
+    assert.ok(!report.includes(secret));
+    assert.ok(!(await idefactory(dir, ['autonomy', 'report'])).out.includes(secret));
+  } finally {
+    cleanup(dir);
+  }
+});

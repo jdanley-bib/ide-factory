@@ -1,3 +1,5 @@
+import { actionHelpLines, actionIds, AUTHORIZATION_REASONS } from './approval-actions.mjs';
+import { ACTORS, RETRY_CLASSES } from './blocked-error.mjs';
 import { IDENTITY_FORMAT_TEXT } from './identity.mjs';
 import { LOCKOUT_CREATE_ALIAS_USAGE, LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { ATTEMPT_STATES, SUPPLIED_EVIDENCE_TYPES, TRANSITIONS } from './attempt.mjs';
@@ -153,6 +155,30 @@ export const COMMANDS = [
     flags: [JSON_FLAG('Print the status document as JSON.')],
     examples: ['idefactory status', 'idefactory status --json'],
   }),
+  group(['autonomy'], 'Report how often and why a human was needed.', 'idefactory autonomy report [--change <name>] [--since <iso>] [--json] [--path dir]'),
+  leaf(
+    ['autonomy', 'report'],
+    'Report human interventions, stops handled without a human, and autonomous recoveries from the control event log. Read-only.',
+    'idefactory autonomy report [--change <name>] [--since <iso>] [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      flags: [
+        { name: 'change', value: '<name>', required: false, description: 'Limit the report to one OpenSpec change.' },
+        { name: 'since', value: '<iso>', required: false, description: 'Count only events at or after this ISO 8601 time.' },
+        JSON_FLAG('Print one JSON document with schemaVersion 1: interventions, counts, autonomousRecoveries, unclassifiedEvents, routineClean, and scope.'),
+        PATH_FLAG,
+      ],
+      examples: ['idefactory autonomy report', 'idefactory autonomy report --change add-auth --json'],
+      notes: [
+        'It reads .factory/observability/events.jsonl and nothing else. It writes no file and appends no event.',
+        'Each stop that needs a human is one intervention in one category. policy-decision: an intentional human decision (approval-missing, halted, reviewer-lockout, budget-exhausted, reconciliation-required). failure: no supported recovery, or unclassified. redundant: a supported option that resolves the stop and that an agent may run existed. A stop whose actor is not human is counted as handled.',
+        'The order is: not human is handled; then an agent-actionable option is redundant; then the policy set is a policy-decision; everything else is a failure.',
+        'An autonomous recovery is a stop with no human actor that a later event resolved with no human decision between them.',
+        'routineClean is true when the range holds no failure and no redundant intervention.',
+        'The report carries codes, ids, and times only. It covers interventions the factory recorded, not prompts typed into an IDE chat.',
+      ],
+    },
+  ),
   group(['checks'], 'Inspect the registered checks.', 'idefactory checks preview [--path dir]'),
   leaf(['checks', 'preview'], 'Preview the checks the registry would run.', 'idefactory checks preview [--path dir]', {
     effects: READ_ONLY,
@@ -160,13 +186,55 @@ export const COMMANDS = [
     examples: ['idefactory checks preview'],
   }),
   leaf(
+    ['requirements'],
+    'Print the resolved requirement set for one work item. Read-only; exits zero even when problems exist.',
+    'idefactory requirements <change> <task> [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [CHANGE_ARG, { name: 'task', required: true, description: 'Work item id, such as 1.1.' }],
+      flags: [
+        JSON_FLAG('Print one JSON document with schemaVersion 1: checks, redKinds, humanDecisions, dependencies, and problems.'),
+        PATH_FLAG,
+      ],
+      examples: ['idefactory requirements my-change 1.1', 'idefactory requirements my-change 1.1 --json'],
+      notes: [
+        'checks lists every required check with its sources: profile, item, or both.',
+        'redKinds lists the test kinds that need a failing red, or a red exception, before verifying.',
+        'humanDecisions lists the accept and complete gates and whether the policy can satisfy them.',
+        'problems lists what would stop an attempt from starting: an undefined profile, an unmapped check kind, an unsatisfiable gate, or a missing dependency. Each names the file that fixes it.',
+        'Nothing is written.',
+      ],
+    },
+  ),
+  leaf(
     ['sync-tasks'],
-    'Create work items from the unchecked boxes of an OpenSpec change.',
+    'Create work items from the unchecked boxes of an OpenSpec change, and reconcile a changed task list.',
     'idefactory sync-tasks <change> [--path dir]',
     {
       arguments: [CHANGE_ARG],
-      flags: [PATH_FLAG],
-      examples: ['idefactory sync-tasks add-auth'],
+      flags: [
+        { name: 'plan', value: null, required: false, description: 'Print what sync would do, every item that needs a decision, in-flight work, drift, dependents, overlapping changes, and a plan digest. Read-only.' },
+        JSON_FLAG('With --plan, print one JSON document with schemaVersion 1. Otherwise print {ok, ...}; a failure prints {ok: false, message, blocked} and keeps its exit code.'),
+        { name: 'apply', value: null, required: false, description: 'Apply explicit decisions from --decisions-file to the queue. Needs --plan-digest and --decided-by.' },
+        { name: 'decisions-file', value: '<path>', required: false, description: 'JSON object keyed by stored item id; each value is a decision name or an object such as {"decision":"drop","dependents":"release"}.' },
+        { name: 'plan-digest', value: '<digest>', required: false, description: 'The digest printed by --plan. Apply refuses when the queue or tasks.md changed since.' },
+        { name: 'decided-by', value: '<id>', required: false, description: 'Deciding identity. For adopt-classification, drop, split, merge, and move on an item with an attempt past planned it must differ from the attempt implementer, and under policy version 2 it must be a verified principal.' },
+        { name: 'principal-provider', value: '<id>', required: false, description: 'Under policy version 2, the verified principal provider.' },
+        { name: 'principal-subject', value: '<id>', required: false, description: 'Under policy version 2, the verified principal subject; must equal --decided-by.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory sync-tasks add-auth',
+        'idefactory sync-tasks add-auth --plan',
+        'idefactory sync-tasks add-auth --apply --decisions-file decisions.json --plan-digest sha256:... --decided-by lead-1',
+      ],
+      notes: [
+        'Appended tasks and checked tasks without items are handled automatically. A wording change on an item that has an attempt updates its title and keeps the earlier text in titleHistory; its classification is never rewritten and a difference is reported as drift.',
+        'When sync reports a reconciliation error, run sync-tasks --plan. Do not create a separate change as a workaround.',
+        'Decisions: keep, renumber ({"to":"1.4"}), defer, resume, drop ({"supersededBy":["1.5"],"dependents":"block|release"}), split ({"into":["1.4","1.5"]}), merge ({"into":"1.3"}), move ({"to":{"change":"other","id":"2.1"}}), adopt-classification, keep-classification.',
+        'defer and drop keep the item, its attempts, and its evidence. A held item is never selected by next or run and cannot be completed. resume returns it to its previous status.',
+        'Each apply writes a record under .factory/work/reconciliations/ and appends a tasks.reconciled event. Applying the same plan digest and decisions again changes nothing. Nothing infers a mapping from text similarity.',
+      ],
     },
   ),
   leaf(
@@ -176,6 +244,7 @@ export const COMMANDS = [
     {
       flags: [
         { name: 'change', value: '<name>', required: false, description: 'Limit the packet to this OpenSpec change.' },
+        JSON_FLAG('Print {ok, empty, text, blocked}. blocked is a blocked-state report when no work item is ready. The exit code does not change.'),
         PATH_FLAG,
       ],
       examples: ['idefactory next --change add-auth'],
@@ -193,16 +262,25 @@ export const COMMANDS = [
         { name: 'max-agent-steps', value: 'N', required: false, description: 'Stop after this many agent steps.' },
         { name: 'new-run', value: null, required: false, description: 'Start a new run session after a sticky stop. Human only.' },
         { name: 'accept-baseline', value: null, required: false, description: 'Accept the current baseline for the run.' },
+        JSON_FLAG('Print one JSON object {stopReason, exitCode, request, blocked, text} instead of the text. Exit codes do not change.'),
         PATH_FLAG,
       ],
-      examples: ['idefactory run --change add-auth --until human-gate'],
-      notes: ['Exit 2 means one IDE role should take the printed request. Exit 0 is a clean stop. Exit 1 is an error.'],
+      examples: ['idefactory run --change add-auth --until human-gate', 'idefactory run --change add-auth --json'],
+      notes: [
+        'Exit 2 means one IDE role should take the printed request. Exit 0 is a clean stop. Exit 1 is an error.',
+        'With --json, blocked is null for a clean finish and otherwise a blocked-state report: invariant {code, message}, actor, recovery {supported, options[]}, and retry.',
+        `Actors: ${ACTORS.join(', ')}. human means the next step needs authority only a human holds. independent-agent means it needs an identity other than the implementer's.`,
+        'Each recovery option has id, supported, command (when supported), actor, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',
+        `Retry classes: ${RETRY_CLASSES.join(', ')}. safe means the condition can clear without a change. only-after-change means the same stop repeats unless something recorded changes. never means a repeat is known to be refused.`,
+        'A stop on a work item is also recorded in .factory/blocked/<change>--<task>.json and marked resolved by a later run that finds the condition gone. The record never decides whether work may proceed. The same report is available from next, complete, attempt transition, and sync-tasks with --json.',
+        'A packet or request lists Standing decisions: approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Do not ask for them again. Listing one grants no authority.',
+      ],
     },
   ),
   group(
     ['attempt'],
-    'Start, transition, or show an execution attempt.',
-    'idefactory attempt start|transition|show ...',
+    'Start, transition, reopen, or show an execution attempt.',
+    'idefactory attempt start|transition|reopen|show ...',
   ),
   leaf(
     ['attempt', 'start'],
@@ -229,6 +307,7 @@ export const COMMANDS = [
       flags: [
         { name: 'evidence', value: '<json>', required: false, description: 'Inline JSON object of evidence. Windows PowerShell 5.1 can mangle quotes; prefer --evidence-file.' },
         { name: 'evidence-file', value: '<path>', required: false, description: 'Path to a file holding the JSON evidence object. Give only one of --evidence and --evidence-file.' },
+        JSON_FLAG('A failure prints {ok: false, message, blocked} with a blocked-state report and exits non-zero as before. Success prints the attempt as usual.'),
         PATH_FLAG,
       ],
       examples: [
@@ -238,6 +317,32 @@ export const COMMANDS = [
       notes: [
         'Check results (red, verification, security) cannot be supplied. Use idefactory verify run.',
         `Identities (implementerId, reviewerId, securityReviewerId): ${IDENTITY_FORMAT_TEXT}.`,
+      ],
+    },
+  ),
+  leaf(
+    ['attempt', 'reopen'],
+    'Move an accepted attempt back to awaiting-review so a missing red can be covered by a method or an exception.',
+    'idefactory attempt reopen <attemptId> --kind <kind>... --for method|exception --by <id> --reason "text" [--principal-provider <id> --principal-subject <id>] [--path dir]',
+    {
+      arguments: [ATTEMPT_ARG],
+      flags: [
+        { name: 'kind', value: '<kind>', required: true, description: 'A required test kind with no red, method, or exception. Repeatable.' },
+        { name: 'for', value: 'method|exception', required: true, description: 'What the amendment will be: a red method (method propose) or a red exception (red reuse or red waive).' },
+        { name: 'by', value: '<id>', required: true, description: `Reopening identity; must differ from the implementer. Same format as attempt identities.` },
+        { name: 'reason', value: '<text>', required: true, description: 'Why the attempt is reopened.' },
+        { name: 'principal-provider', value: '<id>', required: false, description: 'Under governance policy version 2, the verified principal provider.' },
+        { name: 'principal-subject', value: '<id>', required: false, description: 'Under governance policy version 2, the verified principal subject; must equal --by.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory attempt reopen <attemptId> --kind contract --for exception --by human-1 --reason "profile added contract after acceptance"',
+      ],
+      notes: [
+        'Only an accepted attempt can be reopened, at most twice, never after finalization starts. Stored reds, verification, and exceptions are unchanged.',
+        'The earlier review moves to the review history and does not count. A reviewer must accept the amended attempt again.',
+        'While reopened, red reuse, red waive, and method propose accept only the named kinds.',
+        'attempt transition still refuses accepted to awaiting-review.',
       ],
     },
   ),
@@ -266,6 +371,10 @@ export const COMMANDS = [
       examples: [
         'idefactory verify run <attemptId> --check test --red',
         'idefactory verify run <attemptId> --check test',
+      ],
+      notes: [
+        'Reds are append-only: a second --red for a kind is kept next to the first, and the later one is the current red.',
+        'A kind with a reuse exception or an ordinary waiver refuses --red. After an invalid-red waiver, one later red is allowed and satisfies red when it starts after the waiver.',
       ],
     },
   ),
@@ -296,7 +405,18 @@ export const COMMANDS = [
   group(
     ['red'],
     'Record an audited red exception for a verification-only retry.',
-    'idefactory red reuse|waive ...',
+    'idefactory red reuse|waive|list ...',
+  ),
+  leaf(
+    ['red', 'list'],
+    'List every recorded red for an attempt with its digest, the exception that references it, and what satisfies red.',
+    'idefactory red list <attemptId> [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [ATTEMPT_ARG],
+      flags: [JSON_FLAG('Print one JSON document with schemaVersion 1 and one entry per kind.'), PATH_FLAG],
+      examples: ['idefactory red list <attemptId>', 'idefactory red list <attemptId> --json'],
+    },
   ),
   leaf(
     ['red', 'reuse'],
@@ -336,8 +456,71 @@ export const COMMANDS = [
       ],
       notes: [
         'A waiver is refused while a failing CLI red is stored for the kind, unless --invalid-red names that red as recorded after implementation.',
+        'A kind can be invalidated once. After that, verify run --red may append one later red, which does not prove the test came first.',
         'A waiver does not replace passing verification, distinct review, or lockouts.',
       ],
+    },
+  ),
+  group(
+    ['method'],
+    'Choose and review whether an attempt is test-first. The default is red-first.',
+    'idefactory method propose|review|show ...',
+  ),
+  leaf(
+    ['method', 'propose'],
+    'Record a no-red method for a code attempt, with a reason class and rationale. No human approval is needed; a different role must review it.',
+    'idefactory method propose <attemptId> --choice no-red --reason <class> --rationale "text" --implementer <id> --kind <kind>... [--test-path <path>...] [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt that has not yet entered red-confirmed or verifying.' }],
+      flags: [
+        { name: 'choice', value: 'no-red', required: true, description: 'The method to record. red-first is the default and needs no record.' },
+        { name: 'reason', value: '<class>', required: true, description: 'One of docs-or-text, configuration, behavior-preserving, mechanical, exploratory.' },
+        { name: 'rationale', value: '"text"', required: true, description: 'Why a failing test cannot specify this change.' },
+        { name: 'implementer', value: '<id>', required: true, description: 'Id of the implementer making the proposal.' },
+        { ...KIND_FLAG, description: 'Required test kind the method covers. Repeat the flag for more than one kind.' },
+        { name: 'test-path', value: '<path>', required: false, repeatable: true, description: 'Existing git-tracked test file that exercises the changed behavior. Required for behavior-preserving.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory method propose <attempt> --choice no-red --reason configuration --rationale "only edits a config value" --implementer engineer-1 --kind unit',
+        'idefactory method propose <attempt> --choice no-red --reason behavior-preserving --rationale "pure rename" --implementer engineer-1 --kind unit --test-path test/parser.test.mjs',
+      ],
+      notes: [
+        'Refused when the work item has an explicit factory.taskType, when a covered kind already has a failing red or an exception, when a kind is not required, or when a reviewer already rejected a no-red method for the item.',
+        'The record keeps the source revision and the number of changed files so the reviewer can judge. It never counts as a red that ran and is not a red exception.',
+        'It does not waive passing verification, distinct review, lockouts, or human gates.',
+      ],
+    },
+  ),
+  leaf(
+    ['method', 'review'],
+    'Record the reviewer\'s ACCEPT or REJECT of an attempt\'s no-red method. The reviewer must differ from the implementer.',
+    'idefactory method review <attemptId> --verdict ACCEPT|REJECT --reviewer <id> --note "text" [--principal-provider <id> --principal-subject <id>] [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt with a recorded no-red method.' }],
+      flags: [
+        { name: 'verdict', value: 'ACCEPT|REJECT', required: true, description: 'The reviewer\'s decision on the method.' },
+        { name: 'reviewer', value: '<id>', required: true, description: 'Id of the reviewing role. Must not be the implementer.' },
+        { name: 'note', value: '"text"', required: true, description: 'Why the method fits or does not fit the diff.' },
+        ...PRINCIPAL_FLAGS,
+        PATH_FLAG,
+      ],
+      examples: ['idefactory method review <attempt> --verdict ACCEPT --reviewer reviewer-1 --note "config-only diff"'],
+      notes: [
+        'An attempt with a no-red method cannot be accepted without an ACCEPT review.',
+        'After a REJECT, later attempts for the item use red-first and a new proposal is refused.',
+      ],
+    },
+  ),
+  leaf(
+    ['method', 'show'],
+    'Show the method recorded for an attempt. Read-only.',
+    'idefactory method show <attemptId> [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [ATTEMPT_ARG],
+      flags: [PATH_FLAG],
+      examples: ['idefactory method show <attempt>'],
     },
   ),
   leaf(
@@ -348,6 +531,7 @@ export const COMMANDS = [
       arguments: [CHANGE_ARG, { name: 'taskId', required: true, description: 'Work item task id.' }],
       flags: [
         { name: 'attempt', value: '<id>', required: true, description: 'Accepted attempt to finalize.' },
+        JSON_FLAG('Print {ok, ...}. A failure prints {ok: false, message, blocked} with a blocked-state report and exits non-zero as before.'),
         PATH_FLAG,
       ],
       examples: ['idefactory complete add-auth 1.1 --attempt <attemptId>'],
@@ -381,22 +565,71 @@ export const COMMANDS = [
   }),
   leaf(
     ['approve'],
-    'Record a scoped human approval. Does not publish, deploy, or spend.',
-    'idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]',
+    'Record a scoped human approval or a bounded standing authorization. Does not publish, deploy, or spend.',
+    `idefactory approve <id> --note "text" --change <name> --task <id> --action <${actionIds().join('|')}> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--target <name>] [--standing] [--path dir]`,
     {
+      aliasUsages: ['idefactory approve <id> --note "text" --change <name> --task <id> --action <accept|complete> --approver <id> --principal-provider <id> --principal-subject <id> --expiry <iso> [--path dir]'],
       arguments: [{ name: 'id', required: true, description: 'Approval id.' }],
       flags: [
         NOTE_FLAG,
         { name: 'change', value: '<name>', required: true, description: 'OpenSpec change the approval covers.' },
-        { name: 'task', value: '<id>', required: true, description: 'Task the approval covers.' },
-        { name: 'action', value: '<accept|complete>', required: true, description: 'Action the approval allows.' },
+        { name: 'task', value: '<id>', required: true, description: 'Task the approval covers. Omit with --standing.' },
+        { name: 'action', value: `<${actionIds().join('|')}>`, required: true, description: 'Action the approval allows.' },
+        { name: 'target', value: '<name>', required: false, description: 'What the effect applies to, such as an environment or registry. Required for publish, deploy, spend, and account. Matched exactly.' },
+        { name: 'standing', value: null, required: false, description: 'Issue a standing authorization for an external-effect action: bound to the change and target, not to a task or revision. Needs governance policy version 2 and a verified principal. Lifetime is capped by governance.standingMaxHours (default 168).' },
         { name: 'approver', value: '<id>', required: true, description: 'Id of the approving human. Must not be the implementer.' },
         { name: 'principal-provider', value: '<id>', required: true, description: 'Principal verifier provider.' },
         { name: 'principal-subject', value: '<id>', required: true, description: 'Principal verifier subject.' },
-        { name: 'expiry', value: '<iso>', required: true, description: 'Expiry time in ISO 8601. Must be within 24 hours.' },
+        { name: 'expiry', value: '<iso>', required: true, description: 'Expiry time in ISO 8601. Within 24 hours, or within the standing maximum for --standing.' },
         PATH_FLAG,
       ],
-      examples: ['idefactory approve a1 --note "ship it" --change add-auth --task 1.1 --action accept --approver human-1 --principal-provider local --principal-subject human-1 --expiry 2030-01-01T00:00:00Z'],
+      examples: [
+        'idefactory approve a1 --note "ship it" --change add-auth --task 1.1 --action accept --approver human-1 --principal-provider local --principal-subject human-1 --expiry 2030-01-01T00:00:00Z',
+        'idefactory approve d1 --note "staging deploys" --change add-auth --action deploy --target staging --standing --approver human-1 --principal-provider local --principal-subject human-1 --expiry 2030-01-01T00:00:00Z',
+      ],
+      notes: [
+        'Actions and what they bind to:',
+        ...actionHelpLines(),
+      ],
+    },
+  ),
+  leaf(
+    ['authorize'],
+    'Ask whether an action is authorized now. Read-only: never writes and never performs the action.',
+    'idefactory authorize --change <name> [--task <id>] --action <action> [--target <name>] [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      flags: [
+        { name: 'change', value: '<name>', required: true, description: 'OpenSpec change.' },
+        { name: 'task', value: '<id>', required: false, description: 'Task. Required for accept and complete.' },
+        { name: 'action', value: `<${actionIds().join('|')}>`, required: true, description: 'Action to check.' },
+        { name: 'target', value: '<name>', required: false, description: 'Target. Required for publish, deploy, spend, and account.' },
+        JSON_FLAG('Print one JSON document with authorized, the request, and the approval id or the reason and approve command.'),
+        PATH_FLAG,
+      ],
+      examples: ['idefactory authorize --change add-auth --action deploy --target staging --json'],
+      notes: [
+        'Exits zero whether or not the action is authorized. A malformed request exits non-zero.',
+        'Output has authorized, and the approval id when allowed. When not allowed it has a reason and the approve command a human would run.',
+        `Reasons: ${AUTHORIZATION_REASONS.join(', ')}.`,
+        'Run it before an external-effect step. Continue when authorized is true. Stop and report the reason when it is false.',
+      ],
+    },
+  ),
+  leaf(
+    ['revoke'],
+    'Revoke an approval or standing authorization. The original record is left unchanged.',
+    'idefactory revoke <id> --note "text" [--revoker <id> --principal-provider <id> --principal-subject <id>] [--path dir]',
+    {
+      arguments: [{ name: 'id', required: true, description: 'Id of the approval to revoke.' }],
+      flags: [
+        NOTE_FLAG,
+        { name: 'revoker', value: '<id>', required: false, description: 'Id of the revoking human. Required with governance policy version 2.' },
+        { name: 'principal-provider', value: '<id>', required: false, description: 'Principal verifier provider.' },
+        { name: 'principal-subject', value: '<id>', required: false, description: 'Principal verifier subject.' },
+        PATH_FLAG,
+      ],
+      examples: ['idefactory revoke d1 --note "deploy window closed"'],
     },
   ),
   leaf(['reject'], 'Record a human rejection.', 'idefactory reject <id> --note "text" [--path dir]', {
@@ -448,12 +681,22 @@ export const COMMANDS = [
         { name: 'detect', value: null, required: false, description: 'Report what setup would detect and write nothing.' },
         { name: 'governance', value: 'lightweight|strict', required: false, description: 'Governance mode to record.' },
         { name: 'map', value: '<kind>', required: false, repeatable: true, description: 'Check kind to register. Follow it with --argv parts.' },
-        { name: 'argv', value: '<part>', required: false, repeatable: true, description: 'One argument of the command for the preceding --map. Repeat for each part.' },
+        { name: 'argv', value: '<part>', required: false, repeatable: true, description: 'One argument of the command for the preceding --map. Repeat for each part. To pass a part that begins with "--", use the equals form: --argv=--filter.' },
+        { name: 'argv-json', value: '<json-array>', required: false, description: 'The whole command for the preceding --map as one JSON array of strings, stored exactly as given. Use it for parts with spaces, pipes, quotes, or a leading "--".' },
         { name: 'no-test', value: null, required: false, description: 'Record that the project has no test command.' },
         { name: 'verifier-argv', value: '<part>', required: false, repeatable: true, description: 'One argument of the principal verifier command. Repeat for each part.' },
         PATH_FLAG,
       ],
-      examples: ['idefactory setup --detect', 'idefactory setup --governance lightweight --map test --argv npm --argv test'],
+      examples: [
+        'idefactory setup --detect',
+        'idefactory setup --governance lightweight --map test --argv npm --argv test',
+        `idefactory setup --governance lightweight --map unit --argv-json '["dotnet","test","--filter","Category=Unit | Category=Integration"]'`,
+        'idefactory setup --governance lightweight --map unit --argv dotnet --argv test --argv=--filter --argv "Category=Unit"',
+      ],
+      notes: [
+        'Setup stores each argv exactly as given and runs it without a shell. A flag that needs a value fails instead of storing a placeholder.',
+        'An argv of one element that contains whitespace is refused as a shell string. Later elements may contain whitespace, pipes, and quotes.',
+      ],
       effectsDetail: 'read-only with --detect',
     },
   ),
@@ -481,7 +724,7 @@ export const ATTEMPT_PRECONDITIONS = [
   },
   {
     state: 'verifying',
-    text: 'Needs a recorded failing red for every required test kind, or a red exception. Lightweight tasks skip this.',
+    text: 'Needs a recorded failing red for every test kind in the resolved requirement set (item and profile checks together; see "requirements"), or a red exception, or a no-red method that covers the kind (see "method propose"). Lightweight tasks skip this.',
   },
   {
     state: 'awaiting-review',
@@ -489,7 +732,7 @@ export const ATTEMPT_PRECONDITIONS = [
   },
   {
     state: 'accepted',
-    text: 'Needs a reviewerId (in evidence or already on the attempt) and a verdict of ACCEPT if a verdict is given.',
+    text: 'Needs a reviewerId (in evidence or already on the attempt) and a verdict of ACCEPT if a verdict is given. An attempt with a no-red method also needs an ACCEPT "method review" from a reviewer other than the implementer.',
   },
   {
     state: 'rejected',

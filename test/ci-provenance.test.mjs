@@ -171,6 +171,19 @@ test('baseline CI job runs the four Phase 0 commands on pull requests and pushes
   }
 });
 
+test('a windows-latest job runs the argv parser, setup, and execution-fixture tests', () => {
+  const yaml = readWorkflow();
+  const match = yaml.match(/(?:^|\n)  argv-windows:\n([\s\S]*?)(?=\n  [A-Za-z0-9_-]+:\n|\n*$)/);
+  assert.ok(match, 'workflow must define an argv-windows job');
+  assert.match(match[1], /runs-on:\s*windows-latest/);
+  assert.match(match[1], /node-version:\s*24/);
+  const commands = runSteps(match[1]).map((step) => step.command);
+  assert.ok(
+    commands.includes('node --test test/argv-input.test.mjs test/setup.test.mjs'),
+    `argv-windows must run the argv tests; found ${JSON.stringify(commands)}`,
+  );
+});
+
 const FULL_SHA = /^[0-9a-f]{40}$/;
 
 function thirdPartyUses(yaml) {

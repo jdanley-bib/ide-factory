@@ -1,5 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  actionRow,
+  DEFAULT_STANDING_MAX_HOURS,
+  isExternalEffectAction,
+  MAX_STANDING_MAX_HOURS,
+  TARGET_FORMAT,
+  unknownActionMessage,
+} from './approval-actions.mjs';
 import { readText, writeText } from './layout.mjs';
 import { readPolicyVersion } from './principal.mjs';
 import {
@@ -13,7 +21,6 @@ import {
 
 const SUPPORTED_SCHEMA_VERSION = 1;
 const MAX_LIFETIME_MS = 24 * 60 * 60 * 1000;
-const ALLOWED_ACTIONS = new Set(['accept', 'complete']);
 
 const REQUIRED_FIELDS = [
   'schemaVersion',
@@ -28,18 +35,35 @@ const REQUIRED_FIELDS = [
 ];
 
 /**
- * Validate a schema version 1 scoped approval record.
- * Rejects missing scope fields, actions other than accept/complete,
- * expiry more than 24 hours after issuance, and approver === implementer.
+ * Maximum lifetime of a standing authorization, from governance.standingMaxHours in
+ * .factory/config.json. An absent or out-of-range value falls back to the default.
+ */
+export function standingMaxMs(project) {
+  let hours = DEFAULT_STANDING_MAX_HOURS;
+  try {
+    const config = JSON.parse(readText(path.join(project, '.factory', 'config.json')));
+    const value = config?.governance?.standingMaxHours;
+    if (Number.isInteger(value) && value >= 1 && value <= MAX_STANDING_MAX_HOURS) hours = value;
+  } catch {
+    // no readable config: the default applies
+  }
+  return hours * 60 * 60 * 1000;
+}
+
+/**
+ * Validate a scoped approval record: schema version 1 or 2 (task and revision bound, with a target
+ * for external-effect actions) or schema version 3 (standing, external-effect only).
+ * Rejects missing scope fields, unknown actions, lifetimes above the maximum, and approver === implementer.
  *
  * @param {unknown} record
- * @param {{ implementerId?: string }} [options]
+ * @param {{ implementerId?: string, standingMaxMs?: number }} [options]
  * @returns {object}
  */
 export function validateScopedApproval(record, options = {}) {
   if (!record || typeof record !== 'object' || Array.isArray(record)) {
     throw new Error('approval must be an object');
   }
+  if (record.schemaVersion === 3) return validateStandingApproval(record, options);
 
   for (const field of REQUIRED_FIELDS) {
     if (record[field] === undefined || record[field] === null || record[field] === '') {
@@ -58,25 +82,20 @@ export function validateScopedApproval(record, options = {}) {
   requireNonEmptyString(record, 'issuance');
   requireNonEmptyString(record, 'expiry');
 
-  if (!ALLOWED_ACTIONS.has(record.action)) {
-    throw new Error('approval action must be "accept" or "complete"');
+  if (!actionRow(record.action)) {
+    throw new Error(`approval ${unknownActionMessage(record.action)}`);
+  }
+  if (isExternalEffectAction(record.action)) {
+    if (typeof record.target !== 'string' || !TARGET_FORMAT.test(record.target)) {
+      throw new Error(`approval for ${record.action} requires a valid target`);
+    }
   }
 
   if (!Number.isInteger(record.policyVersion) || record.policyVersion <= 0) {
     throw new Error('approval policyVersion must be a positive integer');
   }
 
-  const issuedAt = Date.parse(record.issuance);
-  const expiresAt = Date.parse(record.expiry);
-  if (Number.isNaN(issuedAt) || Number.isNaN(expiresAt)) {
-    throw new Error('approval issuance and expiry must be valid ISO timestamps');
-  }
-  if (expiresAt <= issuedAt) {
-    throw new Error('approval expiry must be later than issuance');
-  }
-  if (expiresAt - issuedAt > MAX_LIFETIME_MS) {
-    throw new Error('approval expiry must be no more than 24 hours after issuance');
-  }
+  checkLifetime(record, MAX_LIFETIME_MS, '24 hours');
 
   const implementerId = options.implementerId;
   if (
@@ -87,20 +106,7 @@ export function validateScopedApproval(record, options = {}) {
     throw new Error('approval approver must differ from the implementer');
   }
 
-  if (record.schemaVersion === 2) {
-    const principal = record.principal;
-    if (!principal || typeof principal !== 'object' || Array.isArray(principal)) {
-      throw new Error('approval principal is required');
-    }
-    for (const field of ['provider', 'subject', 'issuer', 'verifiedAt']) {
-      if (typeof principal[field] !== 'string' || principal[field].length === 0) {
-        throw new Error(`approval principal ${field} must be a non-empty string`);
-      }
-    }
-    if (record.approver !== principal.subject) {
-      throw new Error('approval approver must equal the verified principal subject');
-    }
-  }
+  if (record.schemaVersion === 2) validatePrincipal(record);
 
   return {
     schemaVersion: record.schemaVersion,
@@ -108,11 +114,77 @@ export function validateScopedApproval(record, options = {}) {
     task: record.task,
     sourceRevision: record.sourceRevision,
     action: record.action,
+    ...(isExternalEffectAction(record.action) ? { target: record.target } : {}),
     approver: record.approver,
     issuance: record.issuance,
     expiry: record.expiry,
     policyVersion: record.policyVersion,
     ...(record.schemaVersion === 2 ? { principal: { ...record.principal } } : {}),
+    ...(typeof record.note === 'string' ? { note: record.note } : {}),
+  };
+}
+
+function checkLifetime(record, maxMs, label) {
+  const issuedAt = Date.parse(record.issuance);
+  const expiresAt = Date.parse(record.expiry);
+  if (Number.isNaN(issuedAt) || Number.isNaN(expiresAt)) {
+    throw new Error('approval issuance and expiry must be valid ISO timestamps');
+  }
+  if (expiresAt <= issuedAt) {
+    throw new Error('approval expiry must be later than issuance');
+  }
+  if (expiresAt - issuedAt > maxMs) {
+    throw new Error(`approval expiry must be no more than ${label} after issuance`);
+  }
+}
+
+function validatePrincipal(record) {
+  const principal = record.principal;
+  if (!principal || typeof principal !== 'object' || Array.isArray(principal)) {
+    throw new Error('approval principal is required');
+  }
+  for (const field of ['provider', 'subject', 'issuer', 'verifiedAt']) {
+    if (typeof principal[field] !== 'string' || principal[field].length === 0) {
+      throw new Error(`approval principal ${field} must be a non-empty string`);
+    }
+  }
+  if (record.approver !== principal.subject) {
+    throw new Error('approval approver must equal the verified principal subject');
+  }
+}
+
+function validateStandingApproval(record, options) {
+  for (const field of ['change', 'action', 'target', 'approver', 'issuance', 'expiry']) {
+    if (typeof record[field] !== 'string' || record[field].length === 0) {
+      throw new Error(`standing authorization missing required field: ${field}`);
+    }
+  }
+  if (record.standing !== true) throw new Error('standing authorization must set standing: true');
+  if (!actionRow(record.action)) throw new Error(`standing authorization ${unknownActionMessage(record.action)}`);
+  if (!isExternalEffectAction(record.action)) {
+    throw new Error(`a standing authorization applies only to external-effect actions, not ${record.action}`);
+  }
+  if (!TARGET_FORMAT.test(record.target)) throw new Error('standing authorization requires a valid target');
+  if (!Number.isInteger(record.policyVersion) || record.policyVersion < 2) {
+    throw new Error('a standing authorization needs governance policy version 2');
+  }
+  if (record.task !== undefined || record.sourceRevision !== undefined) {
+    throw new Error('a standing authorization is not bound to a task or revision');
+  }
+  const maxMs = options.standingMaxMs ?? DEFAULT_STANDING_MAX_HOURS * 60 * 60 * 1000;
+  checkLifetime(record, maxMs, `${Math.round(maxMs / 3_600_000)} hours`);
+  validatePrincipal(record);
+  return {
+    schemaVersion: 3,
+    standing: true,
+    change: record.change,
+    action: record.action,
+    target: record.target,
+    approver: record.approver,
+    issuance: record.issuance,
+    expiry: record.expiry,
+    policyVersion: record.policyVersion,
+    principal: { ...record.principal },
     ...(typeof record.note === 'string' ? { note: record.note } : {}),
   };
 }
@@ -128,7 +200,10 @@ export function validateScopedApproval(record, options = {}) {
  * @returns {string} path written
  */
 export function writeScopedApproval(project, id, record, options = {}) {
-  const approval = validateScopedApproval(record, options);
+  const approval = validateScopedApproval(record, {
+    standingMaxMs: standingMaxMs(project),
+    ...options,
+  });
   if (!id || typeof id !== 'string') {
     throw new Error('approval id is required');
   }
@@ -171,83 +246,115 @@ export function isHumanGateRequired(project, verificationProfile) {
 
 /**
  * Whether accept/complete may proceed for this work item's verification profile.
- * When the gate is required, a scoped JSON approval must match change, task,
- * action, current clean HEAD, policy version, lifetime, and a distinct approver.
- *
- * @param {string} project
- * @param {{
- *   action: 'accept'|'complete',
- *   verificationProfile?: string,
- *   change?: string,
- *   task?: string,
- *   implementerId?: string,
- *   now?: Date|number,
- * }} scope
- * @returns {boolean}
+ * Wrapper over authorizes() for the two gate actions.
  */
 export function humanGateAllows(project, scope) {
   if (!scope || (scope.action !== 'accept' && scope.action !== 'complete')) {
     return false;
   }
-  if (!isHumanGateRequired(project, scope.verificationProfile)) {
-    return true;
+  return authorizes(project, scope).authorized;
+}
+
+const REASON_RANK = ['revoked', 'expired', 'policy-mismatch', 'principal-required', 'same-approver', 'revision-mismatch'];
+
+function revokedIds(project) {
+  const dir = path.join(project, '.factory', 'approvals');
+  const ids = new Set();
+  if (!fs.existsSync(dir)) return ids;
+  for (const name of fs.readdirSync(dir)) {
+    if (name.endsWith('.revoked.json')) ids.add(name.slice(0, -'.revoked.json'.length));
   }
-  return hasMatchingScopedApproval(project, scope);
+  return ids;
 }
 
 /**
+ * Decide whether an action is authorized now. Read-only.
+ *
  * @param {string} project
  * @param {{
- *   action: 'accept'|'complete',
+ *   action: string,
  *   change?: string,
  *   task?: string,
+ *   target?: string,
+ *   verificationProfile?: string,
  *   implementerId?: string,
  *   now?: Date|number,
  * }} scope
- * @returns {boolean}
+ * @returns {{ authorized: boolean, approvalId?: string, reason?: string, waived?: boolean }}
  */
-function hasMatchingScopedApproval(project, scope) {
-  if (typeof scope.change !== 'string' || scope.change.length === 0) return false;
-  if (typeof scope.task !== 'string' || scope.task.length === 0) return false;
+export function authorizes(project, scope) {
+  const row = actionRow(scope?.action);
+  if (!row) return { authorized: false, reason: 'no-approval' };
+  if (row.waivableByProfile && !isHumanGateRequired(project, scope.verificationProfile)) {
+    return { authorized: true, waived: true };
+  }
+  if (typeof scope.change !== 'string' || scope.change.length === 0) {
+    return { authorized: false, reason: 'no-approval' };
+  }
+  const external = row.kind === 'external-effect';
+  if (!external && (typeof scope.task !== 'string' || scope.task.length === 0)) {
+    return { authorized: false, reason: 'no-approval' };
+  }
+  if (external && (typeof scope.target !== 'string' || scope.target.length === 0)) {
+    return { authorized: false, reason: 'no-approval' };
+  }
 
   const { sourceRevision, worktreeClean } = resolveGitBinding(project);
-  if (!worktreeClean || !sourceRevision) return false;
-
+  const cleanHead = Boolean(worktreeClean && sourceRevision);
   const policyVersion = readPolicyVersion(project);
   const nowMs = resolveNowMs(scope.now);
-  const approvalsDir = path.join(project, '.factory', 'approvals');
-  if (!fs.existsSync(approvalsDir)) return false;
+  const dir = path.join(project, '.factory', 'approvals');
+  if (!fs.existsSync(dir)) {
+    return { authorized: false, reason: !external && !cleanHead ? 'dirty-worktree' : 'no-approval' };
+  }
+  const revoked = revokedIds(project);
+  const maxStanding = standingMaxMs(project);
 
-  for (const name of fs.readdirSync(approvalsDir)) {
-    if (!name.endsWith('.json')) continue;
+  let best = null;
+  let targetMismatch = false;
+  let sawTaskBound = false;
+  for (const name of fs.readdirSync(dir).sort()) {
+    if (!name.endsWith('.json') || name.endsWith('.revoked.json')) continue;
+    const id = name.slice(0, -'.json'.length);
     let record;
     try {
-      record = JSON.parse(readText(path.join(approvalsDir, name)));
-      validateScopedApproval(record, { implementerId: scope.implementerId });
+      record = JSON.parse(readText(path.join(dir, name)));
+      validateScopedApproval(record, { standingMaxMs: maxStanding });
     } catch {
       continue;
     }
-    if (record.change !== scope.change) continue;
-    if (record.task !== scope.task) continue;
-    if (record.action !== scope.action) continue;
-    if (record.sourceRevision !== sourceRevision) continue;
-    if (record.policyVersion !== policyVersion) continue;
-    if (policyVersion >= 2 && record.schemaVersion !== 2) continue;
-    if (policyVersion >= 2 && record.principal?.subject !== record.approver) continue;
-    if (
+    if (record.change !== scope.change || record.action !== scope.action) continue;
+    const standing = record.schemaVersion === 3;
+    if (!standing && record.task !== scope.task) continue;
+    if (external && record.target !== scope.target) {
+      targetMismatch = true;
+      continue;
+    }
+    if (!standing) sawTaskBound = true;
+
+    let reason = null;
+    const issuedAt = Date.parse(record.issuance);
+    const expiresAt = Date.parse(record.expiry);
+    if (revoked.has(id)) reason = 'revoked';
+    else if (nowMs < issuedAt || nowMs >= expiresAt) reason = 'expired';
+    else if (record.policyVersion !== policyVersion) reason = 'policy-mismatch';
+    else if (policyVersion >= 2 && (record.schemaVersion < 2 || record.principal?.subject !== record.approver)) {
+      reason = 'principal-required';
+    } else if (
       typeof scope.implementerId === 'string'
       && scope.implementerId.length > 0
       && record.approver === scope.implementerId
-    ) {
-      continue;
-    }
-    const issuedAt = Date.parse(record.issuance);
-    const expiresAt = Date.parse(record.expiry);
-    if (Number.isNaN(issuedAt) || Number.isNaN(expiresAt)) continue;
-    if (nowMs < issuedAt || nowMs >= expiresAt) continue;
-    return true;
+    ) reason = 'same-approver';
+    else if (!standing && cleanHead && record.sourceRevision !== sourceRevision) reason = 'revision-mismatch';
+    if (!reason && !standing && !cleanHead) continue;
+    if (!reason) return { authorized: true, approvalId: id };
+    if (!best || REASON_RANK.indexOf(reason) < REASON_RANK.indexOf(best)) best = reason;
   }
-  return false;
+
+  if (!cleanHead && (!external || sawTaskBound)) return { authorized: false, reason: 'dirty-worktree' };
+  if (best) return { authorized: false, reason: best };
+  if (targetMismatch) return { authorized: false, reason: 'target-mismatch' };
+  return { authorized: false, reason: 'no-approval' };
 }
 
 function resolveNowMs(now) {

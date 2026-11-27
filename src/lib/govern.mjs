@@ -1,17 +1,28 @@
+import { listReopenLines } from './attempt-reopen.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
-import { recordedAttemptIdentities } from './attempt.mjs';
+import { getAttempt, recordedAttemptIdentities } from './attempt.mjs';
+import { redStates } from './verification-status.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
+import { describeMethod, listAllMethods } from './red-method.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
+import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
+import {
+  actionIds,
+  actionRow,
+  assertTarget,
+  isExternalEffectAction,
+  unknownActionMessage,
+} from './approval-actions.mjs';
 import { writeScopedApproval } from './risk-gates.mjs';
 import { resolveGitBinding } from './verification-evidence.mjs';
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
-import { listWorkItems, workCounts } from './work.mjs';
+import { describeHold, isHeld, listWorkItems, workCounts } from './work.mjs';
 
 const REQUIRED = [
   '.factory/team.md',
@@ -76,20 +87,42 @@ export function status(project, _env) {
   const workLine = change
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
+  const attemptLines = openAttemptRedLines(project, change || undefined);
+  const heldLines = listWorkItems(project, change || undefined).filter(isHeld).map((item) => `- ${item.change}/${item.id} ${describeHold(item)}${item.hold.supersededBy?.length ? ` (superseded by ${item.hold.supersededBy.map((ref) => `${ref.change}/${ref.id}`).join(', ')})` : ''}`);
+  const reopenLines = listReopenLines(project);
+  const methodLines = listAllMethods(project).map((row) => `- ${describeMethod(row)}`);
   const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
+  const checkLines = Object.entries(registeredArgv(project)).map(([kind, argv]) => `- ${kind}: ${formatArgv(argv)}`);
   return [
     'Factory status',
     `HALT: ${halt ? 'yes' : 'no'}`,
     `Active change: ${active?.change || '(none)'}`,
     `OpenSpec changes: ${changes.join(', ') || '(none)'}`,
     `Work queue: ${workLine}`,
+    ...(heldLines.length ? ['Held items:', ...heldLines] : []),
+    ...(attemptLines.length ? ['Open attempts:', ...attemptLines] : []),
+    ...(reopenLines.length ? ['Reopened attempts:', ...reopenLines.map((line) => `- ${line}`)] : []),
+    ...(methodLines.length ? ['Red methods:', ...methodLines] : []),
     ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
+    ...(checkLines.length ? ['Registered checks:', ...checkLines] : []),
     '',
     team,
     '',
     now,
     '',
   ].join('\n');
+}
+
+function openAttemptRedLines(project, change) {
+  const lines = [];
+  for (const item of listWorkItems(project, change)) {
+    if (item.status !== 'in_progress' || !item.attemptId) continue;
+    const attempt = getAttempt(project, item.attemptId);
+    if (!attempt) continue;
+    const reds = redStates(project, attempt, item).map((entry) => `${entry.kind}=${entry.state}`).join(', ');
+    lines.push(`- ${attempt.id} ${item.change}/${item.id} (${attempt.state}): red ${reds || 'none required'}`);
+  }
+  return lines;
 }
 
 function summarizeAllWork(project) {
@@ -113,21 +146,42 @@ function summarizeAllWork(project) {
  * @param {{ change?: string, task?: string, action?: string, approver?: string, expiry?: string }} [scope]
  * @returns {string} path written
  */
+const APPROVE_USAGE = `Usage: idefactory approve <id> --note "..." --change <name> --task <id> --action <${actionIds().join('|')}> --approver <id> --expiry <iso> [--target <name>] [--standing]`;
+const REVOKE_USAGE = 'Usage: idefactory revoke <id> --note "..." [--revoker <id> --principal-provider <id> --principal-subject <id>]';
+
 export function approve(project, id, note, scope = {}) {
   if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/.test(id)) {
-    throw new Error('Usage: idefactory approve <id> --note "..." --change ... --task ... --action ... --approver ... --expiry ...');
+    throw new Error(APPROVE_USAGE);
   }
   if (!note) throw new Error('--note is required');
+  if (!actionRow(scope.action)) {
+    throw new Error(`${unknownActionMessage(scope.action)}\n${APPROVE_USAGE}`);
+  }
+  const external = isExternalEffectAction(scope.action);
+  const standing = scope.standing === true;
+  if (external) assertTarget(scope.target);
+  else if (scope.target !== undefined) throw new Error(`--target applies only to external-effect actions, not ${scope.action}`);
+  if (standing) {
+    if (!external) throw new Error(`--standing applies only to external-effect actions, not ${scope.action}`);
+    if (scope.task !== undefined) throw new Error('--standing is not bound to a task; omit --task');
+  }
   const decisions = path.join(project, '.factory', 'decisions.md');
   if (!fs.existsSync(decisions)) throw new Error('No .factory/decisions.md. Run idefactory init first.');
 
-  const { sourceRevision, worktreeClean } = resolveGitBinding(project);
-  if (!worktreeClean || !sourceRevision) {
-    throw new Error('approval requires a clean worktree and resolvable HEAD (factory run-state dirt ignored)');
+  const policyVersion = readPolicyVersion(project);
+  if (standing && policyVersion < 2) {
+    throw new Error('a standing authorization needs governance policy version 2 and a verified principal');
+  }
+  let sourceRevision;
+  if (!standing) {
+    const binding = resolveGitBinding(project);
+    if (!binding.worktreeClean || !binding.sourceRevision) {
+      throw new Error('approval requires a clean worktree and resolvable HEAD (factory run-state dirt ignored)');
+    }
+    sourceRevision = binding.sourceRevision;
   }
 
   const issuance = new Date().toISOString();
-  const policyVersion = readPolicyVersion(project);
   let principal;
   if (policyVersion >= 2) {
     principal = confirmPrincipal(project, {
@@ -138,27 +192,36 @@ export function approve(project, id, note, scope = {}) {
       throw new Error('approval approver must equal the verified principal subject');
     }
   }
-  const record = {
-    schemaVersion: principal ? 2 : 1,
-    change: scope.change,
-    task: scope.task,
-    sourceRevision,
-    action: scope.action,
-    approver: scope.approver,
-    issuance,
-    expiry: scope.expiry,
-    policyVersion,
-    note,
-    ...(principal ? { principal } : {}),
-  };
+  const record = standing
+    ? {
+      schemaVersion: 3,
+      standing: true,
+      change: scope.change,
+      action: scope.action,
+      target: scope.target,
+      approver: scope.approver,
+      issuance,
+      expiry: scope.expiry,
+      policyVersion,
+      note,
+      principal,
+    }
+    : {
+      schemaVersion: principal ? 2 : 1,
+      change: scope.change,
+      task: scope.task,
+      sourceRevision,
+      action: scope.action,
+      ...(external ? { target: scope.target } : {}),
+      approver: scope.approver,
+      issuance,
+      expiry: scope.expiry,
+      policyVersion,
+      note,
+      ...(principal ? { principal } : {}),
+    };
 
-  let file;
-  try {
-    file = writeScopedApproval(project, id, record);
-  } catch (error) {
-    // Validator / write failure must leave decisions.md untouched.
-    throw error;
-  }
+  const file = writeScopedApproval(project, id, record);
 
   const stamp = stampNow();
   const entry = `\n## ${stamp.slice(0, 10)} accepted ${id}\n\nStatus: accepted\nId: ${id}\nNote: ${note}\n`;
@@ -169,9 +232,53 @@ export function approve(project, id, note, scope = {}) {
     time: issuance,
     id,
     change: scope.change,
-    task: scope.task,
+    ...(standing ? {} : { task: scope.task }),
   });
   return file;
+}
+
+/**
+ * Revoke an approval by writing a sibling record. The approval file is never edited.
+ * Under policy version 2 the revoker must be a verified principal.
+ */
+export function revokeApproval(project, id, note, scope = {}) {
+  if (!id || !/^[A-Za-z0-9][A-Za-z0-9._-]{0,80}$/.test(id)) throw new Error(REVOKE_USAGE);
+  if (!note) throw new Error('--note is required');
+  const dir = path.join(project, '.factory', 'approvals');
+  if (!fs.existsSync(path.join(dir, `${id}.json`))) throw new Error(`no approval ${id} to revoke`);
+  const revokedFile = path.join(dir, `${id}.revoked.json`);
+  if (fs.existsSync(revokedFile)) throw new Error(`approval ${id} is already revoked`);
+  const decisions = path.join(project, '.factory', 'decisions.md');
+  if (!fs.existsSync(decisions)) throw new Error('No .factory/decisions.md. Run idefactory init first.');
+
+  const policyVersion = readPolicyVersion(project);
+  let principal;
+  let revoker = scope.revoker;
+  if (policyVersion >= 2) {
+    principal = confirmPrincipal(project, {
+      provider: scope.principalProvider,
+      subject: scope.principalSubject,
+    });
+    if (revoker !== principal.subject) {
+      throw new Error('revoker must equal the verified principal subject');
+    }
+  } else if (revoker !== undefined) {
+    assertIdentity(revoker, '--revoker');
+  }
+  const time = new Date().toISOString();
+  writeJsonExclusive(revokedFile, {
+    schemaVersion: 1,
+    approvalId: id,
+    time,
+    note,
+    ...(revoker ? { revoker } : {}),
+    ...(principal ? { principal } : {}),
+  });
+  const stamp = stampNow();
+  fs.appendFileSync(decisions, `\n## ${stamp.slice(0, 10)} revoked ${id}\n\nStatus: revoked\nId: ${id}\nNote: ${note}\n`);
+  ledger(project, 'revoked', { id });
+  appendControlEvent(project, { type: 'approval.revoked', time, id });
+  return revokedFile;
 }
 
 function unmappedCheckKinds(project) {

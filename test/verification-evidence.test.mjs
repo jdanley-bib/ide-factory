@@ -1199,9 +1199,10 @@ test('a red run whose command cannot start records the spawn error code', async 
       unitRegistry(['definitely-missing-idefactory-bin']),
     );
     assert.notEqual(result.code, 0);
-    assert.match(result.err, /infrastructure-failure: .* \(spawn error ENOENT\)/);
+    assert.match(result.err, /infrastructure-failure: .* \(spawn error ENOENT starting definitely-missing-idefactory-bin\)/);
     const [entry] = stored.evidence.redFailures;
     assert.equal(entry.spawnError, 'ENOENT');
+    assert.equal(entry.executable, 'definitely-missing-idefactory-bin');
     assert.equal(entry.exitCode, null);
     assert.equal(entry.timedOut, false);
   } finally {

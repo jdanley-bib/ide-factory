@@ -13,7 +13,7 @@ The system SHALL read `openspec/changes/<name>/` and SHALL NOT invent a product 
 - **THEN** the command exits with an error and creates no work item
 
 ### Requirement: Create tasks from unchecked boxes
-The system SHALL create one `.factory/work/` item for each unchecked task in the change's `tasks.md` that the task locator does not already tie to a work item, and SHALL skip a checkbox that already has a work item. A wording-preserving rewrite of a task that already has a work item SHALL NOT create a second work item.
+The system SHALL create one `.factory/work/` item for each unchecked task in the change's `tasks.md` that the task locator does not already tie to a work item, including a task added after the first sync, and SHALL skip a checkbox that already has a work item. A wording-preserving rewrite of a task that already has a work item SHALL NOT create a second work item.
 
 #### Scenario: First sync
 - **WHEN** `tasks.md` has two unchecked boxes and no matching work items
@@ -27,6 +27,16 @@ The system SHALL create one `.factory/work/` item for each unchecked task in the
 - **WHEN** a synced task keeps the same normalized text and the same checkbox id, aside from whitespace
 - **THEN** sync-tasks does not create a second work item
 - **AND** that work item's id and status stay the same
+
+#### Scenario: Task added after the first sync
+- **WHEN** a change has synced work items and an unchecked task with a new id and new text is added to `tasks.md`
+- **AND** no other task was reworded, removed, or renumbered
+- **THEN** sync-tasks creates one work item for it
+- **AND** every existing work item is unchanged
+
+#### Scenario: Addition together with a rewording
+- **WHEN** a task is added and another task is reworded in the same edit
+- **THEN** sync-tasks treats the edit as ambiguous, changes nothing, and returns a reconciliation report
 
 ### Requirement: Skip completed checkboxes
 The system SHALL NOT create a work item for a checked task in `tasks.md`.
@@ -68,7 +78,7 @@ When every stored task text matches exactly one current task text and a checkbox
 - **AND** no second work item exists for that task
 
 ### Requirement: Ambiguous remap fails closed
-When an edit splits, merges, or reorders tasks so that stored tasks do not match current tasks one to one, sync SHALL leave `.factory/work/` unchanged and SHALL return a reconciliation report.
+When an edit splits, merges, removes, or reorders tasks so that stored tasks do not match current tasks one to one, sync SHALL leave `.factory/work/` unchanged and SHALL return a reconciliation report. The report SHALL name each unmatched stored item and each unmatched current task, and SHALL name the plan command that previews the decisions needed.
 
 #### Scenario: Split leaves the queue unchanged
 - **WHEN** one synced task is replaced by two tasks that do not match the stored tasks one to one
@@ -80,6 +90,11 @@ When an edit splits, merges, or reorders tasks so that stored tasks do not match
 - **WHEN** two synced tasks are replaced by one task
 - **THEN** sync-tasks exits with an error
 - **AND** `.factory/work/` is unchanged
+
+#### Scenario: Removed task
+- **WHEN** a synced task is removed from `tasks.md`
+- **THEN** sync-tasks exits with an error and leaves `.factory/work/` unchanged
+- **AND** the report names the stored item and the plan command
 
 ### Requirement: Hand-checked box is not completion
 A checkbox marked done by editing OpenSpec `tasks.md` SHALL NOT mark its work item done, SHALL NOT accept an attempt, and SHALL NOT satisfy factory completion.

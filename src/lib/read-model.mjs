@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './layout.mjs';
 import { listAllExceptions } from './red-exceptions.mjs';
+import { listAllMethods } from './red-method.mjs';
 import { runsDir } from './run-session.mjs';
 import { listWorkItems } from './work.mjs';
 
@@ -48,10 +49,11 @@ export function buildStatusDocument(project) {
   const approvalsDir = path.join(project, '.factory', 'approvals');
   if (fs.existsSync(approvalsDir)) {
     for (const name of fs.readdirSync(approvalsDir)) {
-      if (!name.endsWith('.json')) continue;
+      if (!name.endsWith('.json') || name.endsWith('.revoked.json')) continue;
       const record = readJson(path.join(approvalsDir, name));
       if (!record) continue;
-      if (record.schemaVersion === 2) approvals.schema2 += 1;
+      if (record.schemaVersion === 3) approvals.schema3 = (approvals.schema3 || 0) + 1;
+      else if (record.schemaVersion === 2) approvals.schema2 += 1;
       else approvals.schema1 += 1;
     }
   }
@@ -65,6 +67,7 @@ export function buildStatusDocument(project) {
     activeChange: active?.change || null,
     workCounts,
     redExceptions: listAllExceptions(project),
+    redMethods: listAllMethods(project),
     metrics: {
       attempts: attemptCounts,
       openRuns,

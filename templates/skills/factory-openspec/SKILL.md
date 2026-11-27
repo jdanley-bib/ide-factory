@@ -37,6 +37,8 @@ idefactory sync-tasks <name>
 
 `.factory/work/` is the only execution queue. OpenSpec `tasks.md` remains the human plan.
 
+When the human changes the plan after a sync, run `idefactory sync-tasks <name>` again. Appended tasks, and checked tasks that never had an item, are handled automatically. When it reports a reconciliation error, run `idefactory sync-tasks <name> --plan` (add `--json` for one document). The plan lists every unmatched item and task, work in flight, classification drift, dependents, overlapping changes, and a digest. Then record explicit decisions in a JSON file keyed by stored item id and run `idefactory sync-tasks <name> --apply --decisions-file <path> --plan-digest <digest> --decided-by <id>`. The decisions are `keep`, `renumber`, `defer`, `resume`, `drop`, `split`, `merge`, `move`, `adopt-classification`, and `keep-classification`. Do not create a separate change as a workaround, and do not guess which old task became which new task. Deferred and dropped items keep their attempts and evidence and are never selected.
+
 ## Build
 
 For each synced work item, follow `factory-build` one item at a time, or use `factory-run` for a bounded multi-item loop when the human asks.
@@ -50,8 +52,16 @@ When every box is checked, tell the human to archive and sync with OpenSpec. Do 
 The only legal pull-request steps are `idefactory pr open <change>`, `idefactory pr comment <attemptId>`, and `idefactory pr capture <change>`.
 The agent never merges. It does not open or edit a pull request through the Cursor pull-request tool or a hand-written `gh pr create` or `gh pr edit`.
 
-`sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.
-
 When the human asks to archive, run `isDeliverableChange` first. If it is false, stop and do not move `openspec/changes/<change>/`. Spec sync stays human-gated and does not itself require the pull-request record.
 
 The IDE session model does the work.
+
+## Routine steps and external effects
+
+When the human asks you to run, or to run the full pipeline, for a change, that request covers `sync-tasks`, `run`, `verify`, and `complete` for that change, with the attempt, red, and method records they involve. Do not ask again before each of them. The cover ends when the run stops and does not extend to another change.
+
+These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Only a human passes `--new-run` after a budget stop, `vacuous-red`, or `retry-cap`.
+
+The cover does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review.
+
+Before any action with an external effect (publish, deploy, spend, creating an account), run `idefactory authorize` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop and report the reason and the `approve` command. When it reports `authorized: true`, do not ask the human whether to proceed.

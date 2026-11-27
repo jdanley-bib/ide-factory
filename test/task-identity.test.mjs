@@ -155,13 +155,13 @@ test('renumbering one task keeps one work item and retargets the attempt taskId'
   }
 });
 
-test('replacing one synced task with two fails closed with a reconciliation report', async () => {
+test('adding a task beside an unchanged one creates only the new item', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
     writeTasks(dir, '- [ ] 1.1 First unchecked task\n');
     assert.equal((await idefactory(dir, ['sync-tasks', CHANGE])).code, 0);
-    const before = snapshotWork(dir);
+    const firstBefore = fs.readFileSync(path.join(dir, '.factory/work/items/demo--1.1.json'), 'utf8');
 
     writeTasks(dir, [
       '- [ ] 1.1 First unchecked task',
@@ -169,13 +169,9 @@ test('replacing one synced task with two fails closed with a reconciliation repo
       '',
     ].join('\n'));
     const result = await idefactory(dir, ['sync-tasks', CHANGE]);
-    assert.notEqual(result.code, 0);
-    assertWorkByteIdentical(before, snapshotWork(dir));
-    const report = reportText(result);
-    assert.match(report, /Reconciliation failed for change demo/);
-    assert.match(report, /unmatched previous checkbox ids:/);
-    assert.match(report, /unmatched current checkbox ids:/);
-    assert.match(report, /1\.2/);
+    assert.equal(result.code, 0, reportText(result));
+    assert.equal(fs.readFileSync(path.join(dir, '.factory/work/items/demo--1.1.json'), 'utf8'), firstBefore);
+    assert.deepEqual(listWorkItems(dir, CHANGE).map((item) => item.id), ['1.1', '1.2']);
   } finally {
     cleanup(dir);
   }

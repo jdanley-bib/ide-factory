@@ -112,6 +112,7 @@ async function seedSecurityStageChange(dir, {
       `- [ ] ${taskId} Stage fixture`,
       '  factory:',
       '    kind: general',
+      '    dependencies: []',
       `    checks: [${checks.join(', ')}]`,
       `    securityProfile: ${securityProfile}`,
       `    verificationProfile: ${verificationProfile}`,

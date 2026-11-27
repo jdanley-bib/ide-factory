@@ -1008,6 +1008,7 @@ async function implementingAttempt(dir, checks) {
       '  factory:',
       '    kind: general',
       `    checks: [${checks.join(', ')}]`,
+      `    verificationProfile: ${checks.some((kind) => /^(unit|integration|playwright|contract)/.test(kind)) ? 'cli' : 'docs'}`,
       '',
     ].join('\n'),
   );
@@ -1298,25 +1299,17 @@ test('an item whose profile is listed as cli needs only unit and can be complete
   }
 });
 
-test('an unknown verification profile refuses review and completion and is not read as unit', async () => {
+test('an unknown verification profile refuses the attempt, the run, and is not read as unit', async () => {
   const dir = tempProject();
   try {
     await seedChange(dir, withProfile('no-such-profile'));
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
-    const attempt = JSON.parse(started.out);
-    await advanceToVerifying(dir, attempt.id, { passChecks: { unit: 0 } });
-    const refused = await idefactory(dir, [
-      'attempt', 'transition', attempt.id, 'awaiting-review', '--evidence', '{}',
-    ]);
-    assert.notEqual(refused.code, 0);
-    assert.match(refused.err, /no-such-profile/);
+    assert.notEqual(started.code, 0);
+    assert.match(started.err, /no-such-profile/);
     const run = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
     assert.match(run.out + run.err, /no-such-profile/);
-    forceAccepted(dir, attempt.id);
-    const done = await idefactory(dir, ['complete', 'demo', '1.1', '--attempt', attempt.id]);
-    assert.notEqual(done.code, 0);
-    assert.match(done.err, /no-such-profile/);
-    assert.equal(getWorkItem(dir, 'demo', '1.1').status, 'in_progress');
+    assert.equal(getWorkItem(dir, 'demo', '1.1').status, 'todo');
+    assert.equal(getWorkItem(dir, 'demo', '1.1').attemptId ?? null, null);
   } finally {
     cleanup(dir);
   }

@@ -90,14 +90,35 @@ export function updateWorkItem(project, change, id, patch) {
   return upsertWorkItem(project, { ...current, ...patch, change, id });
 }
 
+/**
+ * A held item is a work item a reconciliation deferred or dropped. It is stored as blocked with a
+ * hold marker, so builds that predate holds also treat it as not ready.
+ */
+export function isHeld(item) {
+  const kind = item?.hold?.kind;
+  return kind === 'deferred' || kind === 'dropped';
+}
+
+export function describeHold(item) {
+  if (!isHeld(item)) return '';
+  const record = item.hold.decisionRecord ? ` by reconciliation ${item.hold.decisionRecord}` : '';
+  return `${item.hold.kind}${record}`;
+}
+
+export function removeWorkItemFile(project, change, id) {
+  const file = itemPath(project, change, id);
+  if (fs.existsSync(file)) fs.unlinkSync(file);
+  refreshIndex(project);
+}
+
 export function isReady(project, item, allItems) {
-  if (!item || normalizeStatus(item.status) !== 'todo') return false;
+  if (!item || isHeld(item) || normalizeStatus(item.status) !== 'todo') return false;
   const deps = item.dependencies || [];
   if (!deps.length) return true;
   const siblings = allItems || listWorkItems(project, item.change);
   return deps.every((depId) => {
     const dep = siblings.find((entry) => entry.id === depId);
-    return dep && normalizeStatus(dep.status) === 'done';
+    return dep && !isHeld(dep) && normalizeStatus(dep.status) === 'done';
   });
 }
 
