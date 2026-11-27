@@ -33,7 +33,7 @@
       "digest": "2d53ae461e525d1e3717178664868c140f157a1c863c530732be3cad2e961898"
     },
     ".agents/skills/factory-verify/SKILL.md": {
-      "digest": "857049f040cdc881174b811e26163a07cec692ced6185c8d28e5d0ac20fbccda"
+      "digest": "051587bed5e59d6673e412900af60d40420759300c557baffe31d5048e0e0a92"
     },
     ".claude/commands/factory-build.md": {
       "digest": "ce9470fd3848f588f4aa9a49f67638038ce28a98613e43e23af9951a6cb2c6e9"
@@ -87,7 +87,7 @@
       "digest": "2d53ae461e525d1e3717178664868c140f157a1c863c530732be3cad2e961898"
     },
     ".claude/skills/factory-verify/SKILL.md": {
-      "digest": "857049f040cdc881174b811e26163a07cec692ced6185c8d28e5d0ac20fbccda"
+      "digest": "051587bed5e59d6673e412900af60d40420759300c557baffe31d5048e0e0a92"
     },
     ".cline/rules/factory.md": {
       "digest": "a1962dc70285eb4a4e31e027973ddd8e16c11450d1b67db893ca30317e312761"
@@ -123,7 +123,7 @@
       "digest": "2d53ae461e525d1e3717178664868c140f157a1c863c530732be3cad2e961898"
     },
     ".cline/skills/factory-verify/SKILL.md": {
-      "digest": "857049f040cdc881174b811e26163a07cec692ced6185c8d28e5d0ac20fbccda"
+      "digest": "051587bed5e59d6673e412900af60d40420759300c557baffe31d5048e0e0a92"
     },
     ".cline/workflows/factory-build.md": {
       "digest": "84bf6cfde33104b0203940cc9f16c7ae18565a9cdf492436f8fe61208d6e4261"
@@ -201,7 +201,7 @@
       "digest": "2d53ae461e525d1e3717178664868c140f157a1c863c530732be3cad2e961898"
     },
     ".cursor/skills/factory-verify/SKILL.md": {
-      "digest": "857049f040cdc881174b811e26163a07cec692ced6185c8d28e5d0ac20fbccda"
+      "digest": "051587bed5e59d6673e412900af60d40420759300c557baffe31d5048e0e0a92"
     },
     ".github/agents/factory.agent.md": {
       "digest": "cf7f7dc2a99ee9b76442de23746189daa36279d3e1386d49facec273f855bed5"
@@ -261,7 +261,7 @@
       "digest": "2d53ae461e525d1e3717178664868c140f157a1c863c530732be3cad2e961898"
     },
     ".github/skills/factory-verify/SKILL.md": {
-      "digest": "857049f040cdc881174b811e26163a07cec692ced6185c8d28e5d0ac20fbccda"
+      "digest": "051587bed5e59d6673e412900af60d40420759300c557baffe31d5048e0e0a92"
     },
     "AGENTS.md#section": {
       "digest": "8830d44ce1bc04d1a35980b9192ab3c8a17799f191d7b42f524fea213ce57e5e"
