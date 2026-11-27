@@ -42,6 +42,13 @@ test('README documents the adapter manifest, report, flags, extensions, and migr
   assert.match(section, /migrate an install made by an earlier release/);
 });
 
+test('README names verify status, the one-time re-run note, and the run-state reuse rule', () => {
+  assert.match(readme, /\| `idefactory verify status` \|/);
+  assert.match(readme, /idefactory verify status <attemptId>/);
+  assert.match(readme, /re-run verify/);
+  assert.match(readme, /only factory run-state/);
+});
+
 test('README command table and --help list the upgrade flags and adapters pin', async () => {
   assert.match(readme, /\| `idefactory upgrade` \|[^\n]*--dry-run[^\n]*--replace/);
   assert.match(readme, /\| `idefactory adapters pin <path>` \|/);

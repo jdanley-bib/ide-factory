@@ -5,6 +5,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
+import { describeReopens } from './attempt-reopen.mjs';
+import { describeAttemptMethod, describeMethod } from './red-method.mjs';
 import {
   assertSafeForgeArgv,
   azurePullRequestUrl,
@@ -130,8 +132,11 @@ export function postVerdictComment(project, stored, env = process.env) {
   }
 
   const postedVerdicts = Array.isArray(record.postedVerdicts) ? record.postedVerdicts : [];
+  const reopenCount = Array.isArray(attempt.evidence?.reopens) ? attempt.evidence.reopens.length : 0;
   const alreadyPosted = postedVerdicts.some(
-    (item) => item?.attemptId === attempt.id && item?.role === stored.role,
+    (item) => item?.attemptId === attempt.id
+      && item?.role === stored.role
+      && (item?.reopenCount ?? 0) === reopenCount,
   );
   if (alreadyPosted) return { record, applied: true, plan: null };
 
@@ -145,18 +150,23 @@ export function postVerdictComment(project, stored, env = process.env) {
   }
   const exceptions = listAttemptExceptions(project, attempt);
   const port = forgePort(project);
+  const method = describeAttemptMethod(project, attempt);
   const posted = {
     attemptId: attempt.id,
     verdict: stored.verdict,
     role: stored.role,
     reviewerId: stored.reviewerId || null,
+    ...(reopenCount > 0 ? { reopenCount } : {}),
   };
   const build = (withReason) => `${[
     ...lines,
+    ...describeReopens(attempt, { withReason }),
+    ...(method ? [describeMethod(method, { withText: withReason })] : []),
     ...exceptions.map((row) => describeException(row, { withReason })),
   ].join('\n')}\n`;
   let body = build(true);
-  if (exceptions.length > 0 && !port.acceptsCommentBody(record.pullRequest.number, body)) {
+  const hasDetail = exceptions.length > 0 || Boolean(method) || describeReopens(attempt).length > 0;
+  if (hasDetail && !port.acceptsCommentBody(record.pullRequest.number, body)) {
     body = build(false);
   }
   if (port.transport === 'mcp') {

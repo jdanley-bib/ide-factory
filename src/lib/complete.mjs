@@ -1,3 +1,4 @@
+import { BlockedError, haltError } from './blocked-error.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, transitionAttempt } from './attempt.mjs';
@@ -12,6 +13,7 @@ import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { requiredTestKinds } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
+import { assertMethodAccepted } from './red-method.mjs';
 import {
   assertPassingCliSecurityEvidence,
   humanGateAllows,
@@ -22,7 +24,7 @@ import {
   requiredChecksFor,
   unpassedChecks,
 } from './required-checks.mjs';
-import { getWorkItem } from './work.mjs';
+import { describeHold, getWorkItem, isHeld } from './work.mjs';
 
 /**
  * Complete an accepted (or recoverable) attempt via journaled finalization.
@@ -43,16 +45,21 @@ import { getWorkItem } from './work.mjs';
  */
 export function completeWorkItem(project, change, taskId, attemptId, options = {}) {
   if (halted(project)) {
-    const error = new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
-    error.code = 'HALT';
-    throw error;
+    throw haltError();
   }
   if (hasActiveLockout(project)) {
-    throw new Error('Active lockout present under .factory/orchestration/. Resolve before complete.');
+    throw new BlockedError(
+      'Active lockout present under .factory/orchestration/. Resolve before complete.',
+      'reviewer-lockout',
+      { change, task: taskId, attemptId },
+    );
   }
 
   const item = getWorkItem(project, change, taskId);
   if (!item) throw new Error(`Work item not found: ${change}/${taskId}`);
+  if (isHeld(item)) {
+    throw new Error(`Work item ${change}/${taskId} is ${describeHold(item)} and cannot be completed; the item stays unfinished`);
+  }
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
   if (attempt.change !== change || attempt.taskId !== taskId) {
@@ -75,8 +82,10 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     task: taskId,
     implementerId: attempt.implementerId,
   })) {
-    throw new Error(
+    throw new BlockedError(
       'complete requires a valid scoped approval when humanGate is true (or the profile is missing / non-boolean)',
+      'approval-missing',
+      { action: 'complete', change, task: taskId, attemptId },
     );
   }
 
@@ -106,6 +115,7 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
       attemptId,
     });
   }
+  assertMethodAccepted(project, attempt);
   const { sourceRevision } = assertChecksPassed(project, attempt, requiredChecks, {
     allowDirtyWorktree: Boolean(resumeJournal),
     expectedSourceRevision: resumeJournal?.sourceRevision,
@@ -160,7 +170,8 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
     } catch {
       // keep original error
     }
-    throw error;
+    if (error instanceof BlockedError) throw error;
+    throw new BlockedError(error.message, 'finalize-failed', { change, task: taskId, attemptId });
   }
 }
 
@@ -182,18 +193,34 @@ function assertChecksPassed(project, attempt, required, options = {}) {
     throw new Error('finalization journal source revision mismatch');
   }
 
-  const [failure] = unpassedChecks(attempt, required, { rawChecks, headSha, stopAtFirst: true });
-  if (failure) {
-    throw new Error(failure.reason);
-  }
+  const failures = unpassedChecks(attempt, required, {
+    rawChecks,
+    project,
+    requireCleanWorktree: !options.allowDirtyWorktree,
+  }).map((entry) => entry.reason);
 
   const taskType = options.taskType === 'lightweight' ? 'lightweight' : 'code';
+  let redFailures = 0;
   if (taskType === 'code') {
     for (const kind of requiredTestKinds(required)) {
       if (redSatisfaction(project, attempt, kind) === 'missing') {
-        throw new Error(`complete requires a recorded failing CLI red or red exception for: ${kind}`);
+        const route = attempt.state === 'accepted'
+          ? `; this attempt is accepted, so recover with idefactory attempt reopen ${attempt.id} --kind ${kind} --for method|exception --by <id> --reason "text"`
+          : '';
+        failures.push(`complete requires a recorded failing CLI red or red exception for: ${kind}${route}`);
+        redFailures += 1;
       }
     }
+  }
+  const unmetContext = { change: attempt.change, task: attempt.taskId, attemptId: attempt.id };
+  const unmetCode = redFailures > 0 && redFailures === failures.length ? 'red-missing' : 'completion-unmet';
+  if (failures.length === 1) throw new BlockedError(failures[0], unmetCode, unmetContext);
+  if (failures.length > 1) {
+    throw new BlockedError(
+      `complete has ${failures.length} unmet requirements:\n${failures.map((line) => `- ${line}`).join('\n')}`,
+      unmetCode,
+      unmetContext,
+    );
   }
 
   return { sourceRevision: headSha };

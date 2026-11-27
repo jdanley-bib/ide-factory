@@ -5,7 +5,15 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from './attempt.mjs';
 import { appendControlEvent } from './event-log.mjs';
-import { classifyCheckOutcome, retryKey } from './red-evidence.mjs';
+import {
+  appendRed,
+  classifyCheckOutcome,
+  describeRedFailure,
+  redFailureDiagnostics,
+  retryKey,
+  spawnFailureDetail,
+} from './red-evidence.mjs';
+import { laterRedFor, readBoundException } from './red-exceptions.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { halted, writeText } from './layout.mjs';
 
@@ -53,6 +61,31 @@ export function canonicalJson(value) {
 function digestBytes(bytes) {
   const hex = createHash('sha256').update(bytes).digest('hex');
   return `sha256:${hex}`;
+}
+
+/**
+ * Digest of the whole registry entry that shapes a run, so a timeout or artifact
+ * change invalidates a record even when argv is unchanged.
+ */
+export function registryConfigDigest(entry) {
+  return digestBytes(Buffer.from(canonicalJson({
+    argv: entry.argv,
+    cwdPolicy: entry.cwdPolicy,
+    timeoutMs: entry.timeoutMs,
+    artifacts: entry.artifacts,
+  }), 'utf8'));
+}
+
+/** Digest of a set of registry entries, keyed by kind, for run-level reuse. */
+export function registrySetDigest(entries) {
+  const parts = entries
+    .map((entry) => ({ kind: entry.kind, configDigest: registryConfigDigest(entry) }))
+    .sort((a, b) => (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : 0));
+  return digestBytes(Buffer.from(canonicalJson(parts), 'utf8'));
+}
+
+export function runEnvironment() {
+  return { node: process.version, platform: process.platform, arch: process.arch };
 }
 
 /**
@@ -153,6 +186,21 @@ function validateCheckEntry(kind, entry, projectRoot) {
 }
 
 /**
+ * A red for an excepted kind is refused, except one later red after an invalid-red waiver.
+ * Throws before any check process starts.
+ */
+function assertLaterRedAllowed(project, attempt, kind) {
+  const refusal = `red for ${kind} on attempt ${attempt.id} is already excepted; a new red cannot replace it`;
+  const bound = readBoundException(project, attempt, kind);
+  if (!bound?.invalidRed) throw new Error(refusal);
+  if (laterRedFor(attempt, kind, bound)) {
+    throw new Error(
+      `a later red for ${kind} on attempt ${attempt.id} was already recorded after the invalid-red waiver ${bound.id}`,
+    );
+  }
+}
+
+/**
  * Run a registered check and store derived evidence on the attempt.
  * `passed` is always derived from exitCode, timedOut, and artifact presence.
  * Caller-supplied `red` objects are ignored. `--red` stores an assertion
@@ -175,6 +223,9 @@ export async function verifyRun(project, attemptId, options = {}) {
 
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
+  if (asRed && attempt.evidence?.redExceptions?.[kind]) {
+    assertLaterRedAllowed(project, attempt, kind);
+  }
 
   const registryPath = path.join(project, '.factory', 'checks.json');
   if (!fs.existsSync(registryPath)) {
@@ -190,7 +241,12 @@ export async function verifyRun(project, attemptId, options = {}) {
     cwd: project,
     timeoutMs: entry.timeoutMs,
   });
-  if (spawnError && !asRed) throw spawnError;
+  if (spawnError && !asRed) {
+    throw new Error(
+      `infrastructure-failure: ${spawnFailureDetail(entry.argv[0], String(spawnError.code || 'UNKNOWN'))}`,
+      { cause: spawnError },
+    );
+  }
   const finishedAt = new Date().toISOString();
   const output = Buffer.concat([stdout, stderr]).toString('utf8');
   const classification = classifyCheckOutcome({
@@ -201,20 +257,36 @@ export async function verifyRun(project, attemptId, options = {}) {
     asRed,
   });
 
+  const logDigest = digestBytes(Buffer.concat([stdout, stderr]));
+
   if (asRed && classification !== 'assertion-failure') {
+    const diagnostics = redFailureDiagnostics({
+      kind,
+      classification,
+      timedOut,
+      timeoutMs: entry.timeoutMs,
+      startedAt,
+      finishedAt,
+      exitCode,
+      spawnError,
+      executable: entry.argv[0],
+      logDigest,
+      recordedAt: finishedAt,
+    });
+    const detail = describeRedFailure(diagnostics);
     const count = noteRetry(attempt, classification, kind);
+    attempt.evidence.redFailures = [...(attempt.evidence.redFailures || []), diagnostics];
     writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
     if (count >= 4) {
       closeLatestRunSession(project, attempt.change, 'retry-cap');
-      throw new Error(`retry-cap: ${classification} for ${kind}`);
+      throw new Error(`retry-cap: ${classification} for ${kind} (${detail})`);
     }
     if (classification === 'vacuous-red') {
       closeLatestRunSession(project, attempt.change, 'vacuous-red');
     }
-    throw new Error(`${classification}: red run did not record an assertion failure for ${kind}`);
+    throw new Error(`${classification}: red run did not record an assertion failure for ${kind} (${detail})`);
   }
 
-  const logDigest = digestBytes(Buffer.concat([stdout, stderr]));
   const { artifactDigests, allPresent } = hashArtifacts(project, entry.artifacts);
   const { sourceRevision, worktreeClean } = resolveGitBinding(project);
 
@@ -239,6 +311,8 @@ export async function verifyRun(project, attemptId, options = {}) {
     issuer: 'cli',
     timedOut,
     worktreeClean,
+    configDigest: registryConfigDigest(entry),
+    environment: runEnvironment(),
   };
   if (sourceRevision !== undefined) {
     record.sourceRevision = sourceRevision;
@@ -247,7 +321,7 @@ export async function verifyRun(project, attemptId, options = {}) {
   validateCheckRecord(record);
 
   if (asRed) {
-    attempt.evidence.reds = { ...(attempt.evidence.reds || {}), [kind]: record };
+    appendRed(attempt, kind, record);
   } else if (isSecurityPatternedCheck(kind)) {
     attempt.evidence.security = [...(attempt.evidence.security || []), record];
   } else {
@@ -498,6 +572,8 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/boards/',
   '.factory/pull-requests/',
   '.factory/mcp/',
+  '.factory/methods/',
+  '.factory/blocked/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',
@@ -555,7 +631,7 @@ function isHistoryOnlyRoleDirectory(projectCwd, relPath) {
   return only.isFile() && only.name === 'history.md';
 }
 
-function isFactoryRunStatePath(relPath, projectCwd) {
+export function isFactoryRunStatePath(relPath, projectCwd) {
   const normalized = normalizeGitPath(relPath);
   if (FACTORY_RUN_STATE_FILES.has(normalized)) return true;
   if (AGENT_HISTORY_RUN_STATE.test(normalized)) return true;
@@ -597,6 +673,131 @@ export function resolveGitBinding(cwd) {
     return paths.length > 0 && paths.every((p) => isFactoryRunStatePath(p, cwd));
   });
   return { sourceRevision: sha, worktreeClean };
+}
+
+const COMMIT_ID = /^[0-9a-f]{40}([0-9a-f]{24})?$/;
+
+/**
+ * One read of git state for every validity decision in a single command:
+ * HEAD, and the first dirty path that is not factory run-state.
+ */
+export function gitSnapshot(project) {
+  const { sourceRevision: head } = resolveGitBinding(project);
+  if (head === undefined) {
+    return { head: undefined, error: 'git HEAD is unresolvable', dirtyPath: null, worktreeClean: false };
+  }
+  const status = spawnSync('git', ['--no-optional-locks', 'status', '--porcelain'], {
+    cwd: project,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (status.status !== 0) {
+    return { head, error: 'git status failed', dirtyPath: null, worktreeClean: false };
+  }
+  let dirtyPath = null;
+  for (const line of (status.stdout || '').split('\n')) {
+    if (!line) continue;
+    dirtyPath = porcelainPaths(line).find((item) => !isFactoryRunStatePath(item, project)) || null;
+    if (dirtyPath) break;
+  }
+  return { head, error: null, dirtyPath, worktreeClean: dirtyPath === null };
+}
+
+function changedSince(project, revision, head) {
+  if (typeof revision !== 'string' || !COMMIT_ID.test(revision)) {
+    return { error: 'record revision is not a commit id' };
+  }
+  const ancestor = spawnSync('git', ['merge-base', '--is-ancestor', revision, head], {
+    cwd: project,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (ancestor.status === 1) return { ancestor: false, paths: [] };
+  if (ancestor.status !== 0) return { error: 'ancestor check failed' };
+  const diff = spawnSync('git', ['diff', '--name-only', '-z', '--no-renames', revision, head], {
+    cwd: project,
+    encoding: 'utf8',
+    shell: false,
+  });
+  if (diff.status !== 0) return { error: 'changed-path listing failed' };
+  return { ancestor: true, paths: diff.stdout.split('\0').filter((item) => item.length > 0) };
+}
+
+/**
+ * Decide whether one stored record still proves its check at the snapshot HEAD.
+ * Returns { valid, kind, reason }. kind is one of valid, failed, untrusted, stale.
+ * A CLI record stays valid across commits that touch only factory run-state.
+ * An import is valid only at its exact revision. Any git error fails closed.
+ *
+ * @param {object} record
+ * @param {{
+ *   project: string,
+ *   attemptId: string,
+ *   entry: { argv: string[], commandDigest: string, cwdPolicy: string, timeoutMs: number, artifacts: string[] },
+ *   snapshot: ReturnType<typeof gitSnapshot>,
+ *   requireCleanWorktree?: boolean,
+ * }} context
+ */
+export function recordValidity(record, context) {
+  const { project, attemptId, entry, snapshot } = context;
+  const requireCleanWorktree = context.requireCleanWorktree !== false;
+  const verdict = (valid, kind, reason = null) => ({ valid, kind, reason });
+
+  if (!record || typeof record !== 'object') return verdict(false, 'untrusted', 'record is not an object');
+  if (record.issuer !== 'cli' && record.issuer !== 'import') {
+    return verdict(false, 'untrusted', 'verification record requires issuer cli or import');
+  }
+  if (record.attemptId !== attemptId) {
+    return verdict(false, 'untrusted', 'attestation attemptId does not match attempt');
+  }
+  if (record.commandDigest !== entry.commandDigest) {
+    return verdict(false, 'untrusted', 'commandDigest does not match current registry argv');
+  }
+  if (record.exitCode !== 0) {
+    return verdict(false, 'failed', `exit code ${record.exitCode} for: ${record.kind || 'check'}`);
+  }
+  if (record.timedOut !== false) return verdict(false, 'failed', 'check timed out');
+  if (record.passed !== true) return verdict(false, 'failed', 'check record did not pass');
+
+  if (record.issuer === 'import') {
+    if (snapshot.error) return verdict(false, 'stale', `git could not verify the revision: ${snapshot.error}`);
+    if (requireCleanWorktree && snapshot.dirtyPath) {
+      return verdict(false, 'stale', `uncommitted change outside factory run-state: ${snapshot.dirtyPath}`);
+    }
+    if (record.sourceRevision !== snapshot.head) {
+      return verdict(false, 'stale', 'import is reused only at its exact revision');
+    }
+    return verdict(true, 'valid');
+  }
+
+  if (!record.configDigest || !record.environment) {
+    return verdict(false, 'stale', 're-run verify: record has no reuse fingerprint');
+  }
+  if (record.configDigest !== registryConfigDigest(entry)) {
+    return verdict(false, 'stale', 'registry entry changed since the record');
+  }
+  return revisionReuse(project, record.sourceRevision, snapshot, { requireCleanWorktree });
+}
+
+/**
+ * Whether work proven at `revision` still holds at the snapshot HEAD. Valid when
+ * the revision is HEAD, or an ancestor of HEAD with only factory run-state changed
+ * since, and the worktree has no dirty non-run-state path (unless the caller allows it).
+ */
+export function revisionReuse(project, revision, snapshot, { requireCleanWorktree = true } = {}) {
+  const verdict = (valid, kind, reason = null) => ({ valid, kind, reason });
+  if (snapshot.error) return verdict(false, 'stale', `git could not verify the revision: ${snapshot.error}`);
+  if (requireCleanWorktree && snapshot.dirtyPath) {
+    return verdict(false, 'stale', `uncommitted change outside factory run-state: ${snapshot.dirtyPath}`);
+  }
+  if (revision === snapshot.head) return verdict(true, 'valid');
+
+  const changed = changedSince(project, revision, snapshot.head);
+  if (changed.error) return verdict(false, 'stale', `git could not verify the revision: ${changed.error}`);
+  if (!changed.ancestor) return verdict(false, 'stale', 'revision is not an ancestor of HEAD');
+  const product = changed.paths.find((item) => !isFactoryRunStatePath(item, project));
+  if (product) return verdict(false, 'stale', `changed since the record: ${product}`);
+  return verdict(true, 'valid');
 }
 
 function validateArtifactPath(kind, artifact, projectRoot) {

@@ -6,7 +6,10 @@ import { attestationFailureReason } from './required-checks.mjs';
 import { confirmPrincipal, readPolicyVersion } from './principal.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { ledger, readText, writeText } from './layout.mjs';
-import { isFailingRed, redForKind, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { isFailingRed, redForKind, redHistoryFor, retryKey } from './red-evidence.mjs';
+import { redKindsFor } from './required-checks.mjs';
+import { methodCovers } from './red-method.mjs';
+import { isReopenedKind, openReopen } from './attempt-reopen.mjs';
 import {
   canonicalJson,
   commandDigest,
@@ -80,7 +83,7 @@ export function bindRedException(project, attemptId, record) {
   const attempt = getAttempt(project, attemptId);
   if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
   if (attempt.evidence?.redExceptions?.[record.kind]) {
-    throw new Error(`attempt already has an exception for ${record.kind}`);
+    throw new Error(`attempt already has an exception for ${record.kind} (${attempt.evidence.redExceptions[record.kind].id})`);
   }
 
   const file = exceptionFilePath(project, record.id);
@@ -151,12 +154,39 @@ export function readBoundException(project, attempt, kind) {
 
 /**
  * Whether red is satisfied for one kind, and by what.
- * @returns {'cli'|'reuse'|'waiver'|'missing'}
+ * @returns {'cli'|'reuse'|'waiver'|'method'|'missing'}
  */
 export function redSatisfaction(project, attempt, kind) {
-  if (isFailingRed(redForKind(attempt, kind))) return 'cli';
   const record = readBoundException(project, attempt, kind);
-  return record ? record.type : 'missing';
+  if (record?.invalidRed) {
+    const red = redForKind(attempt, kind);
+    if (isFailingRed(red) && redDigestOf(red) === record.invalidRed.redDigest) return 'waiver';
+    return laterRedFor(attempt, kind, record) ? 'cli' : 'missing';
+  }
+  if (isFailingRed(redForKind(attempt, kind))) return 'cli';
+  if (record) return record.type;
+  return methodCovers(project, attempt, kind) ? 'method' : 'missing';
+}
+
+export function redDigestOf(red) {
+  return digestText(canonicalJson(red));
+}
+
+/**
+ * The current red when it is a failing CLI red that started after the invalid-red waiver was issued
+ * and the history still holds the invalidated digest. Otherwise null.
+ */
+export function laterRedFor(attempt, kind, record) {
+  if (!record?.invalidRed) return null;
+  const current = redForKind(attempt, kind);
+  if (!isFailingRed(current)) return null;
+  const digest = record.invalidRed.redDigest;
+  if (redDigestOf(current) === digest) return null;
+  const started = Date.parse(current.startedAt);
+  const issued = Date.parse(record.issuance);
+  if (!Number.isFinite(started) || !Number.isFinite(issued) || started <= issued) return null;
+  if (!redHistoryFor(attempt, kind).some((entry) => redDigestOf(entry) === digest)) return null;
+  return current;
 }
 
 const PRE_VERIFYING_STATES = ['planned', 'assigned', 'implementing', 'red-confirmed'];
@@ -200,12 +230,20 @@ function authorizeApprover(project, target, options) {
   return { approver, principal };
 }
 
-function requireBeforeVerifying(target) {
-  if (!PRE_VERIFYING_STATES.includes(target.state)) {
+function requireAmendable(target, kinds) {
+  if (PRE_VERIFYING_STATES.includes(target.state)) return;
+  const open = openReopen(target);
+  if (open) {
+    const outside = kinds.filter((kind) => !open.kinds.includes(kind));
+    if (outside.length === 0) return;
     throw new Error(
-      `red exceptions apply only before verifying (target state=${target.state})`,
+      `attempt was reopened for ${open.kinds.join(', ')}; ${outside.join(', ')} is outside that reopen`,
     );
   }
+  const hint = target.state === 'accepted'
+    ? '; to amend an accepted attempt run idefactory attempt reopen <attemptId> --kind <kind> --for method|exception --by <id> --reason "text"'
+    : '';
+  throw new Error(`red exceptions apply only before verifying (target state=${target.state})${hint}`);
 }
 
 function requireCodeItem(project, attempt, kinds) {
@@ -214,7 +252,7 @@ function requireCodeItem(project, attempt, kinds) {
   if (item.factory?.taskType === 'lightweight') {
     throw new Error('red exceptions do not apply to a lightweight work item');
   }
-  const required = requiredTestKinds(item.factory?.checks);
+  const required = redKindsFor(project, item);
   for (const kind of kinds) {
     if (!required.includes(kind)) {
       throw new Error(`${kind} is not a required test kind of ${attempt.change}/${attempt.taskId}`);
@@ -289,16 +327,16 @@ export function reuseRed(project, options) {
   if (String(source.createdAt || '') >= String(target.createdAt || '')) {
     throw new Error('reuse requires a source attempt created before the target attempt');
   }
-  requireBeforeVerifying(target);
+  requireAmendable(target, kinds);
   requireCodeItem(project, target, kinds);
 
   const sourceReds = {};
   for (const kind of kinds) {
     if (target.evidence?.redExceptions?.[kind]) {
-      throw new Error(`attempt already has an exception for ${kind}`);
+      throw new Error(`attempt already has an exception for ${kind} (${target.evidence.redExceptions[kind].id})`);
     }
     const red = redForKind(source, kind);
-    if (!isFailingRed(red) || red.attemptId !== source.id) {
+    if (redSatisfaction(project, source, kind) !== 'cli' || red.attemptId !== source.id) {
       throw new Error(`source attempt has no failing CLI red for ${kind}`);
     }
     try {
@@ -380,7 +418,17 @@ export function waiverWarning(kinds) {
   ].join(' ');
 }
 
+export function invalidRedWarning(kinds) {
+  return [
+    `A failing red is stored for ${kinds.join(', ')}, and an invalid-red waiver is requested.`,
+    'The red is treated as recorded after implementation and does not satisfy red.',
+    'The waiver does not replace passing verification, distinct review, or lockouts.',
+    'To proceed, repeat the command with --acknowledge-not-stuck.',
+  ].join(' ');
+}
+
 function isStuck(attempt, kind) {
+  if (isReopenedKind(attempt, kind)) return true;
   return (attempt.evidence?.retryCounts?.[retryKey('vacuous-red', kind)] || 0) >= 1;
 }
 
@@ -404,20 +452,41 @@ export function waiveRed(project, options) {
   const kinds = [...new Set(options.kinds || [])];
   if (kinds.length === 0) throw new Error('waive requires at least one --kind');
   const reason = requireText(options.reason, 'reason');
+  const invalidRedGiven = options.invalidRed !== undefined;
+  if (invalidRedGiven && (typeof options.invalidRed !== 'string' || options.invalidRed.trim() === '')) {
+    throw new Error('--invalid-red needs a reason');
+  }
+  const invalidRedReason = invalidRedGiven ? options.invalidRed.trim() : '';
   const target = getAttempt(project, options.targetAttemptId);
   if (!target) throw new Error(`Attempt not found: ${options.targetAttemptId}`);
 
-  requireBeforeVerifying(target);
+  requireAmendable(target, kinds);
   requireCodeItem(project, target, kinds);
   for (const kind of kinds) {
     if (target.evidence?.redExceptions?.[kind]) {
-      throw new Error(`attempt already has an exception for ${kind}`);
+      throw new Error(`attempt already has an exception for ${kind} (${target.evidence.redExceptions[kind].id})`);
     }
   }
 
-  const notStuck = kinds.filter((kind) => !isStuck(target, kind));
-  if (notStuck.length > 0 && !options.acknowledgeNotStuck) {
-    throw new Error(waiverWarning(notStuck));
+  if (invalidRedGiven) {
+    const withoutRed = kinds.filter((kind) => !isFailingRed(redForKind(target, kind)));
+    if (withoutRed.length > 0) {
+      throw new Error(`--invalid-red needs a failing CLI red stored on this attempt for: ${withoutRed.join(', ')}`);
+    }
+    if (!options.acknowledgeNotStuck) throw new Error(invalidRedWarning(kinds));
+  } else {
+    const withRed = kinds.filter((kind) => isFailingRed(redForKind(target, kind)));
+    if (withRed.length > 0) {
+      const red = redForKind(target, withRed[0]);
+      throw new Error(
+        `a failing CLI red is stored for ${withRed.join(', ')} (exit ${red.exitCode}, started ${red.startedAt}); `
+        + 'if that red was recorded after implementation, invalidate it with --invalid-red "<reason>" and --acknowledge-not-stuck',
+      );
+    }
+    const notStuck = kinds.filter((kind) => !isStuck(target, kind));
+    if (notStuck.length > 0 && !options.acknowledgeNotStuck) {
+      throw new Error(waiverWarning(notStuck));
+    }
   }
 
   const { sourceRevision: headSha } = resolveGitBinding(project);
@@ -443,8 +512,15 @@ export function waiveRed(project, options) {
       policyVersion,
       sourceRevision: headSha,
       ...(principal ? { principal } : {}),
-      noRedExists: true,
+      noRedExists: !invalidRedGiven,
       acknowledgedNotStuck: !isStuck(target, kind),
+      ...(invalidRedGiven ? {
+        invalidRed: {
+          kind,
+          reason: invalidRedReason,
+          redDigest: redDigestOf(redForKind(target, kind)),
+        },
+      } : {}),
     };
     const bound = bindRedException(project, target.id, record);
     records.push(record);
@@ -471,12 +547,22 @@ export function listAttemptExceptions(project, attempt) {
       kind: record.kind,
       approver: record.approver,
       reason: record.reason,
-      noRedRan: true,
+      noRedRan: !record.invalidRed,
       ...(record.type === 'reuse' ? { sourceAttemptId: record.source?.attemptId ?? null } : {}),
       ...(record.type === 'waiver' ? { acknowledgedNotStuck: record.acknowledgedNotStuck === true } : {}),
+      ...(record.invalidRed ? {
+        invalidRedDigest: record.invalidRed.redDigest,
+        invalidRedReason: record.invalidRed.reason,
+        ...laterRedRow(attempt, kind, record),
+      } : {}),
     });
   }
   return rows;
+}
+
+function laterRedRow(attempt, kind, record) {
+  const later = laterRedFor(attempt, kind, record);
+  return later ? { laterRedDigest: redDigestOf(later), laterRedStartedAt: later.startedAt } : {};
 }
 
 /** Every valid exception on every attempt in the project, ordered by attempt id. */
@@ -504,6 +590,19 @@ export function listAllExceptions(project) {
  */
 export function describeException(row, { withReason = true } = {}) {
   const why = withReason ? `: ${row.reason}` : ` (reason on record ${row.id})`;
+  if (row.invalidRedDigest) {
+    const invalid = withReason
+      ? `: ${row.invalidRedReason}`
+      : ` (invalid-red reason on record ${row.id})`;
+    if (row.laterRedDigest) {
+      return `A red ran for ${row.kind} on attempt ${row.attemptId} and was invalidated by ${row.approver}${invalid}; `
+        + `the invalidated red (digest ${row.invalidRedDigest}) does not satisfy red. `
+        + `A later failing red (digest ${row.laterRedDigest}, started ${row.laterRedStartedAt}) was recorded after the invalidation and satisfies red. `
+        + 'It is not proof that the test came first: the reviewer relies on the recorded evidence to judge whether it preceded the implementation it tests';
+    }
+    return `A red ran for ${row.kind} on attempt ${row.attemptId} and was invalidated by ${row.approver}${invalid}; `
+      + `the stored red (digest ${row.invalidRedDigest}) does not satisfy red`;
+  }
   const how = row.type === 'reuse'
     ? `reuse of attempt ${row.sourceAttemptId} red by ${row.approver}${why}`
     : `waiver by ${row.approver}${why}${

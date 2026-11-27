@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { assertIdentity } from './identity.mjs';
 import { ledger, writeText } from './layout.mjs';
 import {
   commentOnPullRequest,
@@ -12,10 +13,16 @@ import {
   assertPassingCliSecurityEvidence,
   requiresSecurityStage,
 } from './risk-gates.mjs';
-import { getWorkItem, updateWorkItem } from './work.mjs';
-import { hasAnyFailingRed, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { describeHold, getWorkItem, isHeld, updateWorkItem } from './work.mjs';
+import { hasAnyFailingRed, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
-import { missingChecks } from './required-checks.mjs';
+import { assertMethodAccepted } from './red-method.mjs';
+import {
+  MISSING_RECORD_PREFIX,
+  assertNoRequirementProblems,
+  missingCheckReasons,
+  redKindsFor,
+} from './required-checks.mjs';
 
 export const ATTEMPT_STATES = [
   'planned',
@@ -31,7 +38,7 @@ export const ATTEMPT_STATES = [
   'finalize-failed',
 ];
 
-const TRANSITIONS = {
+export const TRANSITIONS = {
   planned: ['assigned'],
   assigned: ['implementing'],
   implementing: ['red-confirmed', 'verifying'],
@@ -53,6 +60,36 @@ export function attemptPath(project, attemptId) {
   return path.join(attemptsRoot(project), `${attemptId}.json`);
 }
 
+/**
+ * Every identity stored on an attempt as implementer or reviewer. Unreadable
+ * attempt files are skipped; nothing is written.
+ *
+ * @returns {Set<string>}
+ */
+export function recordedAttemptIdentities(project) {
+  const found = new Set();
+  const root = attemptsRoot(project);
+  if (!fs.existsSync(root)) return found;
+  for (const name of fs.readdirSync(root)) {
+    if (!name.endsWith('.json')) continue;
+    let attempt;
+    try {
+      attempt = JSON.parse(fs.readFileSync(path.join(root, name), 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const value of [
+      attempt?.implementerId,
+      attempt?.reviewerId,
+      attempt?.evidence?.review?.reviewerId,
+      attempt?.evidence?.securityReview?.reviewerId,
+    ]) {
+      if (typeof value === 'string' && value.length > 0) found.add(value);
+    }
+  }
+  return found;
+}
+
 export function getAttempt(project, attemptId) {
   const file = attemptPath(project, attemptId);
   if (!fs.existsSync(file)) return null;
@@ -63,6 +100,10 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   const item = getWorkItem(project, change, taskId);
   if (!item) throw new Error(`Work item not found: ${change}/${taskId}`);
   if (item.status === 'done') throw new Error(`Work item already done: ${change}/${taskId}`);
+  if (isHeld(item)) {
+    throw new Error(`Work item ${change}/${taskId} is ${describeHold(item)}; resume it with idefactory sync-tasks ${change} --apply before starting an attempt`);
+  }
+  assertNoRequirementProblems(project, item);
 
   const attemptId = randomUUID();
   const attempt = {
@@ -94,6 +135,8 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
     evidence: { assignedRole: role },
   });
 }
+
+const IDENTITY_EVIDENCE_KEYS = ['reviewerId', 'implementerId', 'securityReviewerId'];
 
 export const SUPPLIED_EVIDENCE_TYPES = {
   reviewerId: 'string',
@@ -214,6 +257,7 @@ export function assertSuppliedEvidence(attempt, nextState, evidence) {
     if (type === 'string' && typeof value !== 'string') {
       throw new Error(`evidence key "${key}" must be a string`);
     }
+    if (IDENTITY_EVIDENCE_KEYS.includes(key)) assertIdentity(value, `evidence key "${key}"`);
     if (type === 'string[]' && !(Array.isArray(value) && value.every((item) => typeof item === 'string'))) {
       throw new Error(`evidence key "${key}" must be an array of strings`);
     }
@@ -250,15 +294,12 @@ function validateEvidence(project, attempt, nextState, evidence) {
   }
   if (nextState === 'verifying') {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
-    const taskType = item?.factory?.taskType === 'lightweight' ? 'lightweight' : 'code';
-    if (taskType !== 'lightweight') {
-      const missing = requiredTestKinds(item?.factory?.checks)
-        .filter((kind) => redSatisfaction(project, attempt, kind) === 'missing');
-      if (missing.length) {
-        throw new Error(
-          `verifying requires a recorded failing CLI red for: ${missing.join(', ')} (or a red exception)`,
-        );
-      }
+    const missing = redKindsFor(project, item)
+      .filter((kind) => redSatisfaction(project, attempt, kind) === 'missing');
+    if (missing.length) {
+      throw new Error(
+        `verifying requires a recorded failing CLI red for: ${missing.join(', ')} (or a red exception)`,
+      );
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'verifying') {
@@ -274,9 +315,24 @@ function validateEvidence(project, attempt, nextState, evidence) {
     && (attempt.state === 'verifying' || attempt.state === 'security-checking')
   ) {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
-    const missing = item ? missingChecks(project, attempt, item) : [];
-    if (missing.length) {
-      throw new Error(`awaiting-review requires passing check evidence for: ${missing.join(', ')}`);
+    const missing = item ? missingCheckReasons(project, attempt, item) : [];
+    const missingReds = item
+      ? redKindsFor(project, item).filter((kind) => redSatisfaction(project, attempt, kind) === 'missing')
+      : [];
+    if (missing.length || missingReds.length) {
+      const parts = [];
+      if (missing.length) {
+        const named = missing.map((entry) => entry.kind).join(', ');
+        const reasons = missing
+          .filter((entry) => !entry.reason.startsWith(MISSING_RECORD_PREFIX))
+          .map((entry) => `${entry.kind}: ${entry.reason}`);
+        const detail = reasons.length ? ` (${reasons.join('; ')})` : '';
+        parts.push(`awaiting-review requires passing check evidence for: ${named}${detail}`);
+      }
+      if (missingReds.length) {
+        parts.push(`awaiting-review requires a recorded failing CLI red for: ${missingReds.join(', ')} (or a red exception)`);
+      }
+      throw new Error(parts.join('; '));
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
@@ -299,6 +355,7 @@ function validateEvidence(project, attempt, nextState, evidence) {
     if (!evidence.reviewerId && !attempt.reviewerId) {
       throw new Error('accepted requires evidence.reviewerId');
     }
+    assertMethodAccepted(project, attempt);
     if (evidence.verdict && String(evidence.verdict).toUpperCase() !== 'ACCEPT') {
       throw new Error('accepted requires verdict ACCEPT');
     }

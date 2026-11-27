@@ -30,6 +30,22 @@ export function appendControlEvent(project, event) {
   }
 }
 
+/** Parsed control events in append order. Malformed lines are skipped. */
+export function readControlEvents(project) {
+  const file = eventLogPath(project);
+  if (!fs.existsSync(file)) return [];
+  const rows = [];
+  for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
+    if (!line.trim()) continue;
+    try {
+      rows.push(JSON.parse(line));
+    } catch {
+      // a partial or corrupt line is not an event
+    }
+  }
+  return rows;
+}
+
 function sanitizeEvent(event) {
   const allowed = [
     'type',
@@ -50,6 +66,13 @@ function sanitizeEvent(event) {
     'exceptionType',
     'planId',
     'kind',
+    'verdict',
+    'invariant',
+    'actor',
+    'retry',
+    'agentActionable',
+    'resolution',
+    'attemptState',
   ];
   const clean = {};
   for (const key of allowed) {

@@ -6,7 +6,7 @@ Records human approvals for spend and publishing, and reports whether a factory 
 ## Requirements
 
 ### Requirement: Approval record
-`idefactory approve` SHALL write a scoped approval file under `.factory/approvals/` and an entry in `.factory/decisions.md`, and SHALL NOT publish, deploy, or spend. The file SHALL contain the note plus the change, task, source revision, action, approver, issuance, expiry, and policy version. When any scope field is missing, the command SHALL write no approval file and SHALL NOT append `decisions.md`.
+`idefactory approve` SHALL write a scoped approval file under `.factory/approvals/` and an entry in `.factory/decisions.md`, and SHALL NOT publish, deploy, or spend. The file SHALL contain the note plus the change, task, source revision, action, approver, issuance, expiry, and policy version. For an external-effect action it SHALL also contain the target; a standing authorization replaces task and revision with the standing marker and target. When any scope field is missing, the command SHALL write no approval file and SHALL NOT append `decisions.md`.
 
 #### Scenario: Approve
 - **WHEN** approve runs with an id, a note, and every scope field
@@ -16,6 +16,14 @@ Records human approvals for spend and publishing, and reports whether a factory 
 - **WHEN** approve runs with an id and a note and omits a scope field
 - **THEN** no approval file is written
 - **AND** `decisions.md` gains no entry for that id
+
+#### Scenario: Deploy approval carries its target
+- **WHEN** approve runs for `deploy` with a target
+- **THEN** the approval file contains the target
+
+#### Scenario: Deploy without a target
+- **WHEN** approve runs for `deploy` without a target
+- **THEN** no approval file is written
 
 ### Requirement: Verified approval principal
 When governance policy version is 2, the file SHALL also contain a verified principal and the approver SHALL equal that principal's subject. Without a confirmed principal, policy version 2 SHALL write nothing.
@@ -140,3 +148,77 @@ The README approve example SHALL include `--principal-provider` and `--principal
 - **WHEN** the README gates section is read
 - **THEN** its approve command example includes `--principal-provider`
 - **AND** its approve command example includes `--principal-subject`
+
+### Requirement: Shared identity format
+Every agent, reviewer, or resolver identity the CLI accepts as input SHALL be 1 to 128 characters from letters, digits, `.`, `_`, `@`, `:`, `+`, and `-`, and SHALL start with a letter or digit. This applies to lockout `--agent`, `--reviewer`, `--resolver` and to the `Agent:` line of a legacy lockout note.
+
+#### Scenario: Dotted identity is accepted
+- **WHEN** lockout create runs with `--agent engineer-5.1-abc123`, a reviewer, and a reason
+- **THEN** creation data names `engineer-5.1-abc123` as the agent
+- **AND** the command prints a lockout id
+
+#### Scenario: Principal-style resolver is accepted
+- **WHEN** lockout resolve runs with `--resolver Reviewer.One@example.com` and a reason
+- **THEN** the identity passes the format check and the remaining resolve rules apply
+
+#### Scenario: Invalid identity names the flag
+- **WHEN** lockout create runs with `--agent "bad id"`
+- **THEN** the command exits with an error that names `--agent`, the value, and the allowed characters
+- **AND** no lockout files are written
+
+#### Scenario: Flag without a value
+- **WHEN** lockout create runs with `--agent` and no value
+- **THEN** the command exits with an error saying `--agent` needs a value
+- **AND** no lockout files are written
+
+#### Scenario: Invalid resolver is not reported as missing
+- **WHEN** lockout resolve runs with `--resolver "bad id"`
+- **THEN** the error names `--resolver` and the allowed characters instead of saying it is missing
+- **AND** no resolution event is written
+
+#### Scenario: Legacy note with an invalid agent
+- **WHEN** lockout resolve names a legacy `*lockout*.md` note whose `Agent:` line is outside the format
+- **THEN** the command exits with an error naming the `Agent:` line and writes no resolution event
+
+### Requirement: Lockout names its reviewer
+`idefactory lockout create` SHALL require `--reviewer` and SHALL record exactly the identity it was given. It SHALL NOT substitute a default reviewer.
+
+#### Scenario: Reviewer omitted
+- **WHEN** lockout create runs with an agent and a reason but no `--reviewer`
+- **THEN** the command exits with an error that names `--reviewer`
+- **AND** no lockout files are written
+
+#### Scenario: Reviewer recorded as given
+- **WHEN** lockout create runs with `--reviewer reviewer-2`
+- **THEN** creation data names `reviewer-2` as the reviewer
+
+### Requirement: Identities recorded on attempts stay usable
+A lockout command SHALL accept an identity outside the shared format when it exactly equals an `implementerId`, `reviewerId`, or `securityReviewerId` already stored on an attempt. It SHALL compare identities exactly, without trimming, case folding, or aliasing, and SHALL NOT change stored attempts.
+
+#### Scenario: Previously recorded identity
+- **WHEN** an attempt stored before this change has `implementerId` `Eng One` and lockout create runs with `--agent "Eng One"`
+- **THEN** the lockout is created for `Eng One`
+- **AND** the attempt file is unchanged
+
+#### Scenario: Near match is refused
+- **WHEN** lockout create runs with `--agent "eng one"` and the only stored identity is `Eng One`
+- **THEN** the command exits with the identity format error and writes no lockout files
+
+#### Scenario: Distinct resolver still required
+- **WHEN** lockout resolve runs with a resolver exactly equal to the locked agent
+- **THEN** the command exits with the existing distinct-resolver error
+
+### Requirement: Action lists agree
+The governance rule text, the README gates section, the governance skill, command help, and the approve error message SHALL each list exactly the actions in the action table, and a test SHALL fail when any of them differs.
+
+#### Scenario: A new action is added to the table only
+- **WHEN** an action is added to the table and one text is not updated
+- **THEN** the consistency test fails naming that text
+
+### Requirement: Approve help lists every action
+The `idefactory approve` help SHALL list every action in the table with one line stating its binding, and SHALL state that `--target` is required for external-effect actions and that `--standing` records a standing authorization at policy version 2.
+
+#### Scenario: Approve help
+- **WHEN** the user runs `idefactory help approve`
+- **THEN** each action in the table appears with its binding
+- **AND** `--target` and `--standing` are explained

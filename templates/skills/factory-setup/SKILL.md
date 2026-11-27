@@ -13,7 +13,7 @@ You confirm the test command and the governance mode with the human, then run on
 1. Run `idefactory setup --detect` and show the human each proposed command.
 2. Ask which stacks to keep, which stack is `unit` when more than one is kept, and whether governance is lightweight or strict.
 3. Do not run `idefactory setup` before the human confirms or corrects the command and the governance mode.
-4. After that confirmation, run the writing form with an argv array, for example `idefactory setup --governance lightweight --map unit --argv dotnet --argv test`.
+4. After that confirmation, run the writing form with an argv array, for example `idefactory setup --governance lightweight --map unit --argv dotnet --argv test`. For a command with a part that begins with `--`, or with spaces, pipes, or quotes, pass the whole command as one JSON array: `idefactory setup --governance lightweight --map unit --argv-json '["dotnet","test","--filter","Category=Unit | Category=Integration"]'`. The equals form `--argv=--filter` also works for one part. A flag that needs a value fails instead of storing a placeholder, so read the error rather than retrying a variation. Check the stored command with `idefactory checks preview`, which prints each registered argv as an exact JSON array.
 5. Strict governance also needs one `--verifier-argv` flag per argv part. A project with no test command uses `--no-test` instead of `--map`.
 
 <!-- idefactory:owned -->

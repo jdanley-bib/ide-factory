@@ -112,6 +112,7 @@ async function seedSecurityStageChange(dir, {
       `- [ ] ${taskId} Stage fixture`,
       '  factory:',
       '    kind: general',
+      '    dependencies: []',
       `    checks: [${checks.join(', ')}]`,
       `    securityProfile: ${securityProfile}`,
       `    verificationProfile: ${verificationProfile}`,
@@ -239,6 +240,37 @@ test('ACCEPT verdict with distinct securityReviewerId advances security-stage wo
     assert.notEqual(SECURITY_REVIEWER, IMPLEMENTER);
   } finally {
     cleanup(dir);
+  }
+});
+
+test('security evidence stays usable after a run-state commit and a product commit names the stale path', async () => {
+  const runState = tempProject();
+  const product = tempProject();
+  try {
+    const runStateAttempt = await seedSecurityCheckingWithPassingEvidence(runState, '1.1');
+    fs.mkdirSync(path.join(runState, '.factory/observability'), { recursive: true });
+    fs.writeFileSync(path.join(runState, '.factory/observability/after.txt'), 'run state\n');
+    ensureCleanGitCommit(runState);
+    const kept = await idefactory(runState, [
+      'attempt', 'transition', runStateAttempt, 'awaiting-review',
+      '--evidence', JSON.stringify({ verdict: 'ACCEPT', securityReviewerId: SECURITY_REVIEWER }),
+    ]);
+    assert.equal(kept.code, 0, kept.err + kept.out);
+
+    const productAttempt = await seedSecurityCheckingWithPassingEvidence(product, '1.1');
+    fs.mkdirSync(path.join(product, 'src'), { recursive: true });
+    fs.writeFileSync(path.join(product, 'src/after.txt'), 'changed\n');
+    ensureCleanGitCommit(product);
+    const refused = await idefactory(product, [
+      'attempt', 'transition', productAttempt, 'awaiting-review',
+      '--evidence', JSON.stringify({ verdict: 'ACCEPT', securityReviewerId: SECURITY_REVIEWER }),
+    ]);
+    assert.notEqual(refused.code, 0, refused.err + refused.out);
+    assert.match(refused.err + refused.out, /unit: changed since the record: src\/after\.txt/);
+    assert.equal(getAttempt(product, productAttempt).state, 'security-checking');
+  } finally {
+    cleanup(runState);
+    cleanup(product);
   }
 });
 

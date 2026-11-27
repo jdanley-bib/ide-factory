@@ -36,7 +36,40 @@ export function previewChecks(project) {
       preview.missing.push({ kind });
     }
   }
-  return JSON.stringify(preview, null, 2);
+  const registered = registeredArgv(project);
+  if (Object.keys(registered).length) preview.registered = registered;
+  return stringifyWithCompactArgv(preview);
+}
+
+/**
+ * Registered check argv by kind, read from the registry without validating it.
+ * @param {string} project
+ * @returns {Record<string, string[]>}
+ */
+export function registeredArgv(project) {
+  const registry = readJson(path.join(project, '.factory', 'checks.json'));
+  const result = {};
+  for (const [kind, entry] of Object.entries(registry?.checks || {})) {
+    if (Array.isArray(entry?.argv)) result[kind] = entry.argv;
+  }
+  return result;
+}
+
+/** One-line JSON array, so a stored argv compares character for character. */
+export function formatArgv(argv) {
+  return JSON.stringify(argv);
+}
+
+function stringifyWithCompactArgv(value) {
+  const arrays = [];
+  const text = JSON.stringify(value, (key, item) => {
+    if (Array.isArray(item) && item.every((part) => typeof part === 'string')) {
+      arrays.push(item);
+      return `\u0000argv${arrays.length - 1}\u0000`;
+    }
+    return item;
+  }, 2);
+  return text.replace(/"\\u0000argv(\d+)\\u0000"/g, (_, index) => formatArgv(arrays[Number(index)]));
 }
 
 function readJson(file) {

@@ -85,19 +85,6 @@ Installing the Cline adapter SHALL NOT create a work queue other than `.factory/
 - **THEN** `.factory/work/index.json` exists
 - **AND** `.cline/` does not contain a `work/` directory
 
-### Requirement: Factory pull-request guidance
-Installed factory guidance SHALL name `idefactory pr open`, `idefactory pr comment`, and `idefactory pr capture` as the only legal pull-request steps. It SHALL say the agent never merges. It SHALL say `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.
-
-#### Scenario: Rule names the legal pull-request steps
-- **WHEN** the installed Cursor factory rule is read
-- **THEN** it names `pr open`, `pr comment`, and `pr capture` as the only legal pull-request steps
-- **AND** it says the agent never merges
-
-#### Scenario: Run guidance waits for the human
-- **WHEN** the installed factory-run skill is read
-- **THEN** it names `sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync as actions that wait for the human
-- **AND** it does not name another pull-request command as legal
-
 ### Requirement: Setup skill confirms before writing
 The installed factory-setup skill SHALL tell the human which test command it proposes, and SHALL NOT run `idefactory setup` until the human confirms or corrects that command and the governance mode. The skill SHALL NOT instruct the session to hand-edit the check registry.
 
@@ -163,3 +150,108 @@ Every generated factory-review command, in the Cursor, Claude Code, GitHub Copil
 #### Scenario: Upgrade restores the conditional wording
 - **WHEN** a generated review command holds the old unconditional wording and upgrade runs
 - **THEN** it holds the conditional wording again
+
+### Requirement: Skills point to CLI help
+The installed `factory-build`, `factory-run`, `factory-verify`, `factory-tdd`, and `factory-governance` skills SHALL tell the session to run `idefactory help <command>` for usage and the evidence schema of a factory command, and not to read the CLI implementation to learn them. Every installed copy of each skill SHALL carry the same wording.
+
+#### Scenario: Build skill names help
+- **WHEN** the installed `factory-build` skill is read
+- **THEN** it tells the session to run `idefactory help attempt transition` for the states and evidence keys
+- **AND** it tells the session not to read the CLI source for usage
+
+#### Scenario: Every skill in the list points to help
+- **WHEN** the installed `factory-run`, `factory-verify`, `factory-tdd`, and `factory-governance` skills are read
+- **THEN** each one names `idefactory help` as the place to learn command usage
+
+#### Scenario: Every copy carries the wording
+- **WHEN** the skill copies for the Cursor, Claude, GitHub, Agents, and Cline adapters are compared with the template
+- **THEN** each copy has the same help guidance as the template
+
+#### Scenario: Upgrade delivers the wording
+- **WHEN** a project installed before this change runs `idefactory upgrade`
+- **THEN** its unmodified skill copies are replaced with the versions that point to help
+- **AND** a skill copy the project changed or pinned is left alone and reported
+
+### Requirement: Reviewers and implementers rely on valid evidence
+The generated factory-review command in each adapter, every shipped copy of the factory-build and factory-verify skills, and the reviewer charter template SHALL say that a valid verification record is relied on and not re-run, that the reviewer still reviews the change independently and runs a focused check when the change warrants it, and that a stale record is re-run with `verify run`. None SHALL tell the reviewer or implementer to re-run every required check when every record is valid.
+
+#### Scenario: Review command names reliance
+- **WHEN** init finishes in a new project
+- **THEN** the factory-review command in each of the four adapters says a valid record is relied on and a stale record is re-run
+
+#### Scenario: Build and verify skills carry the same wording
+- **WHEN** the factory-build and factory-verify skills in the templates and in each shipped IDE skill directory are read
+- **THEN** each carries the same reliance wording
+
+#### Scenario: Charter applies to new installs
+- **WHEN** init creates a reviewer charter in a project that has none
+- **THEN** the charter carries the reliance wording
+- **AND WHEN** upgrade runs in a project whose reviewer charter already exists
+- **THEN** the existing charter is left unchanged
+
+### Requirement: Pull-request guidance names the legal steps
+Installed factory guidance SHALL name `idefactory pr open`, `idefactory pr comment`, and `idefactory pr capture` as the only legal pull-request steps. It SHALL say the agent never merges.
+
+#### Scenario: Rule names the legal pull-request steps
+- **WHEN** the installed Cursor factory rule is read
+- **THEN** it names `pr open`, `pr comment`, and `pr capture` as the only legal pull-request steps
+- **AND** it says the agent never merges
+
+#### Scenario: Run guidance names no other pull-request command
+- **WHEN** the installed factory-run skill is read
+- **THEN** it does not name another pull-request command as legal
+
+### Requirement: A run request covers the routine steps
+Installed factory guidance SHALL say that a human request to run, or to run the full pipeline, for a change covers `sync-tasks`, `run`, `verify`, and `complete` for that change, with the attempt, red, and method records those steps involve, and that the agent does not ask the human again before each of them. The cover SHALL end when the run stops, and SHALL NOT extend to another change.
+
+#### Scenario: Rule states the cover
+- **WHEN** the installed Cursor factory rule is read
+- **THEN** it says a request to run or to run the full pipeline covers `sync-tasks`, `run`, `verify`, and `complete` for that change
+
+#### Scenario: Run skill does not wait before routine steps
+- **WHEN** the installed factory-run skill is read
+- **THEN** it does not tell the agent to wait for the human before `sync-tasks`, `verify`, or `complete` once a run was requested
+
+#### Scenario: Another change is not covered
+- **WHEN** the installed guidance is read
+- **THEN** it says the cover applies to the requested change only
+
+### Requirement: Separate requests remain
+Installed factory guidance SHALL say that `approve`, `ci scaffold`, archive, and spec sync each need a separate human request, and that only a human passes `--new-run` after a budget stop, `vacuous-red`, or `retry-cap`.
+
+#### Scenario: Archive still waits
+- **WHEN** the installed factory-coordinator skill is read
+- **THEN** it says archive and spec sync run only on a separate human request
+
+#### Scenario: Approve is the human's record
+- **WHEN** the installed factory-governance skill is read
+- **THEN** it says the agent does not run `approve` for itself
+
+### Requirement: External effects need an authorization check
+Installed factory guidance SHALL tell the agent, before any action with an external effect (publish, deploy, spend, creating an account), to run `idefactory authorize` and to proceed only when it reports `authorized: true`. When it reports `authorized: false`, the guidance SHALL tell the agent to stop and report the reason and the `approve` command, and not to ask whether it may proceed when the report says `authorized: true`.
+
+#### Scenario: Check before a deploy
+- **WHEN** the installed factory-governance skill is read
+- **THEN** it tells the agent to run `idefactory authorize` before a deploy and to stop on `authorized: false`
+
+#### Scenario: Authorized does not prompt
+- **WHEN** the installed rule is read
+- **THEN** it does not tell the agent to ask the human when `authorize` reports `authorized: true`
+
+### Requirement: Enforced gates are not waived by the cover
+Installed factory guidance SHALL say that the cover does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review.
+
+#### Scenario: Gates named
+- **WHEN** the installed factory-run skill is read
+- **THEN** it names the profile human gate, lockouts, `HALT`, budget stops, and independent review as still applying
+
+### Requirement: One wording across adapters
+The block of guidance in the preceding requirements SHALL be identical in every shipped copy: the Cursor rule, the Cline rule, the Copilot agent file, and the `factory-run`, `factory-coordinator`, `factory-governance`, and `factory-openspec` skills in `templates` and in each installed adapter path. A test SHALL fail when any copy differs.
+
+#### Scenario: One copy differs
+- **WHEN** one shipped copy carries different wording
+- **THEN** the drift test fails naming that file
+
+#### Scenario: Upgrade preserves an edited file
+- **WHEN** upgrade runs and an installed adapter file was edited
+- **THEN** the edited file is preserved and reported

@@ -50,7 +50,7 @@ The factory SHALL import an attestation only when it matches the evidence schema
 - **THEN** import fails and does not reuse that attestation
 
 ### Requirement: Evidence schema
-Each stored check record SHALL include schema version, check kind, runner name and version, command digest, exit code, start and finish timestamps, source revision, log digest, artifact digests, and attempt id. A record missing any of those fields SHALL be rejected.
+Each stored check record SHALL include schema version, check kind, runner name and version, command digest, exit code, start and finish timestamps, source revision, log digest, artifact digests, and attempt id. A record missing any of those fields SHALL be rejected. A CLI record written by this release also includes the configuration digest and environment fingerprint required by the fingerprinted records requirement.
 
 #### Scenario: Complete record accepted
 - **WHEN** a CLI run or valid import writes a record containing every required field
@@ -184,3 +184,189 @@ When a red run exits zero, the factory SHALL NOT store a red record, SHALL exit 
 - **WHEN** a red run exits zero
 - **THEN** no red record is stored
 - **AND** the result is named `vacuous-red`
+
+### Requirement: Red failure entry is recorded
+When a red run does not record an assertion failure, the factory SHALL append a structured failure entry under `evidence.redFailures` on the attempt. The entry SHALL carry the check kind, the classification, whether the run timed out, the timeout limit, the elapsed duration, the exit code, the spawn error code when one exists, the log digest, and the time recorded.
+
+#### Scenario: Timed-out red run is recorded
+- **WHEN** a red run's check times out after its registered timeout
+- **THEN** the attempt gains a `redFailures` entry for that kind with `timedOut` true, the registered `timeoutMs`, the elapsed duration, and the log digest
+
+#### Scenario: Command cannot start
+- **WHEN** a red run's argv cannot be started
+- **THEN** the `redFailures` entry records the spawn error code and no exit code
+
+#### Scenario: Exit code is recorded
+- **WHEN** a red run exits with a non-zero code that is not an assertion failure
+- **THEN** the `redFailures` entry records that exit code
+
+#### Scenario: Red record is unchanged
+- **WHEN** a non-assertion red run records a `redFailures` entry
+- **THEN** `evidence.reds` has no entry for that kind
+- **AND** no evidence record is stored for that kind
+
+### Requirement: Red failure error reports its diagnostics
+The error thrown for a non-assertion red run SHALL begin with the classification, as the infrastructure-failure requirement already requires, and SHALL state the diagnostic detail for that run: the timeout limit and elapsed time for a timeout, the spawn error code for a command that cannot start, or the exit code otherwise.
+
+#### Scenario: Timeout detail in the error
+- **WHEN** a red run times out
+- **THEN** the error names `infrastructure-failure` and states the timeout limit and elapsed time
+
+#### Scenario: Spawn error detail in the error
+- **WHEN** a red run's argv cannot be started with a spawn error code of `ENOENT`
+- **THEN** the error names `infrastructure-failure` and states `ENOENT`
+
+### Requirement: Raw output stays out of red records
+The factory SHALL NOT store raw check output in the attempt, in the thrown error, or in any control event for a red run. The `redFailures` entry SHALL carry only a `sha256:` log digest of the captured output.
+
+#### Scenario: Sentinel output is absent
+- **WHEN** a red run's check writes a distinctive string to stdout or stderr and fails without an assertion
+- **THEN** that string does not appear in the attempt file, the thrown error, or the control event log
+- **AND** the `redFailures` entry carries a `sha256:` log digest
+
+### Requirement: Timed-out red runs count toward the retry cap
+A timed-out red run SHALL increment the retry counter for its check kind in the same way as any other infrastructure failure. The fourth occurrence for the same kind SHALL close the run session with `retry-cap` and SHALL throw an error that begins with `retry-cap:` and carries the same diagnostics as the infrastructure-failure error.
+
+#### Scenario: Fourth timeout reaches the cap
+- **WHEN** a red run for `unit` times out for the fourth time on the same attempt
+- **THEN** the retry counter for `unit` is four
+- **AND** the latest run session is closed with `retry-cap`
+- **AND** the error begins with `retry-cap:` and states the timeout limit
+
+#### Scenario: Earlier timeout does not close the session
+- **WHEN** a red run for `unit` times out once on an attempt
+- **THEN** the retry counter for `unit` is one
+- **AND** the run session stays open
+
+### Requirement: Reusable passing evidence
+A passing CLI check record SHALL remain valid at a later HEAD only when its source revision is an ancestor of HEAD, every path that differs between that revision and HEAD is factory run-state, the worktree has no dirty non-run-state path, and the registry entry's configuration digest equals the record's. Any other case SHALL be stale, and a git error while checking SHALL make the record stale.
+
+#### Scenario: Run-state commit keeps evidence valid
+- **WHEN** a check passed at revision R and the only paths changed between R and HEAD are under `.factory/attempts/` or `.factory/work/`
+- **AND** the registry entry is unchanged
+- **THEN** the record is valid at HEAD
+
+#### Scenario: Product change makes evidence stale
+- **WHEN** a check passed at revision R and a product source file changed between R and HEAD
+- **THEN** the record is stale
+- **AND** the reason names the changed product path
+
+#### Scenario: Registry change makes evidence stale
+- **WHEN** a check passed at revision R and `.factory/checks.json` changed between R and HEAD
+- **THEN** the record is stale
+
+#### Scenario: Timeout change makes evidence stale
+- **WHEN** a check passed and its registry entry's timeout is later changed
+- **THEN** the record is stale because the configuration digest differs
+
+#### Scenario: Rewritten history makes evidence stale
+- **WHEN** a check passed at revision R and R is no longer an ancestor of HEAD
+- **THEN** the record is stale
+
+#### Scenario: Rename into run-state does not hide a product path
+- **WHEN** a product file was renamed to a run-state path between R and HEAD
+- **THEN** the record is stale because the product path is among the changed paths
+
+#### Scenario: Git error fails closed
+- **WHEN** the ancestor check or the changed-path listing fails
+- **THEN** the record is stale and the reason says git could not verify the revision
+
+### Requirement: One validity rule for every gate
+Review handoff, review entry, the run baseline, complete, and the security gate SHALL decide whether a record is valid with the same validity check. A gate SHALL NOT compare a record's revision to HEAD on its own. An imported signed attestation SHALL be valid only at exactly the current clean HEAD.
+
+#### Scenario: Gates agree on one record
+- **WHEN** a record is valid by the validity check
+- **THEN** review handoff, review entry, and complete all accept it
+
+#### Scenario: Imported attestation is exact-HEAD only
+- **WHEN** an imported attestation was recorded at revision R and a run-state commit moves HEAD past R
+- **THEN** the import is stale and the reason says an import is reused only at its exact revision
+
+### Requirement: Fingerprinted CLI records
+A CLI check record written by this release SHALL include a configuration digest over the registry entry's argv, cwdPolicy, timeoutMs, and artifacts, and an environment fingerprint with the Node version, platform, and architecture. A CLI record without either field SHALL be retained on the attempt, SHALL NOT be reusable, and SHALL report the reason `re-run verify`.
+
+#### Scenario: New record carries the fingerprint
+- **WHEN** a CLI run writes a check record
+- **THEN** the record holds a configuration digest and an environment fingerprint
+
+#### Scenario: Legacy record is kept but not reused
+- **WHEN** an attempt holds a CLI record written before this release
+- **THEN** the record remains on the attempt
+- **AND** the record is stale with the reason `re-run verify`
+
+### Requirement: Verification status report
+`idefactory verify status <attemptId>` SHALL print, for each required check of the attempt, one state from `valid`, `stale`, `missing`, `failed`, or `untrusted`, with a reason. With `--json` it SHALL print one document with `schemaVersion` 1, `allValid`, and one entry per check. The command SHALL NOT write any file, SHALL NOT take the writer lease, and SHALL exit zero whether or not every check is valid.
+
+#### Scenario: Valid check is reported
+- **WHEN** a required check has a valid record
+- **THEN** its state is `valid` and `allValid` is true only if every required check is valid
+
+#### Scenario: Stale check names the reason
+- **WHEN** a required check's only record is stale because of a product change
+- **THEN** its state is `stale` and the reason names the changed path
+
+#### Scenario: Missing and failed checks
+- **WHEN** a required check has no record
+- **THEN** its state is `missing`
+- **AND WHEN** a required check's newest record exited non-zero and no record is valid
+- **THEN** its state is `failed`
+
+#### Scenario: Untrusted record
+- **WHEN** a required check's newest record names a different attempt or command digest
+- **THEN** its state is `untrusted`
+
+#### Scenario: Status does not fail the command
+- **WHEN** at least one required check is not valid
+- **THEN** the command exits zero and `allValid` is false
+
+#### Scenario: Status writes nothing
+- **WHEN** `verify status` runs on an attempt
+- **THEN** no file under the project changes
+
+### Requirement: Registered argv runs exactly as stored
+A registered check SHALL start with the stored executable and the stored elements as separate arguments, with no shell. Characters such as `|`, quotes, and a leading `--` in an element SHALL reach the program unchanged on every supported platform.
+
+#### Scenario: Complex argv reaches the program
+- **WHEN** a check is registered with the elements `--filter` and `Category=Unit | Category=Integration "x"`
+- **AND** the check runs
+- **THEN** the program receives those two elements unchanged and as two separate arguments
+
+### Requirement: Spawn failures are actionable
+When a registered executable cannot be started, the failure SHALL name the executable and the platform cause. Where the target is a Windows batch shim that cannot be started without a shell, the message SHALL say so and SHALL NOT report a test failure.
+
+#### Scenario: Missing executable
+- **WHEN** a registered check names an executable that does not exist
+- **THEN** the result is an infrastructure failure that names the executable
+- **AND** it is not recorded as a failing red
+
+#### Scenario: Batch shim on Windows
+- **WHEN** a registered check names a Windows batch shim that cannot start without a shell
+- **THEN** the failure message names the shim and says it cannot be started without a shell
+
+### Requirement: Red records are append-only
+Every failing red recorded for a check kind on an attempt SHALL be kept, in order, and SHALL NOT be replaced, edited, or deleted. The red that readers use for a kind SHALL be the most recent entry. A second red for a kind SHALL append and SHALL leave every earlier entry byte-for-byte unchanged.
+
+#### Scenario: Second red appends
+- **WHEN** `verify run --red` records a failing red for `unit` on an attempt that already holds one
+- **THEN** both reds are kept in order
+- **AND** the earlier red record is unchanged
+
+#### Scenario: Current red is the latest
+- **WHEN** an attempt holds two failing reds for `unit`
+- **THEN** the gates and status read the later one as the current red
+
+#### Scenario: Attempt without a history
+- **WHEN** an attempt stored before this requirement holds one red for `unit`
+- **THEN** it reads as a history with that single entry
+
+### Requirement: Reds can be listed
+`idefactory red list <attemptId>` SHALL print every red in the history for every kind with its digest, order, and time. For each it SHALL state whether it is the current red, whether an exception references its digest, and what satisfies red for that kind. With `--json` it SHALL print one JSON document with `schemaVersion` 1. It SHALL write nothing.
+
+#### Scenario: List after an invalidation and a later red
+- **WHEN** an attempt has an invalidated red and a later failing red for `unit`
+- **THEN** the list shows both with their digests
+- **AND** it marks the first as referenced by the waiver and the second as current
+
+#### Scenario: Read-only
+- **WHEN** `red list` runs
+- **THEN** no file in the project changes

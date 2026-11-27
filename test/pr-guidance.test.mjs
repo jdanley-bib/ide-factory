@@ -5,7 +5,6 @@ import { test } from 'node:test';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
 
 const LEGAL_STEPS = 'The only legal pull-request steps are `idefactory pr open <change>`, `idefactory pr comment <attemptId>`, and `idefactory pr capture <change>`.';
-const HUMAN_GATE = '`sync-tasks`, `run`, `approve`, `complete`, `verify`, `ci scaffold`, and archive or spec sync run only after the human asks for that action.';
 
 const INSTALLED = [
   '.cursor/rules/factory.mdc',
@@ -26,10 +25,11 @@ function assertGuidance(text, rel) {
   assert.doesNotMatch(legal[1], /gh pr create/, `${rel} does not name gh pr create as a legal step`);
   assert.doesNotMatch(legal[1], /Cursor pull-request tool/, `${rel} does not name the Cursor pull-request tool as a legal step`);
   assert.match(text, /does not open or edit a pull request through the Cursor pull-request tool or a hand-written `gh pr create`/);
-  assert.match(text, new RegExp(HUMAN_GATE.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
-  for (const name of ['sync-tasks', 'run', 'approve', 'complete', 'verify', 'ci scaffold', 'archive or spec sync']) {
-    assert.match(text, new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), rel);
-  }
+  assert.match(text, /^## Routine steps and external effects$/m, rel);
+  assert.match(text, /covers `sync-tasks`, `run`, `verify`, and `complete` for that change/, rel);
+  assert.match(text, /`approve` \(the human's own record; never run it for yourself\), `ci scaffold`, archive, and spec sync/, rel);
+  assert.match(text, /does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review/, rel);
+  assert.match(text, /run `idefactory authorize` and proceed only when it reports `authorized: true`/, rel);
 }
 
 test('init installs pull-request guidance on the Cursor rule and factory-run skill', async () => {
