@@ -63,7 +63,7 @@ Prompt:
 Follow the factory-cloud skill in this repository.
 The webhook payload names workItemId, revision, and change.
 Read the story with the Azure DevOps MCP, run the claim with this run's URL, apply and acknowledge the plan it prints, and stop unless the decision is start or resume.
-Call Azure DevOps only with operations that idefactory prints in a plan. Open pull requests only with idefactory pr open. Never merge.
+Call Azure DevOps only with operations that idefactory prints in a plan. If an operation fails, judge the cause yourself, record your decision with idefactory mcp record, and repeat only as the record allows. Stop at the retry cap or on a human stop. Open pull requests only with idefactory pr open. Never merge.
 ```
 
 ## 4. Bridge

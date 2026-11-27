@@ -661,7 +661,7 @@ export const COMMANDS = [
       examples: ['idefactory forge configure --provider azure-devops --organization https://dev.azure.com/acme --project Factory --repository app'],
     },
   ),
-  group(['mcp'], 'Record or list plans applied through the Azure DevOps MCP.', 'idefactory mcp ack|pending ...'),
+  group(['mcp'], 'Record or list plans applied through the Azure DevOps MCP.', 'idefactory mcp ack|record|pending ...'),
   leaf(
     ['mcp', 'ack'],
     'Record that the agent applied a plan through the MCP, with the result.',
@@ -674,10 +674,37 @@ export const COMMANDS = [
         PATH_FLAG,
       ],
       effects: WRITES,
+      notes: [
+        'Ack refuses when the latest record of any operation is failed or unknown. It then changes nothing and the plan stays pending.',
+        'Without any records for a plan, ack behaves as it did before records existed.',
+      ],
       examples: ['idefactory mcp ack <planId> --result-file result.json'],
     },
   ),
-  leaf(['mcp', 'pending'], 'List plans that were printed and not acknowledged.', 'idefactory mcp pending [--json] [--path dir]', {
+  leaf(['mcp', 'record'], 'Record your judgment about one failed plan operation: what happened, the cause, and the decision.', 'idefactory mcp record <planId> --operation <n> --outcome <applied|failed|unknown> [--cause <code>] --decision <code> [--readback <present|absent|unavailable>] [--note "text"] [--path dir]', {
+    arguments: [{ name: 'planId', required: true, description: 'Plan id printed with the plan.' }],
+    flags: [
+      { name: 'operation', value: '<n>', required: true, description: 'Operation number in the plan, starting at 1.' },
+      { name: 'outcome', value: 'applied|failed|unknown', required: true, description: 'What the operation did as far as you can tell. applied means it succeeded, including a retry that succeeded.' },
+      { name: 'cause', value: 'transient|conflict|permission|invalid-request|not-found|unknown', required: false, description: 'Why it failed. Required for failed and unknown. Not given with applied.' },
+      { name: 'decision', value: 'retry|retry-after-readback|skip-applied|replan|abandon|escalate', required: true, description: 'What you do next. retry, retry-after-readback, and replan repeat the operation. skip-applied records that the effect already landed.' },
+      { name: 'readback', value: 'present|absent|unavailable', required: false, description: 'Result of the operation read-back. Required for skip-applied (present) and retry-after-readback (absent).' },
+      { name: 'note', value: '"text"', required: false, description: 'Your reasoning. Kept only in the progress file, never in events.' },
+      PATH_FLAG,
+    ],
+    effects: WRITES,
+    notes: [
+      'Each record appends one line to .factory/mcp/<planId>.progress.jsonl. The plan file is not changed.',
+      'check-first operations (creates, comments, links, and thread creates) are retried only after a read-back of absent. A read-back of present allows only skip-applied. A read-back of unavailable allows only escalate. A check-first operation with no read-back defined cannot be retried.',
+      'Retries per operation are capped by mcp.maxOperationAttempts in .factory/config.json (default 3, range 1 to 10). Past the cap a retry is refused and the output is a blocked report with operation-retry-cap.',
+      'escalate, and abandon with a cause other than conflict, record a stop that needs a human. abandon with cause conflict means another run owns the story and is handled without a human.',
+    ],
+    examples: [
+      'idefactory mcp record plan-0123456789ab --operation 2 --outcome failed --cause transient --decision retry --readback absent',
+      'idefactory mcp record plan-0123456789ab --operation 1 --outcome failed --cause conflict --decision abandon',
+    ],
+  }),
+  leaf(['mcp', 'pending'], 'List plans that were printed and not acknowledged, with each operation\'s latest outcome and retry count.', 'idefactory mcp pending [--json] [--path dir]', {
     flags: [JSON_FLAG('Print the plans as JSON.'), PATH_FLAG],
     effects: READ_ONLY,
     examples: ['idefactory mcp pending --json'],

@@ -1,8 +1,23 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { BlockedError } from './blocked-error.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { readText, writeText } from './layout.mjs';
+import {
+  CAUSES,
+  DECISIONS,
+  OUTCOMES,
+  READBACKS,
+  appendProgress,
+  decisionProblem,
+  latestOutcome,
+  maxOperationAttempts,
+  readProgress,
+  archiveProgress,
+  retryCount,
+  unresolvedOperations,
+} from './mcp-progress.mjs';
 
 /**
  * Plans for writes the agent applies through Cursor's Azure DevOps MCP
@@ -32,6 +47,53 @@ const FORBIDDEN_PULL_REQUEST_ARGUMENTS = [
   'reviewerAction',
   'isDraft',
 ];
+
+/**
+ * Facts the plan builder attaches to each operation. `repeat` is `check-first`
+ * when repeating the operation could duplicate its effect. `verify` is the read
+ * that shows whether the effect landed. Updates set fields to the values in the
+ * plan, so repeating one cannot change the outcome.
+ */
+const OPERATION_FACTS = {
+  'wit_work_item_write:create': {
+    repeat: 'check-first',
+    verify: { tool: 'search_workitem', purpose: 'find a work item tagged factory with this change name' },
+  },
+  'wit_work_item_write:update': { repeat: 'safe', verify: null },
+  'wit_work_item_comment_write:add': {
+    repeat: 'check-first',
+    verify: { tool: 'wit_work_item', action: 'get', purpose: 'list the work item comments and look for this comment' },
+  },
+  'wit_work_item_link_write:link': {
+    repeat: 'check-first',
+    verify: { tool: 'wit_work_item', action: 'get', purpose: 'list the work item relations and look for this URL' },
+  },
+  'repo_pull_request_write:create': {
+    repeat: 'check-first',
+    verify: { tool: 'repo_pull_request', action: 'list', purpose: 'find an active pull request from the factory branch' },
+  },
+  'repo_pull_request_write:update': { repeat: 'safe', verify: null },
+  'repo_pull_request_thread_write:create': {
+    repeat: 'check-first',
+    verify: { tool: 'repo_pull_request_thread', action: 'list', purpose: 'find a thread with this content' },
+  },
+};
+
+/**
+ * Repeat and read-back facts for an operation. A stored plan written before the
+ * facts existed is check-first with no read-back, so a retry is refused.
+ */
+export function factsOf(operation) {
+  return {
+    repeat: operation.repeat ?? 'check-first',
+    verify: operation.verify ?? null,
+  };
+}
+
+function withFacts(operation) {
+  const facts = OPERATION_FACTS[`${operation.tool}:${operation.arguments.action}`];
+  return { ...operation, ...structuredClone(facts) };
+}
 
 const PLAN_ID = /^plan-[0-9a-f]{12}$/;
 
@@ -87,7 +149,7 @@ function planDigest(plan) {
  */
 export function createPlan(project, { kind, change, operations, effects }) {
   for (const operation of operations) assertPlanOperation(operation);
-  const plan = { schemaVersion: 1, kind, change, operations, effects };
+  const plan = { schemaVersion: 1, kind, change, operations: operations.map(withFacts), effects };
   plan.id = `plan-${planDigest(plan)}`;
   const { id, ...rest } = plan;
   writeText(planFile(project, id), `${JSON.stringify({ id, ...rest }, null, 2)}\n`);
@@ -145,6 +207,11 @@ function setPointer(root, pointer, value) {
  */
 export function ackPlan(project, id, result = {}) {
   const plan = readPlan(project, id);
+  const unresolved = unresolvedOperations(readProgress(project, id));
+  if (unresolved.length) {
+    const list = unresolved.map((row) => `operation ${row.operation} (${row.outcome})`).join(', ');
+    throw new Error(`Plan ${id} has an unresolved ${list}. Record a decision with idefactory mcp record, or escalate. Nothing was recorded.`);
+  }
   const writes = plan.effects.writes.map((entry) => ({ path: entry.path, json: structuredClone(entry.json) }));
   for (const bind of plan.effects.bind || []) {
     const value = positiveInteger(result?.[bind.result]);
@@ -172,6 +239,7 @@ export function ackPlan(project, id, result = {}) {
     kind: plan.kind,
   });
   fs.rmSync(planFile(project, id), { force: true });
+  archiveProgress(project, id);
   return { plan, written: writes.map((entry) => entry.path) };
 }
 
@@ -185,13 +253,125 @@ export function mcpOrgName(organization) {
   return url.pathname.split('/').filter(Boolean)[0] || url.hostname;
 }
 
+/**
+ * Record the agent's judgment about one operation: a failure and what it decided,
+ * or an outcome that resolves an earlier failure. Refused combinations write nothing.
+ * @param {string} project
+ * @param {string} id
+ * @param {{ operation: string|number, outcome: string, cause?: string, decision: string, readback?: string, note?: string }} input
+ */
+export function recordOperation(project, id, input) {
+  const plan = readPlan(project, id);
+  const number = Number(input.operation);
+  if (!Number.isInteger(number) || number < 1 || number > plan.operations.length) {
+    throw new Error(`--operation must be between 1 and ${plan.operations.length} for ${id}`);
+  }
+  const check = (name, value, allowed, required) => {
+    if (value === undefined) {
+      if (required) throw new Error(`--${name} is required (${allowed.join('|')})`);
+      return;
+    }
+    if (!allowed.includes(value)) throw new Error(`--${name} must be one of ${allowed.join('|')}, not ${value}`);
+  };
+  check('outcome', input.outcome, OUTCOMES, true);
+  check('decision', input.decision, DECISIONS, true);
+  check('cause', input.cause, CAUSES, false);
+  check('readback', input.readback, READBACKS, false);
+
+  const records = readProgress(project, id);
+  const operation = plan.operations[number - 1];
+  const problem = decisionProblem({
+    operation: number,
+    fact: factsOf(operation),
+    outcome: input.outcome,
+    cause: input.cause,
+    decision: input.decision,
+    readback: input.readback,
+  }, records, maxOperationAttempts(project));
+  if (problem) {
+    if (problem.code) {
+      throw new BlockedError(problem.message, problem.code, { change: plan.change, planId: id, operation: number });
+    }
+    throw new Error(problem.message);
+  }
+
+  const time = new Date().toISOString();
+  const record = {
+    operation: number,
+    outcome: input.outcome,
+    ...(input.cause ? { cause: input.cause } : {}),
+    decision: input.decision,
+    ...(input.readback ? { readback: input.readback } : {}),
+    ...(input.note ? { note: input.note } : {}),
+    time,
+  };
+  appendProgress(project, id, record);
+  const event = {
+    type: 'mcp-decision',
+    time,
+    change: plan.change,
+    planId: id,
+    kind: plan.kind,
+    operation: number,
+    outcome: input.outcome,
+    ...(input.cause ? { cause: input.cause } : {}),
+    decision: input.decision,
+    ...(input.readback ? { readback: input.readback } : {}),
+  };
+  appendControlEvent(project, event);
+  if (input.decision === 'escalate') {
+    appendControlEvent(project, stopEvent(plan, id, time, 'operation-escalated', 'only-after-change'));
+  } else if (input.decision === 'abandon' && input.cause !== 'conflict') {
+    appendControlEvent(project, stopEvent(plan, id, time, 'operation-abandoned', 'never'));
+  }
+  return { record, plan, retries: retryCount([...records, record], number) };
+}
+
+function stopEvent(plan, id, time, invariant, retry) {
+  return {
+    type: 'blocked.recorded',
+    time,
+    change: plan.change,
+    planId: id,
+    invariant,
+    actor: 'human',
+    retry,
+    agentActionable: false,
+  };
+}
+
+/**
+ * Pending plans with each operation's latest recorded outcome and retry count.
+ * Operations with no record are left out.
+ */
+export function pendingPlans(project) {
+  return listPlans(project).map((summary) => {
+    const records = readProgress(project, summary.id);
+    const operations = [...new Set(records.map((record) => record.operation))].sort((a, b) => a - b);
+    return {
+      ...summary,
+      progress: operations.map((operation) => ({
+        operation,
+        outcome: latestOutcome(records, operation),
+        retries: retryCount(records, operation),
+      })),
+    };
+  });
+}
+
 /** Human-readable plan for text output. */
 export function formatPlan(plan) {
   const lines = [`Plan ${plan.id} (${plan.kind}, ${plan.change})`];
   plan.operations.forEach((operation, index) => {
+    const facts = factsOf(operation);
     lines.push(`${index + 1}. ${operation.tool}`);
     lines.push(JSON.stringify(operation.arguments));
+    const read = facts.verify
+      ? `read-back ${facts.verify.tool}${facts.verify.action ? ` ${facts.verify.action}` : ''} (${facts.verify.purpose})`
+      : 'no read-back';
+    lines.push(`   repeat: ${facts.repeat}; ${read}`);
   });
   lines.push(`After every operation succeeds, run: idefactory mcp ack ${plan.id}${(plan.effects.bind || []).length ? ` --result '{"${plan.effects.bind[0].result}": <id>}'` : ''}`);
+  lines.push(`If an operation fails, decide and record it first: idefactory mcp record ${plan.id} --operation <n> --outcome failed --cause <code> --decision <code>`);
   return lines.join('\n');
 }

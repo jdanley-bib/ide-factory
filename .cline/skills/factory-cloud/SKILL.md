@@ -19,13 +19,41 @@ Azure DevOps is reached only through Cursor's Azure DevOps MCP connection. No Az
 
 - A reading step is yours: call the MCP read, save the result to a file, and pass the file to `idefactory`.
 - A writing step is the CLI's. `idefactory` prints a **plan**: numbered MCP operations, each a tool name and a full argument object, and a plan id. You call each operation exactly as printed, in order, with the arguments unchanged. Then you run `idefactory mcp ack <planId>`. The CLI records the result only at ack.
-- If an operation fails, stop. Do not ack, do not retry with other arguments, and do not call a different tool to get the same effect. Say which operation failed and why.
-- A failed first operation of a claim with a 409 or "revision" error means another run claimed the story first. Stop and do nothing else.
+- If an operation fails, follow "When an operation fails" below. Repeat an operation only with the arguments printed in the plan, and never call a different tool to get the same effect.
 - Ids that a create operation returns go into the ack: `--result '{"workItemId": <id>}'` for a story, `--result '{"pullRequestId": <id>}'` for a pull request.
 
 Write every file you hand the CLI (story snapshot, thread list, result file) in the operating system temporary directory, not inside the project, and remove it afterward. An untracked file inside the project makes the worktree dirty and blocks verification and completion.
 
 Allowed writes are exactly the operations a plan prints: `wit_work_item_write`, `wit_work_item_comment_write`, `wit_work_item_link_write`, `repo_pull_request_write` (create, or update of the description), and `repo_pull_request_thread_write` (create). Never call these with `autoComplete`, `mergeStrategy`, `bypassReason`, `deleteSourceBranch`, `vote`, `status`, `reviewerIds`, or `isDraft`. Never use `update_status`, `update_reviewers`, `vote`, or an abandon on a pull request or thread. Never call `unlink`.
+
+## When an operation fails
+
+The factory does not retry for you. You judge each failure, and the CLI checks only the combinations that could repeat an effect or exceed the retry cap. Each plan line says `repeat: safe` or `repeat: check-first`, and a check-first line names the read-back that shows whether the effect landed.
+
+1. Name the cause: `transient` (timeout, throttling, a 5xx), `conflict` (a 409 or a revision error), `permission` (401 or 403), `invalid-request` (400 or a rejected argument), `not-found` (404), or `unknown`.
+2. Decide whether the effect may have landed. A write that timed out or returned a 5xx may still have landed. For a check-first operation, run its read-back before you decide. Reads only: do not reach the same effect through another tool.
+3. Record the failure and your decision before you repeat anything:
+
+   `idefactory mcp record <planId> --operation <n> --outcome failed --cause <cause> --decision <decision> [--readback <present|absent|unavailable>] --note "<why>"`
+
+   - `retry`: a safe operation after a transient cause. Repeat it unchanged.
+   - `retry-after-readback`: a check-first operation whose read-back found the effect absent (`--readback absent`). Repeat it unchanged.
+   - `skip-applied`: a check-first operation whose read-back found the effect present (`--readback present`). Do not repeat it. Record it as applied, then continue:
+     `idefactory mcp record <planId> --operation <n> --outcome applied --decision skip-applied --readback present`
+   - `replan`: the plan is stale (a revision changed) or one of its arguments was wrong. Run the same `idefactory` command again with fresh input to get a new plan, and use only the new plan. Repeat rules for check-first operations apply as for `retry`.
+   - `abandon` with `--cause conflict`: another run owns the story or the plan is stale. Stop the plan and do nothing else.
+   - `escalate`: anything you cannot resolve safely, including a read-back of `unavailable`, a `permission` failure, or an `invalid-request` you cannot correct. Escalate writes a stop for a human.
+
+4. After a repeat that succeeds, record it: `idefactory mcp record <planId> --operation <n> --outcome applied --decision retry`. If it fails again, record that failure as in step 3. Then decide again.
+5. `idefactory mcp ack <planId>` refuses while any operation's latest record is `failed` or `unknown`. Do not write around the refusal.
+
+Retries per operation are capped (`mcp.maxOperationAttempts` in `.factory/config.json`, default 3). When `idefactory mcp record` refuses with `operation-retry-cap`, the refusal is a human stop. Run `idefactory mcp record ... --json` to get the blocked report, then put it in `idefactory board report <change>`. Do not retry again.
+
+For escalate and the cap, run `idefactory board report <change>`, apply its plan, ack it, and quote the stop in the comment for the human.
+
+A failed read (`wit_work_item`, a list, a thread read) is not a plan operation and is not recorded. Repeat it up to three times with the same arguments, and do not repeat any write to get past it. If it still fails, stop and say so in your summary. A failed `git push` gets the same three tries with waits of 4 and 8 seconds, then stop and report it in `idefactory board report`.
+
+A 409 or a revision error on the first operation of a claim means another run claimed the story first. Record `--cause conflict --decision abandon`, then stop and do nothing else.
 
 ## Before anything else
 

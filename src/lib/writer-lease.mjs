@@ -56,6 +56,7 @@ const MUTATING = new Set([
   'board comment',
   'board transition',
   'mcp ack',
+  'mcp record',
   'approve',
   'revoke',
   'reject',

@@ -43,6 +43,15 @@ test('init installs factory-cloud with the claim, resume-only --new-run, and nev
       assert.match(text, /^## External effects$/m, rel);
       assert.match(text, /idefactory authorize --change <change> --action <publish\|deploy\|spend\|account> --target <name>/, rel);
       assert.match(text, /proceed only when it reports `authorized: true`/, rel);
+      assert.match(text, /^## When an operation fails$/m, rel);
+      assert.match(text, /idefactory mcp record <planId> --operation <n> --outcome failed --cause <cause>/, rel);
+      assert.match(text, /`retry-after-readback`: a check-first operation whose read-back found the effect absent/, rel);
+      assert.match(text, /`skip-applied`: a check-first operation whose read-back found the effect present/, rel);
+      assert.match(text, /`replan`: the plan is stale/, rel);
+      assert.match(text, /A failed read .* Repeat it up to three times/, rel);
+      assert.match(text, /`operation-retry-cap`/, rel);
+      assert.match(text, /A 409 or a revision error on the first operation of a claim means another run claimed the story first\. Record `--cause conflict --decision abandon`/, rel);
+      assert.doesNotMatch(text, /If an operation fails, stop\./, rel);
       assert.doesNotMatch(text, /Do not publish, deploy, spend, or create accounts\.$/m, rel);
     }
 

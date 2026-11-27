@@ -36,7 +36,8 @@ import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { configureBoard, configureForge } from './integration-config.mjs';
 import { claimBoard, commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
-import { ackPlan, formatPlan, listPlans } from './mcp-plan.mjs';
+import { ackPlan, formatPlan, pendingPlans, recordOperation } from './mcp-plan.mjs';
+import { BlockedError } from './blocked-error.mjs';
 
 const HELP = `idefactory — IDE-native software factory
 
@@ -674,17 +675,53 @@ function handleBoard(project, parsed, env, out) {
 
 const MCP_USAGE = [
   'Usage: idefactory mcp ack <planId> [--result <json> | --result-file <path>]',
+  '       idefactory mcp record <planId> --operation <n> --outcome <applied|failed|unknown> [--cause <code>] --decision <code> [--readback <present|absent|unavailable>] [--note "text"]',
   '       idefactory mcp pending [--json]',
 ].join('\n');
+
+function renderPendingText(plans) {
+  if (plans.length === 0) return '(no pending plans)';
+  return plans.map((plan) => [
+    `${plan.id} ${plan.kind} ${plan.change} (${plan.operations} operations)`,
+    ...plan.progress.map((row) => `  operation ${row.operation}: ${row.outcome}, ${row.retries} ${row.retries === 1 ? 'retry' : 'retries'}`),
+  ].join('\n')).join('\n');
+}
 
 function handleMcp(project, parsed, out) {
   const sub = parsed.rest[0];
   if (sub === 'pending') {
-    const plans = listPlans(project);
-    out(parsed.flags.json
-      ? JSON.stringify(plans, null, 2)
-      : (plans.map((plan) => `${plan.id} ${plan.kind} ${plan.change} (${plan.operations} operations)`).join('\n') || '(no pending plans)'));
+    const plans = pendingPlans(project);
+    out(parsed.flags.json ? JSON.stringify(plans, null, 2) : renderPendingText(plans));
     return 0;
+  }
+  if (sub === 'record') {
+    const id = parsed.rest[1];
+    const text = (name) => (typeof parsed.flags[name] === 'string' ? parsed.flags[name] : undefined);
+    if (!id || ['operation', 'outcome', 'cause', 'decision', 'readback', 'note'].some((name) => parsed.flags[name] === true)) {
+      throw new Error(MCP_USAGE);
+    }
+    try {
+      const result = recordOperation(project, id, {
+        operation: text('operation'),
+        outcome: text('outcome'),
+        cause: text('cause'),
+        decision: text('decision'),
+        readback: text('readback'),
+        note: text('note'),
+      });
+      out(`Recorded ${result.record.outcome} for operation ${result.record.operation} of ${id}: ${result.record.decision}${result.record.readback ? ` (read-back ${result.record.readback})` : ''}.`);
+      return 0;
+    } catch (error) {
+      if (error instanceof BlockedError && parsed.flags.json) {
+        out(JSON.stringify(buildBlockedReport(project, {
+          code: error.invariant,
+          change: error.context.change,
+          message: error.message,
+        }), null, 2));
+        return 1;
+      }
+      throw error;
+    }
   }
   if (sub === 'ack') {
     const id = parsed.rest[1];
