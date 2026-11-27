@@ -99,3 +99,5 @@ When a required red is missing on an `accepted` attempt, `idefactory attempt reo
 If `HALT` exists at the project root, stop. The human clears it with `idefactory resume`.
 
 The IDE session model does the work.
+
+A red that is not genuine, because it was recorded after implementation or failed on a fixture error, is withdrawn with `idefactory red invalidate` (see `factory-build`). The withdrawal grants nothing, and a waiver does not replace passing verification, distinct review, or lockouts.

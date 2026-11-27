@@ -3,7 +3,7 @@
   "tool": "0.2.0",
   "files": {
     ".agents/skills/factory-build/SKILL.md": {
-      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
+      "digest": "894d90b38ace9f45d637532609edc223b75e59fec9699f7523d7ef525e940036"
     },
     ".agents/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -18,7 +18,7 @@
       "digest": "0719f8ecb60c700fb15cfe9e111b2e72984d2b2cc4016a701acde5419918bee2"
     },
     ".agents/skills/factory-governance/SKILL.md": {
-      "digest": "92409a101d41190f2c7d81241653367c0db7e2dc40b9357320e591765e089390"
+      "digest": "1c37e5bc97c81814abe594684dfae067e06901a4e731d1e9422e051d2c872218"
     },
     ".agents/skills/factory-openspec/SKILL.md": {
       "digest": "3d53bcbf8b4ca839afb19d63e2fe670e14d959f424042511bd375411ac7e7a2f"
@@ -30,10 +30,10 @@
       "digest": "1297b77b83d1c85a32a4c4565dfd31c38df492f22b2bf33b5267eeabe1973040"
     },
     ".agents/skills/factory-tdd/SKILL.md": {
-      "digest": "7df6db991030e9488a009a9d725e0053e76bb266503cf06b202951879097f0a3"
+      "digest": "76ab4f9a0c7cd4234ca973279c5f79fbb7f5d77ee284d23ea79e8847fd3d9250"
     },
     ".agents/skills/factory-verify/SKILL.md": {
-      "digest": "14045d969eb1c3ce84191ad5ded9363407ae2171a2344f717534bdf550bfe319"
+      "digest": "34bcefe3d67e2e3d949da857ae0511767fbfc5000efb0d9e3c97fb919b884760"
     },
     ".claude/commands/factory-build.md": {
       "digest": "ce9470fd3848f588f4aa9a49f67638038ce28a98613e43e23af9951a6cb2c6e9"
@@ -57,7 +57,7 @@
       "digest": "c9be810c358414a1aba11bb56a0b1f94f348aea0930634fcb72f41b7a82ad2d0"
     },
     ".claude/skills/factory-build/SKILL.md": {
-      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
+      "digest": "894d90b38ace9f45d637532609edc223b75e59fec9699f7523d7ef525e940036"
     },
     ".claude/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -72,7 +72,7 @@
       "digest": "0719f8ecb60c700fb15cfe9e111b2e72984d2b2cc4016a701acde5419918bee2"
     },
     ".claude/skills/factory-governance/SKILL.md": {
-      "digest": "92409a101d41190f2c7d81241653367c0db7e2dc40b9357320e591765e089390"
+      "digest": "1c37e5bc97c81814abe594684dfae067e06901a4e731d1e9422e051d2c872218"
     },
     ".claude/skills/factory-openspec/SKILL.md": {
       "digest": "3d53bcbf8b4ca839afb19d63e2fe670e14d959f424042511bd375411ac7e7a2f"
@@ -84,16 +84,16 @@
       "digest": "1297b77b83d1c85a32a4c4565dfd31c38df492f22b2bf33b5267eeabe1973040"
     },
     ".claude/skills/factory-tdd/SKILL.md": {
-      "digest": "7df6db991030e9488a009a9d725e0053e76bb266503cf06b202951879097f0a3"
+      "digest": "76ab4f9a0c7cd4234ca973279c5f79fbb7f5d77ee284d23ea79e8847fd3d9250"
     },
     ".claude/skills/factory-verify/SKILL.md": {
-      "digest": "14045d969eb1c3ce84191ad5ded9363407ae2171a2344f717534bdf550bfe319"
+      "digest": "34bcefe3d67e2e3d949da857ae0511767fbfc5000efb0d9e3c97fb919b884760"
     },
     ".cline/rules/factory.md": {
       "digest": "a1962dc70285eb4a4e31e027973ddd8e16c11450d1b67db893ca30317e312761"
     },
     ".cline/skills/factory-build/SKILL.md": {
-      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
+      "digest": "894d90b38ace9f45d637532609edc223b75e59fec9699f7523d7ef525e940036"
     },
     ".cline/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -108,7 +108,7 @@
       "digest": "0719f8ecb60c700fb15cfe9e111b2e72984d2b2cc4016a701acde5419918bee2"
     },
     ".cline/skills/factory-governance/SKILL.md": {
-      "digest": "92409a101d41190f2c7d81241653367c0db7e2dc40b9357320e591765e089390"
+      "digest": "1c37e5bc97c81814abe594684dfae067e06901a4e731d1e9422e051d2c872218"
     },
     ".cline/skills/factory-openspec/SKILL.md": {
       "digest": "3d53bcbf8b4ca839afb19d63e2fe670e14d959f424042511bd375411ac7e7a2f"
@@ -120,10 +120,10 @@
       "digest": "1297b77b83d1c85a32a4c4565dfd31c38df492f22b2bf33b5267eeabe1973040"
     },
     ".cline/skills/factory-tdd/SKILL.md": {
-      "digest": "7df6db991030e9488a009a9d725e0053e76bb266503cf06b202951879097f0a3"
+      "digest": "76ab4f9a0c7cd4234ca973279c5f79fbb7f5d77ee284d23ea79e8847fd3d9250"
     },
     ".cline/skills/factory-verify/SKILL.md": {
-      "digest": "14045d969eb1c3ce84191ad5ded9363407ae2171a2344f717534bdf550bfe319"
+      "digest": "34bcefe3d67e2e3d949da857ae0511767fbfc5000efb0d9e3c97fb919b884760"
     },
     ".cline/workflows/factory-build.md": {
       "digest": "84bf6cfde33104b0203940cc9f16c7ae18565a9cdf492436f8fe61208d6e4261"
@@ -171,7 +171,7 @@
       "digest": "2061c69bc748fc211697d624909cb0d1c91b1625f2350ca713db5d6b43c31f61"
     },
     ".cursor/skills/factory-build/SKILL.md": {
-      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
+      "digest": "894d90b38ace9f45d637532609edc223b75e59fec9699f7523d7ef525e940036"
     },
     ".cursor/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -186,7 +186,7 @@
       "digest": "0719f8ecb60c700fb15cfe9e111b2e72984d2b2cc4016a701acde5419918bee2"
     },
     ".cursor/skills/factory-governance/SKILL.md": {
-      "digest": "92409a101d41190f2c7d81241653367c0db7e2dc40b9357320e591765e089390"
+      "digest": "1c37e5bc97c81814abe594684dfae067e06901a4e731d1e9422e051d2c872218"
     },
     ".cursor/skills/factory-openspec/SKILL.md": {
       "digest": "3d53bcbf8b4ca839afb19d63e2fe670e14d959f424042511bd375411ac7e7a2f"
@@ -198,10 +198,10 @@
       "digest": "1297b77b83d1c85a32a4c4565dfd31c38df492f22b2bf33b5267eeabe1973040"
     },
     ".cursor/skills/factory-tdd/SKILL.md": {
-      "digest": "7df6db991030e9488a009a9d725e0053e76bb266503cf06b202951879097f0a3"
+      "digest": "76ab4f9a0c7cd4234ca973279c5f79fbb7f5d77ee284d23ea79e8847fd3d9250"
     },
     ".cursor/skills/factory-verify/SKILL.md": {
-      "digest": "14045d969eb1c3ce84191ad5ded9363407ae2171a2344f717534bdf550bfe319"
+      "digest": "34bcefe3d67e2e3d949da857ae0511767fbfc5000efb0d9e3c97fb919b884760"
     },
     ".github/agents/factory.agent.md": {
       "digest": "cf7f7dc2a99ee9b76442de23746189daa36279d3e1386d49facec273f855bed5"
@@ -231,7 +231,7 @@
       "digest": "f79bcaa6c90b43aec9c28f221bfbf4ba344868ae6ab71bcfba03a4bef3b2a0b6"
     },
     ".github/skills/factory-build/SKILL.md": {
-      "digest": "97d1e856fef4a72a69e608ca710e70324ec15516298192e3ed44e382cd9dfc08"
+      "digest": "894d90b38ace9f45d637532609edc223b75e59fec9699f7523d7ef525e940036"
     },
     ".github/skills/factory-cloud/SKILL.md": {
       "digest": "6e366e26d1ba1a16f073830241d628f86b5b335ee50b8823d3391869a4d5b2b2"
@@ -246,7 +246,7 @@
       "digest": "0719f8ecb60c700fb15cfe9e111b2e72984d2b2cc4016a701acde5419918bee2"
     },
     ".github/skills/factory-governance/SKILL.md": {
-      "digest": "92409a101d41190f2c7d81241653367c0db7e2dc40b9357320e591765e089390"
+      "digest": "1c37e5bc97c81814abe594684dfae067e06901a4e731d1e9422e051d2c872218"
     },
     ".github/skills/factory-openspec/SKILL.md": {
       "digest": "3d53bcbf8b4ca839afb19d63e2fe670e14d959f424042511bd375411ac7e7a2f"
@@ -258,10 +258,10 @@
       "digest": "1297b77b83d1c85a32a4c4565dfd31c38df492f22b2bf33b5267eeabe1973040"
     },
     ".github/skills/factory-tdd/SKILL.md": {
-      "digest": "7df6db991030e9488a009a9d725e0053e76bb266503cf06b202951879097f0a3"
+      "digest": "76ab4f9a0c7cd4234ca973279c5f79fbb7f5d77ee284d23ea79e8847fd3d9250"
     },
     ".github/skills/factory-verify/SKILL.md": {
-      "digest": "14045d969eb1c3ce84191ad5ded9363407ae2171a2344f717534bdf550bfe319"
+      "digest": "34bcefe3d67e2e3d949da857ae0511767fbfc5000efb0d9e3c97fb919b884760"
     },
     "AGENTS.md#section": {
       "digest": "8830d44ce1bc04d1a35980b9192ab3c8a17799f191d7b42f524fea213ce57e5e"
