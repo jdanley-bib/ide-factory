@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { getAttempt } from '../src/lib/attempt.mjs';
+import { AUTHORITY } from '../src/lib/authority.mjs';
 import {
   BLOCKED_CODES,
   BLOCKED_TABLE,
@@ -100,7 +101,7 @@ test('each code has a retry class and options that name real commands', () => {
   for (const [code, row] of Object.entries(BLOCKED_TABLE)) {
     assert.ok(['safe', 'only-after-change', 'never'].includes(row.retry), code);
     for (const entry of row.options) {
-      assert.ok(['human', 'independent-agent', 'implementing-agent', 'tooling'].includes(entry.actor), `${code}/${entry.id}`);
+      assert.ok(Object.hasOwn(AUTHORITY, entry.id), `${code}/${entry.id}`);
       assert.equal(typeof entry.resolves, 'boolean');
     }
   }
@@ -307,7 +308,7 @@ test('a lockout stop is recorded and resolved by the lockout resolution', async 
     const doc = JSON.parse(stopped.out);
     assert.equal(doc.stopReason, 'lockout');
     assert.equal(doc.blocked.invariant.code, 'reviewer-lockout');
-    assert.equal(doc.blocked.actor, 'human');
+    assert.equal(doc.blocked.actor, 'independent-agent');
     assert.equal(readRecord(dir).status, 'open');
 
     ok(await idefactory(dir, ['lockout', 'resolve', lockoutId, '--resolver', 'human-1', '--reason', 'fixed']));
