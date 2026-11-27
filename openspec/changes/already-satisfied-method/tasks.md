@@ -7,11 +7,11 @@
 
 ## 2. The reason class
 
-- [ ] 2.1 Add `already-satisfied` to the closed reason set and refuse it without a vacuous entry per covered kind that matches the registered command digest, naming the kinds missing evidence; verify with tests for no entry, a stale command digest, and one kind of two covered.
-- [ ] 2.2 Compute the net diff (D3), require at least one existing `--test-path`, and refuse changed paths outside the cited tests with up to ten named; verify with tests for a test-only diff accepted, a production file refused, an untracked cited test accepted, a deleted file outside the paths refused, and an attempt with no start revision refused with a message saying so.
-- [ ] 2.3 Store `observedPass`, `testPaths`, `startRevision`, and bounded `changedPaths` in the immutable method record; verify with a test that the record holds digests only and that a second proposal is refused.
-- [ ] 2.4 Lift the explicit task type refusal for this class only and keep every other refusal; verify with tests that an explicit `code` item accepts it, and that a prior method rejection and a stored failing red still refuse it.
-- [ ] 2.5 Re-run the diff check at the transition to `accepted` and at `complete`; verify with a test where a production file is edited after the proposal and both are refused naming the file.
+- [x] 2.1 Add `already-satisfied` to the closed reason set and refuse it without a vacuous entry per covered kind that matches the registered command digest, naming the kinds missing evidence; verify with tests for no entry, a stale command digest, and one kind of two covered.
+- [x] 2.2 Compute the net diff (D3), require at least one existing `--test-path`, and refuse changed paths outside the cited tests with up to ten named; verify with tests for a test-only diff accepted, a production file refused, an untracked cited test accepted, a deleted file outside the paths refused, and an attempt with no start revision refused with a message saying so.
+- [x] 2.3 Store `observedPass`, `testPaths`, `startRevision`, and bounded `changedPaths` in the immutable method record; verify with a test that the record holds digests only and that a second proposal is refused.
+- [x] 2.4 Lift the explicit task type refusal for this class only and keep every other refusal; verify with tests that an explicit `code` item accepts it, and that a prior method rejection and a stored failing red still refuse it.
+- [x] 2.5 Re-run the diff check at the transition to `accepted` and at `complete`; verify with a test where a production file is edited after the proposal and both are refused naming the file.
 
 ## 3. Report, packet, and guidance
 
