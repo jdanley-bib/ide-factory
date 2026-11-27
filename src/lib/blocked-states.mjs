@@ -347,6 +347,7 @@ export function buildBlockedReport(project, input) {
     ...(input.action ? { action: input.action } : {}),
     invariant: { code, message },
     actor,
+    level: usable ? usable.authority.level : 'human',
     recovery,
     retry: row.retry,
   };
@@ -436,7 +437,7 @@ function emitResolved(project, { change, task, invariant, resolution, id }) {
  * ever read by a gate.
  */
 export function recordStop(project, report) {
-  if (!report?.change) return null;
+  if (!report) return null;
   const last = lastStopEvent(project, report.change, report.task);
   if (
     last?.type === 'blocked.recorded'
@@ -457,19 +458,32 @@ export function recordStop(project, report) {
   appendControlEvent(project, {
     type: 'blocked.recorded',
     time,
-    change: report.change,
+    ...(report.change ? { change: report.change } : {}),
     ...(report.task ? { task: report.task } : {}),
     ...(report.attemptId ? { attemptId: report.attemptId } : {}),
     ...(report.attemptState ? { attemptState: report.attemptState } : {}),
     invariant: report.invariant.code,
     actor: report.actor,
+    level: report.level,
     retry: report.retry,
     agentActionable: agentActionable(report),
   });
-  if (!report.task || HANDOFF_CODES.has(report.invariant.code)) return null;
+  if (!report.change || !report.task || HANDOFF_CODES.has(report.invariant.code)) return null;
   const file = blockedRecordPath(project, report.change, report.task);
   writeText(file, `${JSON.stringify({ ...report, status: 'open', recordedAt: time }, null, 2)}\n`);
   return file;
+}
+
+/**
+ * Record a stop reached by any path: a run session close, a thrown BlockedError, or a reported
+ * stop. The same stop reached through two paths records one blocked.recorded event.
+ */
+export function noteStop(project, { stopReason, code, change, attemptId, message, action } = {}) {
+  const invariant = code || codeForStopReason(stopReason);
+  if (!invariant) return null;
+  const report = buildBlockedReport(project, { code: invariant, stopReason, change, attemptId, message, action });
+  if (report.invariant.code === 'unclassified') return null;
+  return recordStop(project, report);
 }
 
 function latestLockoutResolution(project) {

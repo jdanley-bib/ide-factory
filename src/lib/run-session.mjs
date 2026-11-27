@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { attemptsRoot } from './attempt.mjs';
+import { noteStop } from './blocked-states.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { ledger } from './layout.mjs';
 import { listWorkItems } from './work.mjs';
@@ -200,10 +201,10 @@ export function writeRunSession(project, session) {
  * @param {string} change
  * @returns {object|null}
  */
-export function closeLatestRunSession(project, change, stopReason, extra = {}) {
+export function closeLatestRunSession(project, change, stopReason, extra = {}, stop = {}) {
   const existing = latestRunSession(project, change);
   if (!existing) return null;
-  return writeRunSession(project, {
+  const closed = writeRunSession(project, {
     ...existing,
     ...extra,
     status: 'closed',
@@ -211,6 +212,8 @@ export function closeLatestRunSession(project, change, stopReason, extra = {}) {
     pendingStopCheck: null,
     lastObservedAt: new Date().toISOString(),
   });
+  noteStop(project, { stopReason, change, attemptId: stop.attemptId });
+  return closed;
 }
 
 /** Session files on disk for a change, counted for the new-run cap. */

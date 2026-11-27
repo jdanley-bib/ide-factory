@@ -34,7 +34,7 @@ import { resolveRequirements } from './required-checks.mjs';
 import { listWorkItems } from './work.mjs';
 import { renderRequirementsText, requirementsDocument } from './requirements-command.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
-import { consumeEventWarning } from './event-log.mjs';
+import { appendControlEvent, consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { configureBoard, configureForge } from './integration-config.mjs';
 import { claimBoard, commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
@@ -132,7 +132,7 @@ export async function run(argv, io = {}) {
     if (warning) err(warning);
     return code;
   } catch (error) {
-    const blocked = blockedFailure(project, commandKey, parsed, error);
+    const blocked = recordFailure(project, commandKey, parsed, error);
     if (blocked && parsed.flags.json) {
       out(JSON.stringify({ ok: false, message: error.message || String(error), blocked }, null, 2));
       return 1;
@@ -144,8 +144,7 @@ export async function run(argv, io = {}) {
 
 const BLOCKED_COMMANDS = new Set(['run', 'next', 'complete', 'attempt transition', 'sync-tasks']);
 
-function blockedFailure(project, commandKey, parsed, error) {
-  if (!BLOCKED_COMMANDS.has(commandKey)) return null;
+function blockedScope(commandKey, parsed) {
   const scope = {};
   if (commandKey === 'complete') {
     scope.change = parsed.rest[0];
@@ -158,13 +157,28 @@ function blockedFailure(project, commandKey, parsed, error) {
   } else {
     scope.change = (typeof parsed.flags.change === 'string' && parsed.flags.change) || parsed.rest[0];
   }
+  return scope;
+}
+
+/**
+ * Record a failed command in the control log. A stop with a known invariant is recorded as a
+ * blocked stop; any other failure of a mutating command is recorded as command.error without
+ * its text. The blocked report is returned only for commands that print one.
+ */
+function recordFailure(project, commandKey, parsed, error) {
+  const scope = BLOCKED_COMMANDS.has(commandKey) ? blockedScope(commandKey, parsed) : {};
+  let report = null;
   try {
-    const report = blockedReportForError(project, error, scope);
-    if (report.invariant.code !== 'unclassified' && report.change && report.task) recordStop(project, report);
-    return report;
+    report = blockedReportForError(project, error, scope);
   } catch {
-    return null;
+    report = null;
   }
+  if (report && report.invariant.code !== 'unclassified') {
+    recordStop(project, report);
+  } else if (isMutatingCommand(commandKey)) {
+    appendControlEvent(project, { type: 'command.error', time: new Date().toISOString(), command: commandKey, code: 'unclassified' });
+  }
+  return BLOCKED_COMMANDS.has(commandKey) ? report : null;
 }
 
 function requirementWarnings(project, change) {
@@ -468,7 +482,10 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     case 'resume': {
       const haltFile = path.join(project, 'HALT');
-      if (fs.existsSync(haltFile)) fs.unlinkSync(haltFile);
+      if (fs.existsSync(haltFile)) {
+        fs.unlinkSync(haltFile);
+        appendControlEvent(project, { type: 'halt.resumed', time: new Date().toISOString() });
+      }
       out('HALT removed.');
       return 0;
     }

@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from './attempt.mjs';
+import { BlockedError } from './blocked-error.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import {
   appendRed,
@@ -278,15 +279,20 @@ export async function verifyRun(project, attemptId, options = {}) {
     attempt.evidence.redFailures = [...(attempt.evidence.redFailures || []), diagnostics];
     writeText(attemptPath(project, attemptId), JSON.stringify(attempt, null, 2));
     if (count >= 4) {
-      closeLatestRunSession(project, attempt.change, 'retry-cap');
-      throw new Error(`retry-cap: ${classification} for ${kind} (${detail})`);
+      closeLatestRunSession(project, attempt.change, 'retry-cap', {}, { attemptId });
+      throw new BlockedError(`retry-cap: ${classification} for ${kind} (${detail})`, 'retry-cap', { attemptId });
     }
     if (classification === 'vacuous-red') {
       const prior = latestRunSession(project, attempt.change)?.stopContext;
       const priorKinds = prior?.attemptId === attemptId ? prior.kinds : [];
       closeLatestRunSession(project, attempt.change, 'vacuous-red', {
         stopContext: { attemptId, kinds: [...new Set([...priorKinds, kind])].sort() },
-      });
+      }, { attemptId });
+      throw new BlockedError(
+        `${classification}: red run did not record an assertion failure for ${kind} (${detail})`,
+        'vacuous-red',
+        { attemptId },
+      );
     }
     throw new Error(`${classification}: red run did not record an assertion failure for ${kind} (${detail})`);
   }

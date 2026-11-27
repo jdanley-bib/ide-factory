@@ -7,6 +7,7 @@ import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
+import { BlockedError } from '../src/lib/blocked-error.mjs';
 import { eventLogPath } from '../src/lib/event-log.mjs';
 import { hasAnyFailingRed, redForKind } from '../src/lib/red-evidence.mjs';
 import {
@@ -314,6 +315,23 @@ test('verify run --red stores red only on non-zero exit', async () => {
     } finally {
       cleanup(passDir);
     }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous red throws a BlockedError with the unchanged message', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 0);
+    ensureCleanGitCommit(dir);
+    await assert.rejects(verifyRun(dir, attempt.id, { check: 'unit', asRed: true }), (error) => {
+      assert.ok(error instanceof BlockedError);
+      assert.equal(error.invariant, 'vacuous-red');
+      assert.equal(error.context.attemptId, attempt.id);
+      assert.match(error.message, /^vacuous-red: red run did not record an assertion failure for unit \(/);
+      return true;
+    });
   } finally {
     cleanup(dir);
   }

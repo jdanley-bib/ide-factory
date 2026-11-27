@@ -2,10 +2,10 @@
 
 ## 1. Record every stop
 
-- [ ] 1.1 Throw `BlockedError` with invariants `vacuous-red` and `retry-cap` from `verify run --red` with the existing messages; verify with `test/verification-evidence.test.mjs` asserting the invariant, the unchanged message text, and the unchanged exit code.
-- [ ] 1.2 Add `noteStop` and call it from the end of `closeLatestRunSession` when a stop reason is set and from the CLI error handler for `BlockedError`; verify with tests that a vacuous red run records one `blocked.recorded` event and that a stop reached through two paths records once.
-- [ ] 1.3 Append `command.error` with the command name and `code: unclassified` for a plain error, without the message text; verify with `test/event-log.test.mjs` that no error text appears in the event and the allowlist drops unknown fields.
-- [ ] 1.4 Append `halt.resumed` from `idefactory resume`; verify with a test that the event is present after resume and absent after halt.
+- [x] 1.1 Throw `BlockedError` with invariants `vacuous-red` and `retry-cap` from `verify run --red` with the existing messages; verify with `test/verification-evidence.test.mjs` asserting the invariant, the unchanged message text, and the unchanged exit code.
+- [x] 1.2 Add `noteStop` and call it from the end of `closeLatestRunSession` when a stop reason is set and from the CLI error handler for `BlockedError`; verify with tests that a vacuous red run records one `blocked.recorded` event and that a stop reached through two paths records once.
+- [x] 1.3 Append `command.error` with the command name and `code: unclassified` for a plain error, without the message text; verify with `test/event-log.test.mjs` that no error text appears in the event and the allowlist drops unknown fields.
+- [x] 1.4 Append `halt.resumed` from `idefactory resume`; verify with a test that the event is present after resume and absent after halt.
 
 ## 2. Count decisions
 
