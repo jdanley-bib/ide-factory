@@ -440,7 +440,7 @@ function redRequirementTasks() {
   return [
     block('1.1', 'Code with a test', ['checks: [unit, build]']),
     block('1.2', 'Lightweight with a test', ['taskType: lightweight', 'checks: [unit]']),
-    block('1.3', 'Code without a test', ['checks: [build]']),
+    block('1.3', 'Code without a test', ['checks: [build]', 'verificationProfile: docs']),
   ].join('\n');
 }
 

@@ -163,6 +163,8 @@ Mutating commands take a single writer lease at `.factory/orchestration/writer.l
 
 A passing `verify run` record stays valid across commits that change only factory run-state, such as attempts, the work queue, observability, and orchestration files under `.factory/`. Any other change since the record makes it stale, and the reason names the first changed path. A changed registry entry, timeout, or `.factory/checks.json` also makes it stale. Review handoff, `complete`, and the security gate use this one rule.
 
+`idefactory requirements <change> <task>` prints the one resolved requirement set for a work item: each required check with its source (profile, item, or both), the test kinds that need a red, the human decisions it will need, its dependencies, and any problems. Add `--json` for one document with `schemaVersion` 1. It is read-only. The packet, the run request, the gate into `verifying`, red exceptions, the review handoff, and completion all read that set, so a check a profile adds is visible, and gated, before implementation. An attempt does not start while the set has a problem (an undefined profile, a required kind with no registered argv, a human gate the policy cannot satisfy, or a missing dependency), and `sync-tasks` prints the same problems as warnings. Completion and the review handoff report every unmet check and red together.
+
 `idefactory verify status <attemptId>` shows each required check as `valid`, `stale`, `missing`, `failed`, or `untrusted`, with the reason. Add `--json` for one document with `schemaVersion` 1 and `allValid`. It is read-only and exits zero even when a check is not valid.
 
 Records written before this release carry no reuse fingerprint, so they are stale with the reason `re-run verify`. After upgrading, run `idefactory verify run <attemptId> --check <kind>` once for each check that is stale.
@@ -194,6 +196,17 @@ try {
   Remove-Item -Path $file -ErrorAction SilentlyContinue
 }
 ```
+
+### Red method
+
+Test-first is the default method (`red-first`). When a failing test cannot specify the change, the implementing agent records a `no-red` method before editing begins, with no human approval:
+
+```bash
+idefactory method propose <attemptId> --choice no-red --reason configuration --rationale "only a config value changes" --implementer <id> --kind unit
+idefactory method review <attemptId> --verdict ACCEPT --reviewer <id> --note "config-only diff"
+```
+
+The reason class is one of `docs-or-text`, `configuration`, `behavior-preserving`, `mechanical`, or `exploratory`; `behavior-preserving` must cite an existing git-tracked test with `--test-path`. The record keeps the source revision and the number of changed files. A different role must record `method review`, and the attempt cannot be accepted without an `ACCEPT`; after a `REJECT` the item uses `red-first`. A method covers only its kinds, is never shown as a red that ran or as an exception, and does not waive passing verification, independent review, lockouts, or human gates. A proposal is refused when the work item has an explicit `factory.taskType`. `idefactory method show <attemptId>` prints the record.
 
 ### Red exceptions
 

@@ -552,6 +552,7 @@ const FACTORY_RUN_STATE_PREFIXES = [
   '.factory/observability/',
   '.factory/approvals/',
   '.factory/exceptions/',
+  '.factory/methods/',
 ];
 const FACTORY_RUN_STATE_FILES = new Set([
   '.factory/ledger.jsonl',
@@ -609,7 +610,7 @@ function isHistoryOnlyRoleDirectory(projectCwd, relPath) {
   return only.isFile() && only.name === 'history.md';
 }
 
-function isFactoryRunStatePath(relPath, projectCwd) {
+export function isFactoryRunStatePath(relPath, projectCwd) {
   const normalized = normalizeGitPath(relPath);
   if (FACTORY_RUN_STATE_FILES.has(normalized)) return true;
   if (AGENT_HISTORY_RUN_STATE.test(normalized)) return true;

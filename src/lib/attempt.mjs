@@ -13,9 +13,15 @@ import {
   requiresSecurityStage,
 } from './risk-gates.mjs';
 import { getWorkItem, updateWorkItem } from './work.mjs';
-import { hasAnyFailingRed, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { hasAnyFailingRed, retryKey } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
-import { MISSING_RECORD_PREFIX, missingCheckReasons } from './required-checks.mjs';
+import { assertMethodAccepted } from './red-method.mjs';
+import {
+  MISSING_RECORD_PREFIX,
+  assertNoRequirementProblems,
+  missingCheckReasons,
+  redKindsFor,
+} from './required-checks.mjs';
 
 export const ATTEMPT_STATES = [
   'planned',
@@ -93,6 +99,7 @@ export function startAttempt(project, change, taskId, { role = 'engineer', model
   const item = getWorkItem(project, change, taskId);
   if (!item) throw new Error(`Work item not found: ${change}/${taskId}`);
   if (item.status === 'done') throw new Error(`Work item already done: ${change}/${taskId}`);
+  assertNoRequirementProblems(project, item);
 
   const attemptId = randomUUID();
   const attempt = {
@@ -281,15 +288,12 @@ function validateEvidence(project, attempt, nextState, evidence) {
   }
   if (nextState === 'verifying') {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
-    const taskType = item?.factory?.taskType === 'lightweight' ? 'lightweight' : 'code';
-    if (taskType !== 'lightweight') {
-      const missing = requiredTestKinds(item?.factory?.checks)
-        .filter((kind) => redSatisfaction(project, attempt, kind) === 'missing');
-      if (missing.length) {
-        throw new Error(
-          `verifying requires a recorded failing CLI red for: ${missing.join(', ')} (or a red exception)`,
-        );
-      }
+    const missing = redKindsFor(project, item)
+      .filter((kind) => redSatisfaction(project, attempt, kind) === 'missing');
+    if (missing.length) {
+      throw new Error(
+        `verifying requires a recorded failing CLI red for: ${missing.join(', ')} (or a red exception)`,
+      );
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'verifying') {
@@ -306,13 +310,23 @@ function validateEvidence(project, attempt, nextState, evidence) {
   ) {
     const item = getWorkItem(project, attempt.change, attempt.taskId);
     const missing = item ? missingCheckReasons(project, attempt, item) : [];
-    if (missing.length) {
-      const named = missing.map((entry) => entry.kind).join(', ');
-      const reasons = missing
-        .filter((entry) => !entry.reason.startsWith(MISSING_RECORD_PREFIX))
-        .map((entry) => `${entry.kind}: ${entry.reason}`);
-      const detail = reasons.length ? ` (${reasons.join('; ')})` : '';
-      throw new Error(`awaiting-review requires passing check evidence for: ${named}${detail}`);
+    const missingReds = item
+      ? redKindsFor(project, item).filter((kind) => redSatisfaction(project, attempt, kind) === 'missing')
+      : [];
+    if (missing.length || missingReds.length) {
+      const parts = [];
+      if (missing.length) {
+        const named = missing.map((entry) => entry.kind).join(', ');
+        const reasons = missing
+          .filter((entry) => !entry.reason.startsWith(MISSING_RECORD_PREFIX))
+          .map((entry) => `${entry.kind}: ${entry.reason}`);
+        const detail = reasons.length ? ` (${reasons.join('; ')})` : '';
+        parts.push(`awaiting-review requires passing check evidence for: ${named}${detail}`);
+      }
+      if (missingReds.length) {
+        parts.push(`awaiting-review requires a recorded failing CLI red for: ${missingReds.join(', ')} (or a red exception)`);
+      }
+      throw new Error(parts.join('; '));
     }
   }
   if (nextState === 'awaiting-review' && attempt.state === 'security-checking') {
@@ -335,6 +349,7 @@ function validateEvidence(project, attempt, nextState, evidence) {
     if (!evidence.reviewerId && !attempt.reviewerId) {
       throw new Error('accepted requires evidence.reviewerId');
     }
+    assertMethodAccepted(project, attempt);
     if (evidence.verdict && String(evidence.verdict).toUpperCase() !== 'ACCEPT') {
       throw new Error('accepted requires verdict ACCEPT');
     }

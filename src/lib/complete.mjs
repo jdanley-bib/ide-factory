@@ -12,6 +12,7 @@ import { hasActiveLockout } from './govern.mjs';
 import { halted, ledger, readText } from './layout.mjs';
 import { requiredTestKinds } from './red-evidence.mjs';
 import { redSatisfaction } from './red-exceptions.mjs';
+import { assertMethodAccepted } from './red-method.mjs';
 import {
   assertPassingCliSecurityEvidence,
   humanGateAllows,
@@ -106,6 +107,7 @@ export function completeWorkItem(project, change, taskId, attemptId, options = {
       attemptId,
     });
   }
+  assertMethodAccepted(project, attempt);
   const { sourceRevision } = assertChecksPassed(project, attempt, requiredChecks, {
     allowDirtyWorktree: Boolean(resumeJournal),
     expectedSourceRevision: resumeJournal?.sourceRevision,
@@ -182,23 +184,23 @@ function assertChecksPassed(project, attempt, required, options = {}) {
     throw new Error('finalization journal source revision mismatch');
   }
 
-  const [failure] = unpassedChecks(attempt, required, {
+  const failures = unpassedChecks(attempt, required, {
     rawChecks,
     project,
-    stopAtFirst: true,
     requireCleanWorktree: !options.allowDirtyWorktree,
-  });
-  if (failure) {
-    throw new Error(failure.reason);
-  }
+  }).map((entry) => entry.reason);
 
   const taskType = options.taskType === 'lightweight' ? 'lightweight' : 'code';
   if (taskType === 'code') {
     for (const kind of requiredTestKinds(required)) {
       if (redSatisfaction(project, attempt, kind) === 'missing') {
-        throw new Error(`complete requires a recorded failing CLI red or red exception for: ${kind}`);
+        failures.push(`complete requires a recorded failing CLI red or red exception for: ${kind}`);
       }
     }
+  }
+  if (failures.length === 1) throw new Error(failures[0]);
+  if (failures.length > 1) {
+    throw new Error(`complete has ${failures.length} unmet requirements:\n${failures.map((line) => `- ${line}`).join('\n')}`);
   }
 
   return { sourceRevision: headSha };

@@ -17,9 +17,13 @@ import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mj
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
+import { describeAttemptMethod, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { renderVerifyStatusText, verifyStatus } from './verification-status.mjs';
 import { answerHelp } from './command-help.mjs';
+import { resolveRequirements } from './required-checks.mjs';
+import { listWorkItems } from './work.mjs';
+import { renderRequirementsText, requirementsDocument } from './requirements-command.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
 import { consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
@@ -111,6 +115,18 @@ export async function run(argv, io = {}) {
   }
 }
 
+function requirementWarnings(project, change) {
+  const byMessage = new Map();
+  for (const item of listWorkItems(project, change)) {
+    if (item.status !== 'todo') continue;
+    for (const problem of resolveRequirements(project, item).problems) {
+      if (!byMessage.has(problem.message)) byMessage.set(problem.message, []);
+      byMessage.get(problem.message).push(item.id);
+    }
+  }
+  return [...byMessage].map(([message, ids]) => `warning: requirement problem for ${ids.join(', ')}: ${message}`);
+}
+
 async function dispatchCommand(cmd, ctx) {
   const { project, parsed, env, out, err, isTTY, cwd } = ctx;
   switch (cmd) {
@@ -183,11 +199,19 @@ async function dispatchCommand(cmd, ctx) {
       }
       out(previewChecks(project));
       return 0;
+    case 'requirements': {
+      const [change, taskId] = parsed.rest;
+      if (!change || !taskId) throw new Error('Usage: idefactory requirements <change> <task> [--json]');
+      const doc = requirementsDocument(project, change, taskId);
+      out(parsed.flags.json ? JSON.stringify(doc) : renderRequirementsText(doc));
+      return 0;
+    }
     case 'sync-tasks': {
       const change = parsed.rest[0];
       const result = syncTasks(project, change, env);
       out(`Synced ${result.change}: created ${result.created}, skipped ${result.skipped}.`);
       for (const line of result.suggestions || []) out(line);
+      for (const line of requirementWarnings(project, result.change)) err(line);
       return 0;
     }
     case 'next': {
@@ -217,6 +241,8 @@ async function dispatchCommand(cmd, ctx) {
       return await handleVerify(project, parsed, out);
     case 'red':
       return handleRed(project, parsed, out);
+    case 'method':
+      return handleMethod(project, parsed, out);
     case 'complete': {
       const [change, taskId] = parsed.rest;
       const attemptId = parsed.flags.attempt;
@@ -437,6 +463,90 @@ const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session st
 
 function stringFlag(flags, key) {
   return typeof flags[key] === 'string' && flags[key].length > 0 ? flags[key] : '';
+}
+
+const METHOD_PROPOSE_USAGE = 'Usage: idefactory method propose <attemptId> --choice no-red --reason <class> --rationale "text" --implementer <id> --kind <kind>... [--test-path <path>...]';
+const METHOD_REVIEW_USAGE = 'Usage: idefactory method review <attemptId> --verdict ACCEPT|REJECT --reviewer <id> --note "text" [--principal-provider <id> --principal-subject <id>]';
+const METHOD_SHOW_USAGE = 'Usage: idefactory method show <attemptId>';
+
+function sequenceValues(parsed, key) {
+  return (parsed.sequence || [])
+    .filter((entry) => entry.key === key && typeof entry.value === 'string')
+    .map((entry) => entry.value);
+}
+
+function handleMethod(project, parsed, out) {
+  const sub = parsed.rest[0];
+  const attemptId = parsed.rest[1];
+  if (sub === 'show') {
+    if (!attemptId) throw new Error(METHOD_SHOW_USAGE);
+    const attempt = getAttempt(project, attemptId);
+    if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
+    const row = describeAttemptMethod(project, attempt);
+    out(row ? `${describeMethod(row)}\n` : `Attempt ${attemptId} uses the red-first method.\n`);
+    return 0;
+  }
+  if (halted(project)) {
+    throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
+  }
+  if (sub === 'propose') {
+    const kinds = sequenceValues(parsed, 'kind');
+    const rationale = stringFlag(parsed.flags, 'rationale');
+    const proposer = stringFlag(parsed.flags, 'implementer');
+    const reason = stringFlag(parsed.flags, 'reason');
+    const choice = stringFlag(parsed.flags, 'choice');
+    if (!attemptId || kinds.length === 0 || !rationale || !proposer || !reason || !choice) {
+      throw new Error(METHOD_PROPOSE_USAGE);
+    }
+    const result = proposeMethod(project, {
+      attemptId,
+      choice,
+      reason,
+      rationale,
+      proposer,
+      kinds,
+      testPaths: sequenceValues(parsed, 'test-path'),
+    });
+    out(JSON.stringify({
+      attemptId,
+      method: {
+        id: result.record.id,
+        choice: result.record.choice,
+        reason: result.record.reason,
+        kinds: result.record.kinds,
+        sourceRevision: result.record.sourceRevision,
+        changedFiles: result.record.changedFiles,
+        file: path.relative(project, result.file),
+      },
+      note: 'A different role must record idefactory method review before this attempt can be accepted.',
+    }, null, 2));
+    return 0;
+  }
+  if (sub === 'review') {
+    const verdict = stringFlag(parsed.flags, 'verdict');
+    const reviewer = stringFlag(parsed.flags, 'reviewer');
+    const note = stringFlag(parsed.flags, 'note');
+    if (!attemptId || !verdict || !reviewer || !note) throw new Error(METHOD_REVIEW_USAGE);
+    const result = reviewMethod(project, {
+      attemptId,
+      verdict,
+      reviewer,
+      note,
+      principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+      principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+    });
+    out(JSON.stringify({
+      attemptId,
+      review: {
+        id: result.record.id,
+        verdict: result.record.verdict,
+        reviewer: result.record.reviewer,
+        file: path.relative(project, result.file),
+      },
+    }, null, 2));
+    return 0;
+  }
+  throw new Error(`${METHOD_PROPOSE_USAGE}\n       ${METHOD_REVIEW_USAGE}\n       ${METHOD_SHOW_USAGE}`);
 }
 
 function handleRed(project, parsed, out) {

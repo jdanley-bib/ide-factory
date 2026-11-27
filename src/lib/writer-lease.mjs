@@ -16,6 +16,8 @@ const READ_ONLY = new Set([
   'help',
   'attempt show',
   'verify status',
+  'method show',
+  'requirements',
   'setup detect',
   'init dry-run',
   'upgrade dry-run',
@@ -34,6 +36,8 @@ const MUTATING = new Set([
   'verify import',
   'red reuse',
   'red waive',
+  'method propose',
+  'method review',
   'complete',
   'pr open',
   'pr comment',
@@ -82,6 +86,10 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'reuse') return 'red reuse';
     if (sub === 'waive') return 'red waive';
     return sub ? `red ${sub}` : 'red';
+  }
+  if (head === 'method') {
+    const sub = String(rest[0] || '').trim();
+    return sub ? `method ${sub}` : 'method';
   }
   if (head === 'lockout') {
     const sub = String(rest[0] || '').trim();

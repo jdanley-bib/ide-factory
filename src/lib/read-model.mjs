@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './layout.mjs';
 import { listAllExceptions } from './red-exceptions.mjs';
+import { listAllMethods } from './red-method.mjs';
 import { runsDir } from './run-session.mjs';
 import { listWorkItems } from './work.mjs';
 
@@ -65,6 +66,7 @@ export function buildStatusDocument(project) {
     activeChange: active?.change || null,
     workCounts,
     redExceptions: listAllExceptions(project),
+    redMethods: listAllMethods(project),
     metrics: {
       attempts: attemptCounts,
       openRuns,

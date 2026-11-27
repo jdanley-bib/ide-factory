@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './layout.mjs';
+import { isRequiredTestKind } from './red-evidence.mjs';
+import { configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
+import { isHumanGateRequired } from './risk-gates.mjs';
+import { listWorkItems } from './work.mjs';
 import {
   commandDigest,
   gitSnapshot,
@@ -23,21 +27,165 @@ export function readProfiles(project) {
   return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
 }
 
+const REQUIREMENTS_SCHEMA_VERSION = 1;
+const GATE_ACTIONS = ['accept', 'complete'];
+
+function tryReadRegistry(project) {
+  try {
+    return { checks: readCheckRegistry(project), error: null };
+  } catch (error) {
+    return { checks: {}, error: error.message };
+  }
+}
+
+function argvMapped(entry) {
+  return Array.isArray(entry?.argv)
+    && entry.argv.length > 0
+    && entry.argv.every((part) => typeof part === 'string' && part.length > 0);
+}
+
+function gateSatisfiable(project) {
+  if (readPolicyVersion(project) < 2) return { satisfiable: true, reason: null };
+  try {
+    configuredPrincipalProvider(project);
+    return { satisfiable: true, reason: null };
+  } catch (error) {
+    return { satisfiable: false, reason: error.message };
+  }
+}
+
+/**
+ * The one requirement set for a work item: its checks with their sources, the kinds that need
+ * red evidence, the human decisions it will need, its dependencies, and any problems that would
+ * strand an attempt. Never throws for an item defect; problems are returned instead.
+ */
+export function resolveRequirements(project, item) {
+  const problems = [];
+  const profileName = item?.factory?.verificationProfile || DEFAULT_PROFILE;
+  const profiles = readProfiles(project);
+  const fromProfile = Object.prototype.hasOwnProperty.call(profiles, profileName)
+    ? profiles[profileName]?.checks
+    : undefined;
+  if (!Array.isArray(fromProfile)) {
+    problems.push({
+      id: `undefined-profile:${profileName}`,
+      invariant: `the verification profile "${profileName}" must be defined`,
+      fix: '.factory/profiles.json',
+      message: `unknown verification profile "${profileName}"; define it in .factory/profiles.json`,
+    });
+  }
+  const own = Array.isArray(item?.factory?.checks) ? item.factory.checks : [];
+  const byKind = new Map();
+  const add = (kind, source) => {
+    if (!byKind.has(kind)) byKind.set(kind, []);
+    if (!byKind.get(kind).includes(source)) byKind.get(kind).push(source);
+  };
+  for (const kind of Array.isArray(fromProfile) ? fromProfile : []) add(kind, 'profile');
+  for (const kind of own) add(kind, 'item');
+  const checks = [...byKind].map(([kind, sources]) => ({ kind, sources }));
+
+  const registry = tryReadRegistry(project);
+  if (registry.error) {
+    problems.push({
+      id: 'check-registry',
+      invariant: 'the check registry must exist and be valid JSON',
+      fix: '.factory/checks.json',
+      message: `${registry.error}; fix .factory/checks.json`,
+    });
+  } else {
+    for (const { kind } of checks) {
+      if (!argvMapped(registry.checks[kind])) {
+        problems.push({
+          id: `unmapped-kind:${kind}`,
+          invariant: `the required check kind ${kind} must have a registered argv`,
+          fix: '.factory/checks.json',
+          message: `required check kind ${kind} has no argv in the check registry; map it in .factory/checks.json`,
+        });
+      }
+    }
+  }
+
+  const lightweight = item?.factory?.taskType === 'lightweight';
+  const redKinds = lightweight ? [] : checks.map((entry) => entry.kind).filter((kind) => isRequiredTestKind(kind));
+
+  const gateRequired = isHumanGateRequired(project, profileName);
+  const gate = gateRequired ? gateSatisfiable(project) : { satisfiable: true, reason: null };
+  const humanDecisions = GATE_ACTIONS.map((action) => ({
+    action,
+    required: gateRequired,
+    satisfiable: gate.satisfiable,
+  }));
+  if (gateRequired && !gate.satisfiable) {
+    problems.push({
+      id: 'unsatisfiable-gate',
+      invariant: `the ${profileName} profile requires a human gate, but the policy cannot verify an approver`,
+      fix: '.factory/config.json governance.principalVerifier (or set humanGate false in .factory/profiles.json)',
+      message: `human gate for profile "${profileName}" cannot be satisfied: ${gate.reason}; configure governance.principalVerifier in .factory/config.json or set humanGate false in .factory/profiles.json`,
+    });
+  }
+
+  const siblings = item?.change ? listWorkItems(project, item.change) : [];
+  const dependencies = (Array.isArray(item?.dependencies) ? item.dependencies : []).map((id) => {
+    const found = siblings.find((entry) => entry.id === id);
+    return { id, exists: Boolean(found), status: found?.status || null };
+  });
+  for (const dep of dependencies) {
+    if (!dep.exists) {
+      problems.push({
+        id: `missing-dependency:${dep.id}`,
+        invariant: `the dependency ${dep.id} must exist in ${item.change}`,
+        fix: `openspec/changes/${item.change}/tasks.md (then idefactory sync-tasks ${item.change})`,
+        message: `dependency ${dep.id} does not exist in ${item.change}; fix tasks.md and run idefactory sync-tasks ${item.change}`,
+      });
+    }
+  }
+
+  return {
+    schemaVersion: REQUIREMENTS_SCHEMA_VERSION,
+    change: item?.change || null,
+    taskId: item?.id || null,
+    taskClass: lightweight ? 'lightweight' : 'code',
+    verificationProfile: profileName,
+    checks,
+    redKinds,
+    humanDecisions,
+    dependencies,
+    problems,
+  };
+}
+
 /**
  * The checks an attempt must pass: the item's verification profile plus the item's own list.
  * An undefined profile name refuses rather than falling back to `unit`.
  */
 export function requiredChecksFor(project, item) {
-  const name = item?.factory?.verificationProfile || DEFAULT_PROFILE;
-  const profiles = readProfiles(project);
-  const fromProfile = Object.prototype.hasOwnProperty.call(profiles, name)
-    ? profiles[name]?.checks
-    : undefined;
-  if (!Array.isArray(fromProfile)) {
-    throw new Error(`unknown verification profile "${name}"; define it in .factory/profiles.json`);
+  const resolved = resolveRequirements(project, item);
+  const profileProblem = resolved.problems.find((problem) => problem.id.startsWith('undefined-profile:'));
+  if (profileProblem) throw new Error(profileProblem.message);
+  return resolved.checks.map((entry) => entry.kind);
+}
+
+/** The kinds that need a red for this item, from the full requirement set. */
+export function redKindsFor(project, item) {
+  if (!project) {
+    if (item?.factory?.taskType === 'lightweight') return [];
+    return (Array.isArray(item?.factory?.checks) ? item.factory.checks : []).filter(isRequiredTestKind);
   }
-  const own = Array.isArray(item?.factory?.checks) ? item.factory.checks : [];
-  return [...new Set([...fromProfile, ...own])];
+  return resolveRequirements(project, item).redKinds;
+}
+
+/** One line per problem, naming the invariant and where to fix it. */
+export function describeProblems(problems) {
+  return problems.map((problem) => `- ${problem.message}`);
+}
+
+export function assertNoRequirementProblems(project, item) {
+  const { problems } = resolveRequirements(project, item);
+  if (problems.length) {
+    throw new Error(
+      `requirement problems for ${item.change}/${item.id}; no attempt started:\n${describeProblems(problems).join('\n')}`,
+    );
+  }
 }
 
 export function readCheckRegistry(project) {

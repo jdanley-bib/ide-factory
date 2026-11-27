@@ -2,10 +2,12 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
-import { recordedAttemptIdentities } from './attempt.mjs';
+import { getAttempt, recordedAttemptIdentities } from './attempt.mjs';
+import { redStates } from './verification-status.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
+import { describeMethod, listAllMethods } from './red-method.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
@@ -77,6 +79,8 @@ export function status(project, _env) {
   const workLine = change
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
+  const attemptLines = openAttemptRedLines(project, change || undefined);
+  const methodLines = listAllMethods(project).map((row) => `- ${describeMethod(row)}`);
   const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
   const checkLines = Object.entries(registeredArgv(project)).map(([kind, argv]) => `- ${kind}: ${formatArgv(argv)}`);
   return [
@@ -85,6 +89,8 @@ export function status(project, _env) {
     `Active change: ${active?.change || '(none)'}`,
     `OpenSpec changes: ${changes.join(', ') || '(none)'}`,
     `Work queue: ${workLine}`,
+    ...(attemptLines.length ? ['Open attempts:', ...attemptLines] : []),
+    ...(methodLines.length ? ['Red methods:', ...methodLines] : []),
     ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
     ...(checkLines.length ? ['Registered checks:', ...checkLines] : []),
     '',
@@ -93,6 +99,18 @@ export function status(project, _env) {
     now,
     '',
   ].join('\n');
+}
+
+function openAttemptRedLines(project, change) {
+  const lines = [];
+  for (const item of listWorkItems(project, change)) {
+    if (item.status !== 'in_progress' || !item.attemptId) continue;
+    const attempt = getAttempt(project, item.attemptId);
+    if (!attempt) continue;
+    const reds = redStates(project, attempt, item).map((entry) => `${entry.kind}=${entry.state}`).join(', ');
+    lines.push(`- ${attempt.id} ${item.change}/${item.id} (${attempt.state}): red ${reds || 'none required'}`);
+  }
+  return lines;
 }
 
 function summarizeAllWork(project) {

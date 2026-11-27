@@ -5,7 +5,8 @@ import { attemptsRoot, getAttempt } from './attempt.mjs';
 import { classifyTask, defaultAcceptanceCriteria, parseFactoryBlock } from './classify.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
 import { halted, ledger, readText, writeText } from './layout.mjs';
-import { requiredTestKinds } from './red-evidence.mjs';
+import { describeProblems, redKindsFor, resolveRequirements } from './required-checks.mjs';
+import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import {
   ensureWorkDirs,
   getWorkItem,
@@ -365,7 +366,7 @@ function selectAcrossChanges(project) {
 function renderPacket({ role, item, modelProfile, project }) {
   const criteria = (item.acceptanceCriteria || []).map((entry) => `- ${entry}`).join('\n');
   const roles = (item.factory?.roles || []).join(', ');
-  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role);
+  const prior = priorRejectionBlock(project, item, role) + redExceptionBlock(project, item, role) + methodBlock(project, item, role);
   return `# Work packet
 
 Role: ${role}
@@ -383,8 +384,8 @@ Change: ${item.change}
 Roles pipeline: ${roles || role}
 Verification profile: ${item.factory?.verificationProfile || '(default)'}
 Checks: ${(item.factory?.checks || []).join(', ') || '(default)'}
-Task class: ${taskClassOf(item)}
-Red required for: ${redRequiredKinds(item).join(', ') || 'none'}
+${requirementLines(project, item)}Task class: ${taskClassOf(item)}
+Red required for: ${redRequiredKinds(project, item).join(', ') || 'none'}
 
 Description:
 openspec-task: ${item.id}
@@ -399,7 +400,9 @@ ${prior}
 Method:
 - Prefer common scaffolds and libraries over hand-rolled toolchains (for example npm create vite@latest for a SPA).
 - Write a failing test before production code only for the kinds listed under Red required for. A human-authorized red exception satisfies a kind in place of a red.
+- If a failing test cannot specify the change and the task class was inferred, record a no-red method with idefactory method propose before editing (docs-or-text, configuration, behavior-preserving, mechanical, or exploratory). The reviewer must accept it.
 - Record evidence on the attempt via idefactory attempt transition. Pass JSON evidence with --evidence-file <path> to a temporary file outside the project, or --evidence <json> inline, never both.
+- Print the resolved requirement set with idefactory requirements ${item.change} ${item.id}.
 - Run verification profile checks before claiming done.
 - Review is a different role: reviewer. The implementer does not approve their own work.
 - Finalize with idefactory complete ${item.change} ${item.id} --attempt <id>.
@@ -419,9 +422,44 @@ function taskClassOf(item) {
   return item.factory?.taskType === 'lightweight' ? 'lightweight' : 'code';
 }
 
-function redRequiredKinds(item) {
+function currentAttempt(project, item) {
+  return project && item.attemptId ? getAttempt(project, item.attemptId) : null;
+}
+
+function redRequiredKinds(project, item) {
   if (taskClassOf(item) === 'lightweight') return [];
-  return requiredTestKinds(item.factory?.checks);
+  const kinds = redKindsFor(project, item);
+  const attempt = currentAttempt(project, item);
+  if (!attempt) return kinds;
+  const covered = new Set(methodCoveredKinds(project, attempt));
+  return kinds.filter((kind) => !covered.has(kind));
+}
+
+function methodBlock(project, item, role) {
+  const attempt = currentAttempt(project, item);
+  const row = attempt ? describeAttemptMethod(project, attempt) : null;
+  if (!row) return '';
+  const lines = [describeMethod(row)];
+  if (role === 'reviewer' || role === 'security-reviewer') {
+    lines.push(
+      `Record a method review: idefactory method review ${row.attemptId} --verdict ACCEPT|REJECT --reviewer <id> --note "text". `
+      + 'Reject the method when its reason class does not fit the diff.',
+    );
+  } else if (!row.review) {
+    lines.push('A different role must record a method review before this attempt can be accepted.');
+  }
+  return `\nRed method:\n${lines.map((line) => `- ${line}`).join('\n')}\n`;
+}
+
+function requirementLines(project, item) {
+  if (!project) return '';
+  const { checks, problems } = resolveRequirements(project, item);
+  const listed = checks.map((entry) => `${entry.kind} (${entry.sources.join(', ')})`).join(', ');
+  const lines = [`Required checks: ${listed || 'none'}`];
+  if (problems.length) {
+    lines.push('Requirement problems (no attempt can start until fixed):', ...describeProblems(problems));
+  }
+  return `${lines.join('\n')}\n`;
 }
 
 function redExceptionBlock(project, item, role) {

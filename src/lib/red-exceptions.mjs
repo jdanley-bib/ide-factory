@@ -6,7 +6,9 @@ import { attestationFailureReason } from './required-checks.mjs';
 import { confirmPrincipal, readPolicyVersion } from './principal.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { ledger, readText, writeText } from './layout.mjs';
-import { isFailingRed, redForKind, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { isFailingRed, redForKind, retryKey } from './red-evidence.mjs';
+import { redKindsFor } from './required-checks.mjs';
+import { methodCovers } from './red-method.mjs';
 import {
   canonicalJson,
   commandDigest,
@@ -151,7 +153,7 @@ export function readBoundException(project, attempt, kind) {
 
 /**
  * Whether red is satisfied for one kind, and by what.
- * @returns {'cli'|'reuse'|'waiver'|'missing'}
+ * @returns {'cli'|'reuse'|'waiver'|'method'|'missing'}
  */
 export function redSatisfaction(project, attempt, kind) {
   const record = readBoundException(project, attempt, kind);
@@ -160,7 +162,8 @@ export function redSatisfaction(project, attempt, kind) {
     return isFailingRed(red) && redDigestOf(red) === record.invalidRed.redDigest ? 'waiver' : 'missing';
   }
   if (isFailingRed(redForKind(attempt, kind))) return 'cli';
-  return record ? record.type : 'missing';
+  if (record) return record.type;
+  return methodCovers(project, attempt, kind) ? 'method' : 'missing';
 }
 
 function redDigestOf(red) {
@@ -222,7 +225,7 @@ function requireCodeItem(project, attempt, kinds) {
   if (item.factory?.taskType === 'lightweight') {
     throw new Error('red exceptions do not apply to a lightweight work item');
   }
-  const required = requiredTestKinds(item.factory?.checks);
+  const required = redKindsFor(project, item);
   for (const kind of kinds) {
     if (!required.includes(kind)) {
       throw new Error(`${kind} is not a required test kind of ${attempt.change}/${attempt.taskId}`);

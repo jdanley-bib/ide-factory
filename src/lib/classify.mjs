@@ -60,6 +60,7 @@ export function classifyTask({ id, title, body = '', factory, routeDefault = nul
     throw new Error(`factory.taskType must be code or lightweight, got ${base.taskType}`);
   }
   const taskType = base.taskType || (kind === 'docs' ? 'lightweight' : 'code');
+  const taskTypeSource = base.taskType !== undefined ? 'explicit' : 'inferred';
   if (base.route !== undefined && base.route !== 'quick' && base.route !== 'full') {
     throw new Error(`factory.route must be quick or full, got ${base.route}`);
   }
@@ -85,6 +86,7 @@ export function classifyTask({ id, title, body = '', factory, routeDefault = nul
     verificationProfile,
     dependencies,
     taskType,
+    taskTypeSource,
     route,
   };
 }

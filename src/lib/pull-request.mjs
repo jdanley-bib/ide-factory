@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
 import { describeException, listAttemptExceptions } from './red-exceptions.mjs';
+import { describeAttemptMethod, describeMethod } from './red-method.mjs';
 import {
   buildCommentPullRequestArgv,
   buildCreatePullRequestArgv,
@@ -152,9 +153,11 @@ export function postVerdictComment(project, stored, env = process.env) {
     lines.push(`Reviewer: ${stored.reviewerId}`);
   }
   const exceptions = listAttemptExceptions(project, attempt);
+  const method = describeAttemptMethod(project, attempt);
   const build = (withReason) => {
     const body = `${[
       ...lines,
+      ...(method ? [describeMethod(method, { withText: withReason })] : []),
       ...exceptions.map((row) => describeException(row, { withReason })),
     ].join('\n')}\n`;
     const built = buildCommentPullRequestArgv({ number: record.pullRequest.number, body });
@@ -165,7 +168,7 @@ export function postVerdictComment(project, stored, env = process.env) {
   try {
     argv = build(true);
   } catch (error) {
-    if (exceptions.length === 0) throw error;
+    if (exceptions.length === 0 && !method) throw error;
     argv = build(false);
   }
   const result = runForge(project, argv, env);

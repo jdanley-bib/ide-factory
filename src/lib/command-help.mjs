@@ -160,6 +160,27 @@ export const COMMANDS = [
     examples: ['idefactory checks preview'],
   }),
   leaf(
+    ['requirements'],
+    'Print the resolved requirement set for one work item. Read-only; exits zero even when problems exist.',
+    'idefactory requirements <change> <task> [--json] [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [CHANGE_ARG, { name: 'task', required: true, description: 'Work item id, such as 1.1.' }],
+      flags: [
+        JSON_FLAG('Print one JSON document with schemaVersion 1: checks, redKinds, humanDecisions, dependencies, and problems.'),
+        PATH_FLAG,
+      ],
+      examples: ['idefactory requirements my-change 1.1', 'idefactory requirements my-change 1.1 --json'],
+      notes: [
+        'checks lists every required check with its sources: profile, item, or both.',
+        'redKinds lists the test kinds that need a failing red, or a red exception, before verifying.',
+        'humanDecisions lists the accept and complete gates and whether the policy can satisfy them.',
+        'problems lists what would stop an attempt from starting: an undefined profile, an unmapped check kind, an unsatisfiable gate, or a missing dependency. Each names the file that fixes it.',
+        'Nothing is written.',
+      ],
+    },
+  ),
+  leaf(
     ['sync-tasks'],
     'Create work items from the unchecked boxes of an OpenSpec change.',
     'idefactory sync-tasks <change> [--path dir]',
@@ -340,6 +361,68 @@ export const COMMANDS = [
       ],
     },
   ),
+  group(
+    ['method'],
+    'Choose and review whether an attempt is test-first. The default is red-first.',
+    'idefactory method propose|review|show ...',
+  ),
+  leaf(
+    ['method', 'propose'],
+    'Record a no-red method for a code attempt, with a reason class and rationale. No human approval is needed; a different role must review it.',
+    'idefactory method propose <attemptId> --choice no-red --reason <class> --rationale "text" --implementer <id> --kind <kind>... [--test-path <path>...] [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt that has not yet entered red-confirmed or verifying.' }],
+      flags: [
+        { name: 'choice', value: 'no-red', required: true, description: 'The method to record. red-first is the default and needs no record.' },
+        { name: 'reason', value: '<class>', required: true, description: 'One of docs-or-text, configuration, behavior-preserving, mechanical, exploratory.' },
+        { name: 'rationale', value: '"text"', required: true, description: 'Why a failing test cannot specify this change.' },
+        { name: 'implementer', value: '<id>', required: true, description: 'Id of the implementer making the proposal.' },
+        { ...KIND_FLAG, description: 'Required test kind the method covers. Repeat the flag for more than one kind.' },
+        { name: 'test-path', value: '<path>', required: false, repeatable: true, description: 'Existing git-tracked test file that exercises the changed behavior. Required for behavior-preserving.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory method propose <attempt> --choice no-red --reason configuration --rationale "only edits a config value" --implementer engineer-1 --kind unit',
+        'idefactory method propose <attempt> --choice no-red --reason behavior-preserving --rationale "pure rename" --implementer engineer-1 --kind unit --test-path test/parser.test.mjs',
+      ],
+      notes: [
+        'Refused when the work item has an explicit factory.taskType, when a covered kind already has a failing red or an exception, when a kind is not required, or when a reviewer already rejected a no-red method for the item.',
+        'The record keeps the source revision and the number of changed files so the reviewer can judge. It never counts as a red that ran and is not a red exception.',
+        'It does not waive passing verification, distinct review, lockouts, or human gates.',
+      ],
+    },
+  ),
+  leaf(
+    ['method', 'review'],
+    'Record the reviewer\'s ACCEPT or REJECT of an attempt\'s no-red method. The reviewer must differ from the implementer.',
+    'idefactory method review <attemptId> --verdict ACCEPT|REJECT --reviewer <id> --note "text" [--principal-provider <id> --principal-subject <id>] [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt with a recorded no-red method.' }],
+      flags: [
+        { name: 'verdict', value: 'ACCEPT|REJECT', required: true, description: 'The reviewer\'s decision on the method.' },
+        { name: 'reviewer', value: '<id>', required: true, description: 'Id of the reviewing role. Must not be the implementer.' },
+        { name: 'note', value: '"text"', required: true, description: 'Why the method fits or does not fit the diff.' },
+        ...PRINCIPAL_FLAGS,
+        PATH_FLAG,
+      ],
+      examples: ['idefactory method review <attempt> --verdict ACCEPT --reviewer reviewer-1 --note "config-only diff"'],
+      notes: [
+        'An attempt with a no-red method cannot be accepted without an ACCEPT review.',
+        'After a REJECT, later attempts for the item use red-first and a new proposal is refused.',
+      ],
+    },
+  ),
+  leaf(
+    ['method', 'show'],
+    'Show the method recorded for an attempt. Read-only.',
+    'idefactory method show <attemptId> [--path dir]',
+    {
+      effects: READ_ONLY,
+      arguments: [ATTEMPT_ARG],
+      flags: [PATH_FLAG],
+      examples: ['idefactory method show <attempt>'],
+    },
+  ),
   leaf(
     ['complete'],
     'Journal the finalization and mark an accepted attempt done.',
@@ -491,7 +574,7 @@ export const ATTEMPT_PRECONDITIONS = [
   },
   {
     state: 'verifying',
-    text: 'Needs a recorded failing red for every required test kind, or a red exception. Lightweight tasks skip this.',
+    text: 'Needs a recorded failing red for every test kind in the resolved requirement set (item and profile checks together; see "requirements"), or a red exception, or a no-red method that covers the kind (see "method propose"). Lightweight tasks skip this.',
   },
   {
     state: 'awaiting-review',
@@ -499,7 +582,7 @@ export const ATTEMPT_PRECONDITIONS = [
   },
   {
     state: 'accepted',
-    text: 'Needs a reviewerId (in evidence or already on the attempt) and a verdict of ACCEPT if a verdict is given.',
+    text: 'Needs a reviewerId (in evidence or already on the attempt) and a verdict of ACCEPT if a verdict is given. An attempt with a no-red method also needs an ACCEPT "method review" from a reviewer other than the implementer.',
   },
   {
     state: 'rejected',

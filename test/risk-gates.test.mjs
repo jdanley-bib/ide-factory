@@ -388,6 +388,7 @@ async function seedGatedChange(dir, {
       `- [ ] ${taskId} Human gate item`,
       '  factory:',
       '    kind: general',
+      '    dependencies: []',
       '    checks: [unit]',
       `    verificationProfile: ${verificationProfile}`,
       '    roles: [engineer, reviewer, scribe]',
@@ -501,22 +502,15 @@ test('complete without complete approval exits non-zero and leaves item undone',
   }
 });
 
-test('unknown verification profile is refused at review handoff and never reaches the human gate', async () => {
+test('unknown verification profile is refused before an attempt starts and never reaches the human gate', async () => {
   const dir = tempProject();
   try {
     await seedGatedChange(dir, { verificationProfile: 'no-such-profile', taskId: '2.1' });
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '2.1']);
-    assert.equal(started.code, 0, started.err + started.out);
-    const attemptId = JSON.parse(started.out).id;
-    await advanceToVerifying(dir, attemptId);
-
-    const handoff = await idefactory(dir, [
-      'attempt', 'transition', attemptId, 'awaiting-review',
-      '--evidence', JSON.stringify({}),
-    ]);
-    assert.notEqual(handoff.code, 0, handoff.out);
-    assert.match(handoff.err, /no-such-profile/);
-    assert.equal(getAttempt(dir, attemptId).state, 'verifying');
+    assert.notEqual(started.code, 0, started.out);
+    assert.match(started.err, /no-such-profile/);
+    assert.match(started.err, /profiles\.json/);
+    assert.equal(fs.readdirSync(path.join(dir, '.factory', 'attempts')).filter((name) => name.endsWith('.json')).length, 0);
 
     const result = await idefactory(dir, [
       'run', '--change', 'demo', '--max-tasks', '1', '--max-agent-steps', '10',
@@ -686,6 +680,7 @@ async function seedSecurityStageChange(dir, {
       `- [ ] ${taskId} Stage fixture`,
       '  factory:',
       '    kind: general',
+      '    dependencies: []',
       `    checks: [${checks.join(', ')}]`,
       `    securityProfile: ${securityProfile}`,
       `    verificationProfile: ${verificationProfile}`,
@@ -829,7 +824,6 @@ test('security-checking to awaiting-review rejected without passing CLI security
     const shipped = JSON.parse(
       fs.readFileSync(path.join(dir, '.factory', 'checks.json'), 'utf8'),
     );
-    assert.equal(shipped.checks.unit, undefined);
     assert.equal(shipped.checks['threat-review'], undefined);
 
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '3.2']);

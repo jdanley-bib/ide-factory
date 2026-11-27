@@ -22,10 +22,11 @@ import {
   STICKY_STOP_REASONS,
   writeRunSession,
 } from './run-session.mjs';
-import { classifyCheckOutcome, isRequiredTestKind, requiredTestKinds, retryKey } from './red-evidence.mjs';
+import { classifyCheckOutcome, isRequiredTestKind, retryKey } from './red-evidence.mjs';
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
+import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import { humanGateAllows } from './risk-gates.mjs';
-import { missingChecks } from './required-checks.mjs';
+import { describeProblems, missingChecks, redKindsFor, resolveRequirements } from './required-checks.mjs';
 import {
   gitSnapshot,
   registrySetDigest,
@@ -208,6 +209,15 @@ export function runFactory(project, env, {
 
     let attempt = item.attemptId ? getAttempt(project, item.attemptId) : null;
     if (!attempt) {
+      const { problems } = resolveRequirements(project, item);
+      if (problems.length) {
+        return {
+          code: EXIT_ERROR,
+          text: `Run stopped (blocked) for ${change}: ${item.id} has requirement problems; no attempt started.\n${describeProblems(problems).join('\n')}\n`,
+          stopReason: 'blocked',
+          request: null,
+        };
+      }
       const role = primaryRole(item);
       const modelProfile = item.factory?.modelProfile || profileForRole(config, role);
       attempt = startAttempt(project, change, item.id, { role, modelProfile });
@@ -456,7 +466,7 @@ function stageForState(state, item, { project, attempt } = {}) {
           message: 'Lightweight item. Implement and run verification. A failing test is not required.',
         };
       }
-      if (requiredTestKinds(item.factory?.checks).length === 0) {
+      if (redKindsFor(project, item).length === 0) {
         return {
           needsAgent: true,
           role: implementer,
@@ -469,14 +479,19 @@ function stageForState(state, item, { project, attempt } = {}) {
           needsAgent: true,
           role: implementer,
           nextState: 'verifying',
-          message: 'Every required test kind has a red or a human-authorized red exception. Implement until green, run verification profile checks, and move to verifying.',
+          message: methodCoveredKinds(project, attempt).length > 0
+            ? 'Every required test kind has a failing red or is covered by the recorded no-red method. Implement until green, run verification profile checks, and move to verifying.'
+            : 'Every required test kind has a red or a human-authorized red exception. Implement until green, run verification profile checks, and move to verifying.',
         };
       }
       return {
         needsAgent: true,
         role: implementer,
         nextState: 'red-confirmed',
-        message: 'Write a failing test and report red evidence with idefactory verify run --red.',
+        message: 'Write a failing test and report red evidence with idefactory verify run --red.'
+          + (item.factory?.taskTypeSource === 'inferred'
+            ? ' If a failing test cannot specify the change, record a no-red method with idefactory method propose before editing.'
+            : ''),
       };
     case 'red-confirmed':
       return {
@@ -537,7 +552,7 @@ function stageForState(state, item, { project, attempt } = {}) {
 }
 
 function redRequirementMet(project, attempt, item) {
-  const kinds = requiredTestKinds(item.factory?.checks);
+  const kinds = redKindsFor(project, item);
   if (kinds.length === 0) return false;
   return kinds.every((kind) => redSatisfaction(project, attempt, kind) !== 'missing');
 }
@@ -555,10 +570,23 @@ function profileForRole(config, role) {
 }
 
 function withRedExceptions(project, attempt, stage) {
-  if (stage.role !== 'reviewer' && stage.role !== 'security-reviewer') return stage.message;
+  const method = describeAttemptMethod(project, attempt);
+  let message = stage.message;
+  if (method) {
+    const methodLines = [`- ${describeMethod(method)}`];
+    if (stage.role === 'reviewer' || stage.role === 'security-reviewer') {
+      methodLines.push(
+        `- Record a method review: idefactory method review ${attempt.id} --verdict ACCEPT|REJECT --reviewer <id> --note "text". Reject it when the reason class does not fit the diff.`,
+      );
+    } else if (!method.review) {
+      methodLines.push('- A different role must record a method review before this attempt can be accepted.');
+    }
+    message = `${message}\n\nRed method:\n${methodLines.join('\n')}`;
+  }
+  if (stage.role !== 'reviewer' && stage.role !== 'security-reviewer') return message;
   const lines = listAttemptExceptions(project, attempt).map((row) => `- ${describeException(row)}`);
-  if (lines.length === 0) return stage.message;
-  return `${stage.message}\n\nRed exceptions:\n${lines.join('\n')}`;
+  if (lines.length === 0) return message;
+  return `${message}\n\nRed exceptions:\n${lines.join('\n')}`;
 }
 
 function renderRequest(request) {

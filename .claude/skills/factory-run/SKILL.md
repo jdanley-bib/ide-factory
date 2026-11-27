@@ -27,6 +27,8 @@ idefactory run --change <name> --until human-gate
 
 Each iteration resumes the persisted run session for the change. Do not reset budgets from this loop.
 
+`run` stops with `blocked` before it starts an attempt when the item's requirement set has a problem: an undefined profile, a required check kind with no registry argv, an unsatisfiable human gate, or a missing dependency. The stop text names the file that fixes it; `idefactory requirements <change> <task>` prints the same set.
+
 Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human configured.
 
 3. Interpret the exit code:

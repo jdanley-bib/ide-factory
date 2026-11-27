@@ -45,6 +45,7 @@ function sanitizeEvent(event) {
     'agent',
     'resolver',
     'exceptionType',
+    'verdict',
   ];
   const clean = {};
   for (const key of allowed) {

@@ -7,7 +7,7 @@ import { COMMANDS } from '../src/lib/command-help.mjs';
 import { parseArgs } from '../src/lib/run.mjs';
 import { spawnFailureDetail } from '../src/lib/red-evidence.mjs';
 import { mapsFromSequence } from '../src/lib/setup.mjs';
-import { BASIC_TASK, commitAll, readJson, seedChange, writeJson } from './factory-project.mjs';
+import { BASIC_TASK, commitAll, nodeCheck, readJson, seedChange, writeJson } from './factory-project.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -178,6 +178,7 @@ test('a missing executable is an infrastructure failure that names it and record
       schemaVersion: 1,
       checks: {
         unit: { argv: ['definitely-not-a-real-binary-xyz', '--x'], cwdPolicy: 'project', timeoutMs: 5000, artifacts: [] },
+        build: nodeCheck('process.exit(0)'),
       },
     });
     commitAll(dir);
