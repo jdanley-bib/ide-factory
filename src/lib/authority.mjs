@@ -19,6 +19,8 @@ export const AUTHORITY = Object.freeze({
   'raise-new-run-cap': gate('human', 'none', 'raise a configured run cap or ceiling'),
   'new-run-spend': gate('human', 'none', 'open a new run session after max-tokens or max-cost'),
   'new-run-human': gate('human', 'none', 'open a new run session on a stop that a person must decide'),
+  'record-setup': gate('human', 'none', 'record the test command and governance mode, which are project decisions'),
+  'detect-setup': gate('agent', 'none', 'print stack proposals that a person can confirm; writes nothing', { actor: 'tooling' }),
 
   'resolve-lockout': gate('independent', 'identity', 'resolve a reviewer lockout with an identity other than the locked agent'),
   'waive-red': gate('independent', 'identity', 'waive a red with an identity other than the implementer', { principalUnderV2: true }),

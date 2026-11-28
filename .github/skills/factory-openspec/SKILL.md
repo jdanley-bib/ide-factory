@@ -79,6 +79,7 @@ A person is needed only for these gates, which the authority table marks `human`
 - `raise-new-run-cap`: raise a configured run cap or ceiling. Command: `set run.maxNewRuns in .factory/config.json`
 - `new-run-spend`: open a new run session after max-tokens or max-cost. Command: `idefactory run --change <change> --new-run`
 - `new-run-human`: open a new run session on a stop that a person must decide. Command: `idefactory run --change <change> --new-run`
+- `record-setup`: record the test command and governance mode, which are project decisions. Command: `idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)`
 
 Stop rules:
 - `retry: never`: stop and report. Do not retry.

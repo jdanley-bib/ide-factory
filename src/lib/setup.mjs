@@ -46,6 +46,16 @@ export function setupReadinessErrors(project) {
   return errors;
 }
 
+/** The gaps that stop run and next before any session or baseline. Outside a factory project there are none. */
+export function setupStopGaps(project) {
+  if (!fs.existsSync(path.join(project, '.factory', 'config.json'))) return [];
+  return setupReadinessErrors(project);
+}
+
+export function setupStopMessage(gaps) {
+  return `Setup is incomplete: ${gaps.join('; ')}. One answer is needed from a person: idefactory setup records the test command and governance mode.`;
+}
+
 /**
  * Print-only detection, or a confirmed write of governance and check argv.
  * Writes nothing until every required answer is present and valid.

@@ -273,6 +273,8 @@ export const COMMANDS = [
       examples: ['idefactory run --change add-auth --until human-gate', 'idefactory run --change add-auth --json'],
       notes: [
         'Exit 2 means one IDE role should take the printed request. Exit 0 is a clean stop. Exit 1 is an error.',
+        'Run and next check setup first. With no recorded test decision, or no principal verifier under policy version 2, the stop is setup-incomplete: no session is created, no baseline runs, and the text ends with the setup command to run.',
+        'A blocked stop in text output ends with a Next: line that names the first supported recovery and who may run it: an agent, an identity other than the implementer, or a person. --json prints the same first option in blocked.recovery.options.',
         'With --json, blocked is null for a clean finish and otherwise a blocked-state report: invariant {code, message}, actor, recovery {supported, options[]}, and retry.',
         `Actors: ${ACTORS.join(', ')}. human means a person must decide. independent-agent means an identity other than the implementer's, or the locked agent's, is required. Each option names its level and enforcement; see the Authority notes.`,
         'Each recovery option has id, supported, command (when supported), actor, authority {level, enforcement, source}, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',

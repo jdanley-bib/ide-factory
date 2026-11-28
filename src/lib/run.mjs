@@ -4,7 +4,7 @@ import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
 import { REPOINT_USAGE, applyRepoint, repointPreview } from './attempt-repoint.mjs';
 import { completeWorkItem } from './complete.mjs';
 import { approve, createLockout, doctor, orphanAttemptLines, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
-import { blockedReportForError, buildBlockedReport, recordStop } from './blocked-states.mjs';
+import { blockedReportForError, buildBlockedReport, nextLine, recordStop, resolveSetupStop } from './blocked-states.mjs';
 import { buildAutonomyReport, renderAutonomyText } from './autonomy.mjs';
 import { authorizeRequest, renderAuthorizeText } from './authorize.mjs';
 import { buildStatusDocument } from './read-model.mjs';
@@ -17,7 +17,7 @@ import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
 import { scaffoldConsumerCi } from './ci-scaffold.mjs';
 import { capturePullRequestComments, commentOnPullRequest, openPullRequest } from './pull-request.mjs';
-import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mjs';
+import { mapsFromSequence, setupProject, setupReadinessErrors, setupStopGaps, setupStopMessage } from './setup.mjs';
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reopenAttempt } from './attempt-reopen.mjs';
@@ -327,11 +327,25 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     }
     case 'next': {
+      const change = parsed.flags.change || undefined;
+      const setupGaps = setupStopGaps(project);
+      if (setupGaps.length) {
+        const blocked = buildBlockedReport(project, { code: 'setup-incomplete', change, message: setupStopMessage(setupGaps) });
+        if (change) recordStop(project, blocked);
+        if (parsed.flags.json) {
+          out(JSON.stringify({ ok: false, empty: true, text: '', blocked }, null, 2));
+        } else {
+          out(setupStopMessage(setupGaps));
+          out(nextLine(blocked));
+        }
+        return 0;
+      }
+      if (change) resolveSetupStop(project, change);
       const packet = buildPacket(project, env, parsed.flags.change || '');
+      const blocked = packet.empty
+        ? buildBlockedReport(project, { code: 'no-ready-work', change })
+        : null;
       if (parsed.flags.json) {
-        const blocked = packet.empty
-          ? buildBlockedReport(project, { code: 'no-ready-work', change: parsed.flags.change || undefined })
-          : null;
         out(JSON.stringify({
           ok: !packet.empty,
           empty: Boolean(packet.empty),
@@ -342,6 +356,7 @@ async function dispatchCommand(cmd, ctx) {
         return 0;
       }
       out(packet.text);
+      if (blocked) out(nextLine(blocked));
       return 0;
     }
     case 'run': {
@@ -374,6 +389,7 @@ async function dispatchCommand(cmd, ctx) {
       const orphans = orphanAttemptLines(project, parsed.flags.change || parsed.rest[0] || undefined);
       if (orphans.length) out(['Orphan attempts:', ...orphans].join('\n'));
       out(result.text);
+      if (result.blocked) out(nextLine(result.blocked));
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
     case 'attempt':

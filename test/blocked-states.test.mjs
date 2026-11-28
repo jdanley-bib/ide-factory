@@ -10,6 +10,7 @@ import {
   STOP_REASON_CODES,
   buildBlockedReport,
   codeForStopReason,
+  nextLine,
 } from '../src/lib/blocked-states.mjs';
 import { renderWorkPacket } from '../src/lib/queue.mjs';
 import { standingDecisions } from '../src/lib/standing-decisions.mjs';
@@ -430,6 +431,7 @@ test('next --json reports the empty case and run --json reports a halt', async (
   const dir = tempProject();
   try {
     ok(await idefactory(dir, ['init']));
+    ok(await idefactory(dir, ['setup', '--governance', 'lightweight', '--no-test']));
     const empty = await idefactory(dir, ['next', '--change', 'demo', '--json']);
     assert.equal(empty.code, 0, empty.err + empty.out);
     const doc = JSON.parse(empty.out);
@@ -521,4 +523,45 @@ test('the method proposal rows name the reopened case that the command accepts',
     const option = BLOCKED_TABLE[code].options.find((entry) => entry.id === id);
     assert.match(option.requires, /reopened for a method/, `${code} ${id}`);
   }
+});
+
+test('setup-incomplete lists recording the setup first as a person decision, then detect as an agent step', async () => {
+  const dir = tempProject();
+  try {
+    ok(await idefactory(dir, ['init']));
+    const report = buildBlockedReport(dir, { code: 'setup-incomplete', change: 'demo' });
+    assert.equal(report.invariant.code, 'setup-incomplete');
+    assert.equal(report.retry, 'only-after-change');
+    assert.equal(report.actor, 'human');
+    assert.deepEqual(report.recovery.options.map((option) => option.id), ['record-setup', 'detect-setup']);
+    const [record, detect] = report.recovery.options;
+    assert.equal(record.authority.level, 'human');
+    assert.equal(record.command, 'idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)');
+    assert.equal(detect.authority.level, 'agent');
+    assert.equal(detect.command, 'idefactory setup --detect');
+    assert.equal(detect.resolves, false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('nextLine names the first supported option and who may run it', () => {
+  const report = (options) => ({ recovery: { options } });
+  const supported = (level, command) => ({ supported: true, command, authority: { level } });
+  assert.equal(
+    nextLine(report([{ supported: false }, supported('agent', 'idefactory attempt start demo 1.1')])),
+    'Next: idefactory attempt start demo 1.1 (an agent may run it)',
+  );
+  assert.equal(
+    nextLine(report([supported('independent', 'idefactory red waive a --kind unit')])),
+    'Next: idefactory red waive a --kind unit (an identity other than the implementer may run it)',
+  );
+  assert.equal(
+    nextLine(report([supported('human', 'idefactory resume')])),
+    'Next: idefactory resume (a person may run it)',
+  );
+  assert.equal(
+    nextLine(report([{ supported: false }])),
+    'Next: no supported recovery for this stop. A person must decide what to do.',
+  );
 });

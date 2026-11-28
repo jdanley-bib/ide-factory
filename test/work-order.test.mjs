@@ -19,6 +19,9 @@ test('listWorkItems and next prefer 2.1 over 10.1', async () => {
   const dir = tempProject();
   try {
     assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal((await idefactory(dir, [
+      'setup', '--governance', 'lightweight', '--map', 'unit', '--argv=node', '--argv=-e', '--argv=process.exit(0)',
+    ])).code, 0);
     for (const id of ['1.1', '10.1', '2.1', '10.2']) {
       upsertWorkItem(dir, {
         change: 'demo',

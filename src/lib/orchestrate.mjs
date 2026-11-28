@@ -1,6 +1,7 @@
 import { standingDecisionsText } from './standing-decisions.mjs';
 import { haltError } from './blocked-error.mjs';
-import { blockedReportForStop, focusItem, recordStop, resolveClearedRecords, resolveOpenForChange } from './blocked-states.mjs';
+import { blockedReportForStop, focusItem, recordStop, resolveClearedRecords, resolveOpenForChange, resolveSetupStop } from './blocked-states.mjs';
+import { setupStopGaps, setupStopMessage } from './setup.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -81,6 +82,12 @@ function runFactoryCore(project, env, {
     throw haltError();
   }
   if (!change) throw new Error('Usage: idefactory run --change <name>');
+  const setupGaps = setupStopGaps(project);
+  if (setupGaps.length) {
+    const message = setupStopMessage(setupGaps);
+    return { code: EXIT_OK, text: `${message}\n`, stopReason: 'setup-incomplete', request: null, blocked: { message } };
+  }
+  resolveSetupStop(project, change);
   resolveClearedRecords(project, change);
   if (hasActiveLockout(project)) {
     const focusItemRow = focusItem(project, change);

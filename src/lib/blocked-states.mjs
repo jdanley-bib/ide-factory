@@ -229,6 +229,14 @@ export const BLOCKED_TABLE = {
       option('apply-reconciliation', ['sync-tasks'], 'idefactory sync-tasks {change} --apply --decisions-file <file> --plan-digest <digest> --decided-by <id>', 'a decision by an identity other than the implementer\'s, recorded against the plan digest', true, (ctx) => Boolean(ctx.change)),
     ],
   },
+  'setup-incomplete': {
+    retry: 'only-after-change',
+    message: 'Factory setup is incomplete. A person records the test command and governance mode before a run starts.',
+    options: [
+      option('record-setup', ['setup'], 'idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)', 'a person records the test command and governance mode', true),
+      option('detect-setup', ['setup'], 'idefactory setup --detect', 'nothing; it prints stack proposals for a person to confirm', false),
+    ],
+  },
   unclassified: {
     retry: 'only-after-change',
     message: 'The failure has no mapping.',
@@ -262,6 +270,7 @@ export const STOP_REASON_CODES = {
   'infrastructure-failure': 'infrastructure-failure',
   baseline: 'baseline',
   'retry-cap': 'retry-cap',
+  'setup-incomplete': 'setup-incomplete',
 };
 
 export function codeForStopReason(stopReason) {
@@ -379,6 +388,31 @@ export function codeForError(error) {
   if (error instanceof BlockedError) return error.invariant;
   if (error?.code === 'HALT' || error?.message === HALT_MESSAGE) return 'halted';
   return 'unclassified';
+}
+
+const NEXT_WHO = {
+  human: 'a person',
+  independent: 'an identity other than the implementer',
+  agent: 'an agent',
+};
+
+/** The one line a text stop prints: the first supported option, and who may run it. */
+export function nextLine(report) {
+  const first = report.recovery.options.find((option) => option.supported);
+  if (!first) return 'Next: no supported recovery for this stop. A person must decide what to do.';
+  return `Next: ${first.command} (${NEXT_WHO[first.authority.level]} may run it)`;
+}
+
+/** Close an open setup-incomplete stop once a later run or next gets past the setup check. */
+export function resolveSetupStop(project, change) {
+  let last = null;
+  for (const event of readControlEvents(project)) {
+    if (event.change !== change || event.task) continue;
+    if (event.type === 'blocked.recorded') last = event;
+    else if (event.type === 'blocked.resolved') last = null;
+  }
+  if (last?.invariant !== 'setup-incomplete') return;
+  emitResolved(project, { change, invariant: 'setup-incomplete', resolution: 'setup-recorded' });
 }
 
 export function blockedReportForError(project, error, scope = {}) {
