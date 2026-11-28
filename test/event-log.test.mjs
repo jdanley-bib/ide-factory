@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
+import { appendControlEvent, readControlEvents } from '../src/lib/event-log.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 
 function git(cwd, args) {
@@ -149,6 +150,59 @@ test('a failed event append after completion leaves the work item done and warns
     const completed = await idefactory(dir, ['complete', 'demo', '1.1', '--attempt', attempt.id]);
     assert.match(`${completed.err}${completed.out}`, /event-log warning/);
     assert.equal(getWorkItem(dir, 'demo', '1.1').status, 'done');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a plain failure of a mutating command appends command.error without its text', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const failed = await idefactory(dir, ['attempt', 'transition', 'no-such-attempt', 'accepted', '--evidence', '{}']);
+    assert.notEqual(failed.code, 0);
+    const rows = events(dir).filter((event) => event.type === 'command.error');
+    assert.equal(rows.length, 1, JSON.stringify(rows));
+    assert.deepEqual(Object.keys(rows[0]).sort(), ['code', 'command', 'time', 'type']);
+    assert.equal(rows[0].command, 'attempt transition');
+    assert.equal(rows[0].code, 'unclassified');
+    assert.equal(fs.readFileSync(path.join(dir, '.factory/observability/events.jsonl'), 'utf8').includes(failed.err.trim()), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('the event allowlist drops fields it does not name', () => {
+  const dir = tempProject();
+  try {
+    appendControlEvent(dir, {
+      type: 'allowlist.check',
+      time: '2026-01-01T00:00:00.000Z',
+      command: 'run',
+      code: 'unclassified',
+      secret: 'token-abc',
+      message: 'raw error text',
+    });
+    const [row] = readControlEvents(dir);
+    assert.equal(row.command, 'run');
+    assert.equal(row.code, 'unclassified');
+    assert.equal(row.secret, undefined);
+    assert.equal(row.message, undefined);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('halt appends no event and resume appends halt.resumed', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    assert.equal((await idefactory(dir, ['halt'])).code, 0);
+    assert.equal(events(dir).some((event) => event.type === 'halt.resumed'), false);
+    assert.equal((await idefactory(dir, ['resume'])).code, 0);
+    const resumed = events(dir).filter((event) => event.type === 'halt.resumed');
+    assert.equal(resumed.length, 1);
+    assert.equal(typeof resumed[0].time, 'string');
   } finally {
     cleanup(dir);
   }

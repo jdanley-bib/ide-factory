@@ -183,3 +183,66 @@ Help for `run`, `next`, `complete`, `attempt transition`, and `sync-tasks` SHALL
 #### Scenario: Global help unchanged
 - **WHEN** the user runs `idefactory help`
 - **THEN** the output is the existing global usage text
+
+### Requirement: Attempt ownership help
+`idefactory help attempt repoint` SHALL describe the preview and apply forms, the plan digest, the decision flags, the identity rule, and that evidence is never edited. `idefactory help attempt start` SHALL state that a live attempt with evidence blocks a second start and that an empty live attempt is reused. The global usage text SHALL NOT change.
+
+#### Scenario: Repoint help
+- **WHEN** the user runs `idefactory help attempt repoint`
+- **THEN** the output shows the `--plan-digest`, `--decided-by`, and `--reason` flags and says no attempt evidence is modified
+
+#### Scenario: Start help
+- **WHEN** the user runs `idefactory attempt start --help`
+- **THEN** the output states the active-attempt guard and the reuse of an empty attempt
+
+#### Scenario: Global text unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text
+
+### Requirement: New-run help
+`idefactory help run` SHALL describe `--new-run` as opening a new session after a budget stop or `retry-cap`, limited by `run.maxNewRuns`, and SHALL state that condition stops clear without it. The global usage text SHALL NOT change.
+
+#### Scenario: Run help names the cap
+- **WHEN** the user runs `idefactory help run`
+- **THEN** the output describes `--new-run`, `run.maxNewRuns`, and that `vacuous-red` clears when resolved
+
+#### Scenario: Global text unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text
+
+### Requirement: Red invalidation help
+`idefactory help red invalidate` SHALL describe the flags, the two classes, that the command grants nothing, the per-kind limit, and that a human waiver remains for a kind that cannot be satisfied. The global usage text SHALL NOT change.
+
+#### Scenario: Invalidate help
+- **WHEN** the user runs `idefactory help red invalidate`
+- **THEN** the output names `--class`, `post-implementation`, `wrong-failure`, and the limit of two per kind
+
+#### Scenario: Global text unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text
+
+### Requirement: Authority help
+Help for each gated command SHALL state its authority level and enforcement label from the authority table in one line. The `run` help SHALL define the three levels and the three enforcement labels. The global usage text SHALL NOT change.
+
+#### Scenario: Waive help
+- **WHEN** the user runs `idefactory help red waive`
+- **THEN** the output states level `independent` and the enforcement label
+
+#### Scenario: Run help defines levels
+- **WHEN** the user runs `idefactory help run`
+- **THEN** the output defines `agent`, `independent`, `human`, `none`, `identity`, and `principal`
+
+#### Scenario: Global text unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text
+
+### Requirement: Autonomy report help
+`idefactory help autonomy report` SHALL describe `decisions`, `unrecordedStops`, `measurementComplete`, `eventsRead`, `noStopEvents`, the deprecated `noEvents` alias, and that `routineClean` needs a complete measurement. The global usage text SHALL NOT change.
+
+#### Scenario: Help names the fields
+- **WHEN** the user runs `idefactory help autonomy report`
+- **THEN** the output names `unrecordedStops`, `measurementComplete`, and `noStopEvents`
+
+#### Scenario: Global text unchanged
+- **WHEN** the user runs `idefactory help`
+- **THEN** the output is the existing global usage text

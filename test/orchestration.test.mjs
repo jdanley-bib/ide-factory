@@ -9,6 +9,7 @@ import {
   createFinalizationJournal,
 } from '../src/lib/finalization-recovery.mjs';
 import { writeText } from '../src/lib/layout.mjs';
+import { readRunSession } from '../src/lib/run-session.mjs';
 import { commandDigest } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem, itemPath } from '../src/lib/work.mjs';
 import { cleanup, idefactory, tempProject } from './helpers.mjs';
@@ -352,7 +353,15 @@ test('verificationProfile alone does not route to security-reviewer or block awa
   }
 });
 
-test('security-reviewer route in fresh session after sticky unchanged-state with remaining budget', async () => {
+function listRunSessionFiles(project) {
+  const runsDir = path.join(project, '.factory', 'orchestration', 'runs');
+  if (!fs.existsSync(runsDir)) return [];
+  return fs.readdirSync(runsDir)
+    .filter((name) => name.endsWith('.json'))
+    .map((name) => path.join(runsDir, name));
+}
+
+test('security-reviewer route after unchanged-state clears in the same session', async () => {
   const dir = tempProject();
   try {
     await seedChange(dir, [
@@ -381,23 +390,21 @@ test('security-reviewer route in fresh session after sticky unchanged-state with
 
     await advanceToVerifying(dir, attempt.id, { passChecks: SECURITY_PROFILE_CHECKS });
 
-    const stickyResume = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
-    assert.equal(stickyResume.code, 0, stickyResume.err + stickyResume.out);
-    assert.match(`${stickyResume.err}\n${stickyResume.out}`, /unchanged-state/);
-    assert.doesNotMatch(`${stickyResume.err}\n${stickyResume.out}`, /# Orchestration request/);
-
-    const securityRun = await idefactory(dir, [
-      'run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps), '--new-run',
-    ]);
-    assert.equal(securityRun.code, 2, securityRun.err + securityRun.out);
-    const securityRoleLines = [...securityRun.out.matchAll(/^Role: security-reviewer$/gm)];
+    const runId = readRunSession(listRunSessionFiles(dir)[0]).runId;
+    const resumed = await idefactory(dir, ['run', '--change', 'demo', '--max-agent-steps', String(maxAgentSteps)]);
+    assert.equal(resumed.code, 2, resumed.err + resumed.out);
+    const securityRoleLines = [...resumed.out.matchAll(/^Role: security-reviewer$/gm)];
     assert.equal(securityRoleLines.length, 1, 'must print exactly one security-reviewer request');
-    assert.match(securityRun.out, /\.factory\/agents\/security-reviewer\/charter\.md/);
-    assert.doesNotMatch(securityRun.out, /\.factory\/agents\/reviewer\/charter\.md/);
-    const request = parseOrchestrationJson(securityRun.out);
+    assert.match(resumed.out, /\.factory\/agents\/security-reviewer\/charter\.md/);
+    assert.doesNotMatch(resumed.out, /\.factory\/agents\/reviewer\/charter\.md/);
+    const request = parseOrchestrationJson(resumed.out);
     assert.equal(request.role, 'security-reviewer');
     assert.equal(request.state, 'verifying');
     assert.equal(request.nextState, 'security-checking');
+    const session = readRunSession(listRunSessionFiles(dir)[0]);
+    assert.equal(session.runId, runId);
+    assert.equal(session.status, 'open');
+    assert.deepEqual(session.clearedStops.map((entry) => entry.stopReason), ['unchanged-state']);
   } finally {
     cleanup(dir);
   }
@@ -1055,6 +1062,41 @@ test('implementing request for a code item with a test kind still asks for a red
     const request = requestJson(result.out);
     assert.equal(request.nextState, 'red-confirmed');
     assert.match(result.out, /Write a failing test and report red evidence with idefactory verify run --red/);
+    assert.doesNotMatch(result.out, /already-satisfied/);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('an explicit-class item with a vacuous red gets the already-satisfied method in its next request', async () => {
+  const dir = tempProject();
+  try {
+    await seedChange(dir, [
+      '- [ ] 1.1 Add parser',
+      '  factory:',
+      '    kind: general',
+      '    taskType: code',
+      '    checks: [unit]',
+      '    verificationProfile: cli',
+      '    roles: [engineer, reviewer, scribe]',
+      '',
+    ].join('\n'));
+    writeCheckRegistry(dir, { unit: 0 });
+    ensureCleanGitCommit(dir);
+    const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
+    assert.equal(started.code, 0, started.err);
+    const attemptId = JSON.parse(started.out).id;
+    assert.equal((await idefactory(dir, [
+      'attempt', 'transition', attemptId, 'implementing', '--evidence', JSON.stringify({ implementerId: 'engineer-1' }),
+    ])).code, 0);
+    const red = await idefactory(dir, ['verify', 'run', attemptId, '--check', 'unit', '--red']);
+    assert.match(red.err, /vacuous-red/);
+    const result = await idefactory(dir, ['run', '--change', 'demo', '--new-run', '--max-tasks', '1']);
+    assert.equal(result.code, 2, result.err + result.out);
+    assert.equal(requestJson(result.out).nextState, 'red-confirmed');
+    assert.match(result.out, /A red run reported vacuous-red for unit\. If the behavior already exists/);
+    assert.match(result.out, new RegExp(`method propose ${attemptId} .*--reason already-satisfied .*--kind unit --test-path <path>`));
+    assert.doesNotMatch(result.out, /If a failing test cannot specify the change/);
   } finally {
     cleanup(dir);
   }

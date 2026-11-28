@@ -1,4 +1,5 @@
 import { actionHelpLines, actionIds, AUTHORIZATION_REASONS } from './approval-actions.mjs';
+import { gateLabel } from './authority.mjs';
 import { ACTORS, RETRY_CLASSES } from './blocked-error.mjs';
 import { IDENTITY_FORMAT_TEXT } from './identity.mjs';
 import { LOCKOUT_CREATE_ALIAS_USAGE, LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
@@ -36,7 +37,7 @@ const APPROVER_FLAG = {
   name: 'approver',
   value: '<id>',
   required: true,
-  description: 'Id of the human who authorizes the exception. Must not be the implementer.',
+  description: 'Id of the identity that authorizes the exception. It must not be the implementer\'s.',
 };
 const PRINCIPAL_FLAGS = [
   {
@@ -165,16 +166,19 @@ export const COMMANDS = [
       flags: [
         { name: 'change', value: '<name>', required: false, description: 'Limit the report to one OpenSpec change.' },
         { name: 'since', value: '<iso>', required: false, description: 'Count only events at or after this ISO 8601 time.' },
-        JSON_FLAG('Print one JSON document with schemaVersion 1: interventions, counts, autonomousRecoveries, unclassifiedEvents, routineClean, and scope.'),
+        JSON_FLAG('Print one JSON document with schemaVersion 2: interventions, decisions, counts, autonomousRecoveries, unrecordedStops, unreadableSessions, eventsRead, noStopEvents, noEvents (an alias of noStopEvents, kept for one release), measurementComplete, routineClean, unclassifiedEvents, and scope.'),
         PATH_FLAG,
       ],
       examples: ['idefactory autonomy report', 'idefactory autonomy report --change add-auth --json'],
       notes: [
-        'It reads .factory/observability/events.jsonl and nothing else. It writes no file and appends no event.',
-        'Each stop that needs a human is one intervention in one category. policy-decision: an intentional human decision (approval-missing, halted, reviewer-lockout, budget-exhausted, reconciliation-required). failure: no supported recovery, or unclassified. redundant: a supported option that resolves the stop and that an agent may run existed. A stop whose actor is not human is counted as handled.',
-        'The order is: not human is handled; then an agent-actionable option is redundant; then the policy set is a policy-decision; everything else is a failure.',
+        'It reads .factory/observability/events.jsonl and the closed run sessions under .factory/orchestration/runs. It writes no file and appends no event.',
+        'Each stop that needs a human is one intervention in one category. policy-decision: an intentional human decision (approval-missing, halted, budget-exhausted, new-run-cap). failure: no supported recovery, or unclassified. redundant: a supported option that resolves the stop and that an agent may run existed. A stop whose option is independent or agent-level is counted as handled.',
+        'The order is: a stop below the human level is handled; then an agent-actionable option is redundant; then the policy set is a policy-decision; everything else is a failure.',
+        'A human-level decision event (an approval issued or revoked, or a halt resumed) is one policy-decision intervention. An independent or agent-level decision (a lockout resolved, a red waived or reused, a reconciliation applied, a new run opened) is listed under decisions and is not an intervention.',
+        'unrecordedStops lists each closed run session whose stop has no blocked.recorded event with the same code. An unreadable session is listed under unreadableSessions. measurementComplete is false while either list is not empty.',
         'An autonomous recovery is a stop with no human actor that a later event resolved with no human decision between them.',
-        'routineClean is true when the range holds no failure and no redundant intervention.',
+        'routineClean is true only when measurementComplete is true and the range holds no failure and no redundant intervention.',
+        'eventsRead counts the events in range. noStopEvents is true when none of them is a stop. noEvents is the same value under its old name.',
         'The report carries codes, ids, and times only. It covers interventions the factory recorded, not prompts typed into an IDE chat.',
       ],
     },
@@ -260,17 +264,20 @@ export const COMMANDS = [
         { name: 'until', value: 'human-gate', required: false, description: 'Where to stop. Defaults to human-gate.' },
         { name: 'max-tasks', value: 'N', required: false, description: 'Stop after this many tasks.' },
         { name: 'max-agent-steps', value: 'N', required: false, description: 'Stop after this many agent steps.' },
-        { name: 'new-run', value: null, required: false, description: 'Start a new run session after a sticky stop. Human only.' },
-        { name: 'accept-baseline', value: null, required: false, description: 'Accept the current baseline for the run.' },
+        { name: 'new-run', value: null, required: false, description: 'Open a new run session after a budget stop or retry-cap, up to run.maxNewRuns session files per change (default 3). Spend ceilings are never reset by it. Condition stops such as vacuous-red clear on their own once resolved, without this flag.' },
+        { name: 'accept-baseline', value: null, required: false, description: 'Accept a failing baseline for this HEAD only. Needs --reason.' },
+        { name: 'reason', value: '"text"', required: false, description: 'Why the baseline is accepted. Required with --accept-baseline; recorded with the HEAD and time, and shown to the reviewer.' },
         JSON_FLAG('Print one JSON object {stopReason, exitCode, request, blocked, text} instead of the text. Exit codes do not change.'),
         PATH_FLAG,
       ],
       examples: ['idefactory run --change add-auth --until human-gate', 'idefactory run --change add-auth --json'],
       notes: [
         'Exit 2 means one IDE role should take the printed request. Exit 0 is a clean stop. Exit 1 is an error.',
+        'Run and next check setup first. With no recorded test decision, or no principal verifier under policy version 2, the stop is setup-incomplete: no session is created, no baseline runs, and the text ends with the setup command to run.',
+        'A blocked stop in text output ends with a Next: line that names the first supported recovery and who may run it: an agent, an identity other than the implementer, or a person. --json prints the same first option in blocked.recovery.options.',
         'With --json, blocked is null for a clean finish and otherwise a blocked-state report: invariant {code, message}, actor, recovery {supported, options[]}, and retry.',
-        `Actors: ${ACTORS.join(', ')}. human means the next step needs authority only a human holds. independent-agent means it needs an identity other than the implementer's.`,
-        'Each recovery option has id, supported, command (when supported), actor, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',
+        `Actors: ${ACTORS.join(', ')}. human means a person must decide. independent-agent means an identity other than the implementer's, or the locked agent's, is required. Each option names its level and enforcement; see the Authority notes.`,
+        'Each recovery option has id, supported, command (when supported), actor, authority {level, enforcement, source}, requires, and resolves. supported means the command exists and its precondition holds now, not that it will succeed. When no option that resolves the stop is supported, recovery.supported is false, the message says so, and the actor is human.',
         `Retry classes: ${RETRY_CLASSES.join(', ')}. safe means the condition can clear without a change. only-after-change means the same stop repeats unless something recorded changes. never means a repeat is known to be refused.`,
         'A stop on a work item is also recorded in .factory/blocked/<change>--<task>.json and marked resolved by a later run that finds the condition gone. The record never decides whether work may proceed. The same report is available from next, complete, attempt transition, and sync-tasks with --json.',
         'A packet or request lists Standing decisions: approvals, standing authorizations, red exceptions, methods, and reconciliation decisions still valid for the item. Do not ask for them again. Listing one grants no authority.',
@@ -279,8 +286,8 @@ export const COMMANDS = [
   ),
   group(
     ['attempt'],
-    'Start, transition, reopen, or show an execution attempt.',
-    'idefactory attempt start|transition|reopen|show ...',
+    'Start, transition, reopen, repoint, or show an execution attempt.',
+    'idefactory attempt start|transition|reopen|repoint|show ...',
   ),
   leaf(
     ['attempt', 'start'],
@@ -293,6 +300,35 @@ export const COMMANDS = [
       ],
       flags: [PATH_FLAG],
       examples: ['idefactory attempt start add-auth 1.1'],
+      notes: [
+        'A live attempt with recorded evidence blocks a second start with invariant attempt-active. Continue that attempt instead.',
+        'An empty live attempt is returned unchanged with reused: true.',
+      ],
+    },
+  ),
+  leaf(
+    ['attempt', 'repoint'],
+    'Point a work item at a different attempt, after previewing the repair.',
+    'idefactory attempt repoint <change> <taskId> --attempt <id> [--apply --plan-digest <digest> --decided-by <id> --reason "<text>"] [--path dir]',
+    {
+      arguments: [
+        CHANGE_ARG,
+        { name: 'taskId', required: true, description: 'Work item task id.' },
+      ],
+      flags: [
+        { name: 'attempt', value: '<id>', required: true, description: 'Attempt to make current.' },
+        { name: 'apply', value: null, required: false, description: 'Write the repair. Without it the command only previews.' },
+        { name: 'plan-digest', value: '<digest>', required: false, description: 'Digest printed by the preview. Required with --apply.' },
+        { name: 'decided-by', value: '<id>', required: false, description: 'Identity recording the repair. Required with --apply.' },
+        { name: 'reason', value: '<text>', required: false, description: 'Why the pointer is wrong. Required with --apply; stored in the repair record, not in events.' },
+        PATH_FLAG,
+      ],
+      notes: [
+        'Only the work item pointer and its history change. No attempt file, and no evidence on any attempt, is edited.',
+        'When the attempt being displaced has evidence, --decided-by must differ from its implementer. Under policy version 2 it must also be the verified principal.',
+        'The target must belong to the same change and task, must not be the current attempt, and must not be rejected.',
+      ],
+      examples: ['idefactory attempt repoint add-auth 1.1 --attempt 3f2c'],
     },
   ),
   leaf(
@@ -436,6 +472,29 @@ export const COMMANDS = [
     },
   ),
   leaf(
+    ['red', 'invalidate'],
+    'Withdraw a stored failing CLI red as not genuine. Grants nothing: the kind still needs a reviewed method, an exception, or a later failing red. Does not edit the red.',
+    'idefactory red invalidate <attemptId> --kind <kind> --class <post-implementation|wrong-failure> --note "text" --by <identity> [--path dir]',
+    {
+      arguments: [{ name: 'attemptId', required: true, description: 'Attempt whose failing red is withdrawn.' }],
+      flags: [
+        { name: 'kind', value: '<kind>', required: true, description: 'Test kind whose current failing red is withdrawn.' },
+        { name: 'class', value: 'post-implementation|wrong-failure', required: true, description: 'post-implementation: the red was recorded after implementation began. wrong-failure: the test failed on a fixture or unrelated fault, not the behavior under test.' },
+        { name: 'note', value: '"text"', required: true, description: 'Why the red is not genuine. Kept in the record, never in the event log.' },
+        { name: 'by', value: '<identity>', required: true, description: 'Identity recorded with the withdrawal. It need not differ from the implementer.' },
+        PATH_FLAG,
+      ],
+      examples: [
+        'idefactory red invalidate <attemptId> --kind unit --class post-implementation --note "recorded after the implementation was written" --by engineer-1',
+      ],
+      notes: [
+        'At most two invalidations per kind on an attempt. After that, a human waiver with --invalid-red is the exit.',
+        'An invalidated red does not satisfy red and does not block a method proposal. A failing CLI red recorded after the invalidation does satisfy red.',
+        'The command is refused while HALT is present and requires the writer lease.',
+      ],
+    },
+  ),
+  leaf(
     ['red', 'waive'],
     'Record that no red exists for a kind. Does not write a red.',
     'idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--principal-provider <id> --principal-subject <id>] [--path dir]',
@@ -455,7 +514,7 @@ export const COMMANDS = [
         'idefactory red waive <target> --kind unit --invalid-red "recorded after implementing" --note "post-hoc red" --approver human-1 --acknowledge-not-stuck',
       ],
       notes: [
-        'A waiver is refused while a failing CLI red is stored for the kind, unless --invalid-red names that red as recorded after implementation.',
+        'A waiver is refused while a failing CLI red is stored for the kind. To withdraw a red that is not genuine, use red invalidate first; --invalid-red is the human acceptance of such a red.',
         'A kind can be invalidated once. After that, verify run --red may append one later red, which does not prove the test came first.',
         'A waiver does not replace passing verification, distinct review, or lockouts.',
       ],
@@ -474,19 +533,21 @@ export const COMMANDS = [
       arguments: [{ name: 'attemptId', required: true, description: 'Attempt that has not yet entered red-confirmed or verifying.' }],
       flags: [
         { name: 'choice', value: 'no-red', required: true, description: 'The method to record. red-first is the default and needs no record.' },
-        { name: 'reason', value: '<class>', required: true, description: 'One of docs-or-text, configuration, behavior-preserving, mechanical, exploratory.' },
+        { name: 'reason', value: '<class>', required: true, description: 'One of docs-or-text, configuration, behavior-preserving, mechanical, exploratory, already-satisfied.' },
         { name: 'rationale', value: '"text"', required: true, description: 'Why a failing test cannot specify this change.' },
         { name: 'implementer', value: '<id>', required: true, description: 'Id of the implementer making the proposal.' },
         { ...KIND_FLAG, description: 'Required test kind the method covers. Repeat the flag for more than one kind.' },
-        { name: 'test-path', value: '<path>', required: false, repeatable: true, description: 'Existing git-tracked test file that exercises the changed behavior. Required for behavior-preserving.' },
+        { name: 'test-path', value: '<path>', required: false, repeatable: true, description: 'Existing test file or directory that exercises the behavior. Required for behavior-preserving (a tracked file) and already-satisfied (any path; the only changes allowed).' },
         PATH_FLAG,
       ],
       examples: [
         'idefactory method propose <attempt> --choice no-red --reason configuration --rationale "only edits a config value" --implementer engineer-1 --kind unit',
         'idefactory method propose <attempt> --choice no-red --reason behavior-preserving --rationale "pure rename" --implementer engineer-1 --kind unit --test-path test/parser.test.mjs',
+        'idefactory method propose <attempt> --choice no-red --reason already-satisfied --rationale "parser already trims input" --implementer engineer-1 --kind unit --test-path test/parser-trim.test.mjs',
       ],
       notes: [
-        'Refused when the work item has an explicit factory.taskType, when a covered kind already has a failing red or an exception, when a kind is not required, or when a reviewer already rejected a no-red method for the item.',
+        'Refused when the work item has an explicit factory.taskType (except for already-satisfied), when a covered kind already has a failing red or an exception, when a kind is not required, or when a reviewer already rejected a no-red method for the item.',
+        'already-satisfied answers a vacuous-red for behavior that already exists. Each covered kind needs a vacuous red recorded for its current registered command, and every changed path since the attempt started must lie in the cited tests. The reviewer checks that the tests cover the acceptance criteria.',
         'The record keeps the source revision and the number of changed files so the reviewer can judge. It never counts as a red that ran and is not a red exception.',
         'It does not waive passing verification, distinct review, lockouts, or human gates.',
       ],
@@ -886,6 +947,36 @@ export const ATTEMPT_PRECONDITIONS = [
   },
 ];
 
+const GATED_COMMANDS = {
+  approve: 'record-approval',
+  resume: 'resume',
+  'lockout resolve': 'resolve-lockout',
+  'red waive': 'waive-red',
+  'red reuse': 'reuse-red',
+  'red invalidate': 'red-invalidate',
+  'attempt reopen': 'reopen-attempt',
+  'attempt repoint': 'attempt-repoint',
+  'method review': 'method-review',
+};
+
+const GATED_NOTES = {
+  'sync-tasks': [`--apply, which decides a reconciliation: ${gateLabel('apply-reconciliation')}.`],
+  'attempt transition': [`accepted or rejected by a reviewer: ${gateLabel('review-attempt')}.`],
+  run: [
+    'Authority levels: agent means the agent doing the work may take the action. independent means an identity other than the implementer\'s is required, which may be an agent. human means a person must decide.',
+    'Enforcement labels: none means the CLI checks nothing about who acts. identity means the CLI checks that the supplied identity differs from the implementer\'s or the locked agent\'s, which does not prove a person. principal means the policy version 2 verifier confirms the identity.',
+    `--new-run within run.maxNewRuns: ${gateLabel('new-run')}.`,
+    `--new-run after max-tokens or max-cost: ${gateLabel('new-run-spend')}.`,
+    `--accept-baseline with --reason: ${gateLabel('accept-baseline')}.`,
+  ],
+};
+
+for (const entry of COMMANDS) {
+  const key = pathKey(entry);
+  if (GATED_COMMANDS[key]) entry.authority = GATED_COMMANDS[key];
+  if (GATED_NOTES[key]) entry.notes = [...(entry.notes || []), ...GATED_NOTES[key]];
+}
+
 export function pathKey(entry) {
   return entry.path.join(' ');
 }
@@ -976,6 +1067,7 @@ export function renderText(entry) {
     return `${lines.join('\n')}\n`;
   }
   lines.push('', `Effects: ${effectsLine(entry)}`);
+  if (entry.authority) lines.push(`Authority: ${gateLabel(entry.authority)}.`);
   if (entry.arguments.length) {
     lines.push('', 'Arguments:');
     lines.push(...table(entry.arguments.map((arg) => ({

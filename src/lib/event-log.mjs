@@ -54,6 +54,7 @@ function sanitizeEvent(event) {
     'change',
     'task',
     'attemptId',
+    'previousAttemptId',
     'runId',
     'commandDigest',
     'exitCode',
@@ -77,6 +78,9 @@ function sanitizeEvent(event) {
     'outcome',
     'cause',
     'readback',
+    'command',
+    'code',
+    'level',
   ];
   const clean = {};
   for (const key of allowed) {

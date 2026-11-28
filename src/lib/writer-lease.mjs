@@ -35,12 +35,14 @@ const MUTATING = new Set([
   'next',
   'run',
   'attempt start',
+  'attempt repoint',
   'attempt transition',
   'attempt reopen',
   'verify run',
   'verify import',
   'red reuse',
   'red waive',
+  'red invalidate',
   'method propose',
   'method review',
   'complete',
@@ -88,6 +90,7 @@ export function cliCommandKey(cmd, rest = [], flags = {}) {
     if (sub === 'start') return 'attempt start';
     if (sub === 'transition') return 'attempt transition';
     if (sub === 'show') return 'attempt show';
+    if (sub === 'repoint') return 'attempt repoint';
     return sub ? `attempt ${sub}` : 'attempt';
   }
   if (head === 'verify') {

@@ -217,6 +217,8 @@ test('read-only commands neither acquire nor remove a lease', async () => {
     assert.equal(isMutatingCommand('status'), false);
     assert.equal(isMutatingCommand('complete'), true);
     assert.equal(isMutatingCommand('attempt start'), true);
+    assert.equal(isMutatingCommand('red invalidate'), true);
+    assert.equal(cliCommandKey('red', ['invalidate', 'a1']), 'red invalidate');
 
     await withReadOnlyCommand(dir, 'status', async () => {
       assert.equal(fs.existsSync(writerLeaseDir(dir)), false);

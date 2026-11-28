@@ -3,12 +3,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { getAttempt } from '../src/lib/attempt.mjs';
+import { AUTHORITY } from '../src/lib/authority.mjs';
 import {
   BLOCKED_CODES,
   BLOCKED_TABLE,
   STOP_REASON_CODES,
   buildBlockedReport,
   codeForStopReason,
+  nextLine,
 } from '../src/lib/blocked-states.mjs';
 import { renderWorkPacket } from '../src/lib/queue.mjs';
 import { standingDecisions } from '../src/lib/standing-decisions.mjs';
@@ -100,7 +102,7 @@ test('each code has a retry class and options that name real commands', () => {
   for (const [code, row] of Object.entries(BLOCKED_TABLE)) {
     assert.ok(['safe', 'only-after-change', 'never'].includes(row.retry), code);
     for (const entry of row.options) {
-      assert.ok(['human', 'independent-agent', 'implementing-agent', 'tooling'].includes(entry.actor), `${code}/${entry.id}`);
+      assert.ok(Object.hasOwn(AUTHORITY, entry.id), `${code}/${entry.id}`);
       assert.equal(typeof entry.resolves, 'boolean');
     }
   }
@@ -127,6 +129,32 @@ test('actors follow who holds the authority', async () => {
     const start = rejected.recovery.options.find((entry) => entry.id === 'start-new-attempt');
     assert.equal(start.supported, true);
     assert.equal(start.command, 'idefactory attempt start demo 1.1');
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous red offers the already-satisfied proposal first, and each proposal names the states it accepts', async () => {
+  const dir = tempProject();
+  try {
+    assert.equal((await idefactory(dir, ['init'])).code, 0);
+    const vacuous = { id: 'a1', change: 'demo', taskId: '1.1', state: 'implementing', evidence: { redFailures: [{ kind: 'unit', classification: 'vacuous-red' }] } };
+    const report = buildBlockedReport(dir, { code: 'vacuous-red', attempt: vacuous });
+    const first = report.recovery.options[0];
+    assert.equal(first.id, 'propose-already-satisfied');
+    assert.equal(first.supported, true);
+    for (const flag of ['--reason already-satisfied', '--test-path', '--kind']) assert.match(first.command, new RegExp(flag));
+    const propose = report.recovery.options.find((entry) => entry.id === 'propose-method');
+    assert.match(propose.requires, /planned, assigned, or implementing/);
+    assert.doesNotMatch(propose.requires, /before verification/);
+
+    const verifying = buildBlockedReport(dir, { code: 'vacuous-red', attempt: { ...vacuous, state: 'verifying' } });
+    assert.equal(verifying.recovery.options.find((entry) => entry.id === 'propose-already-satisfied').supported, false);
+    assert.equal(verifying.recovery.options.find((entry) => entry.id === 'propose-method').supported, false);
+
+    const noVacuous = buildBlockedReport(dir, { code: 'red-missing', attempt: { ...vacuous, evidence: {} } });
+    assert.equal(noVacuous.recovery.options.find((entry) => entry.id === 'propose-already-satisfied'), undefined);
+    assert.equal(noVacuous.recovery.options.find((entry) => entry.id === 'propose-method').supported, true);
   } finally {
     cleanup(dir);
   }
@@ -307,7 +335,7 @@ test('a lockout stop is recorded and resolved by the lockout resolution', async 
     const doc = JSON.parse(stopped.out);
     assert.equal(doc.stopReason, 'lockout');
     assert.equal(doc.blocked.invariant.code, 'reviewer-lockout');
-    assert.equal(doc.blocked.actor, 'human');
+    assert.equal(doc.blocked.actor, 'independent-agent');
     assert.equal(readRecord(dir).status, 'open');
 
     ok(await idefactory(dir, ['lockout', 'resolve', lockoutId, '--resolver', 'human-1', '--reason', 'fixed']));
@@ -403,6 +431,7 @@ test('next --json reports the empty case and run --json reports a halt', async (
   const dir = tempProject();
   try {
     ok(await idefactory(dir, ['init']));
+    ok(await idefactory(dir, ['setup', '--governance', 'lightweight', '--no-test']));
     const empty = await idefactory(dir, ['next', '--change', 'demo', '--json']);
     assert.equal(empty.code, 0, empty.err + empty.out);
     const doc = JSON.parse(empty.out);
@@ -487,4 +516,52 @@ test('shipped skills tell the agent to branch on the report and not to re-ask', 
   }
   const run = fs.readFileSync(path.join(repoRoot, 'templates/skills/factory-run/SKILL.md'), 'utf8');
   for (const word of ['actor', 'supported', 'safe', 'only-after-change', 'never']) assert.match(run, new RegExp(word));
+});
+
+test('the method proposal rows name the reopened case that the command accepts', () => {
+  for (const [code, id] of [['red-missing', 'propose-method'], ['vacuous-red', 'propose-method'], ['vacuous-red', 'propose-already-satisfied']]) {
+    const option = BLOCKED_TABLE[code].options.find((entry) => entry.id === id);
+    assert.match(option.requires, /reopened for a method/, `${code} ${id}`);
+  }
+});
+
+test('setup-incomplete lists recording the setup first as a person decision, then detect as an agent step', async () => {
+  const dir = tempProject();
+  try {
+    ok(await idefactory(dir, ['init']));
+    const report = buildBlockedReport(dir, { code: 'setup-incomplete', change: 'demo' });
+    assert.equal(report.invariant.code, 'setup-incomplete');
+    assert.equal(report.retry, 'only-after-change');
+    assert.equal(report.actor, 'human');
+    assert.deepEqual(report.recovery.options.map((option) => option.id), ['record-setup', 'detect-setup']);
+    const [record, detect] = report.recovery.options;
+    assert.equal(record.authority.level, 'human');
+    assert.equal(record.command, 'idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)');
+    assert.equal(detect.authority.level, 'agent');
+    assert.equal(detect.command, 'idefactory setup --detect');
+    assert.equal(detect.resolves, false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('nextLine names the first supported option and who may run it', () => {
+  const report = (options) => ({ recovery: { options } });
+  const supported = (level, command) => ({ supported: true, command, authority: { level } });
+  assert.equal(
+    nextLine(report([{ supported: false }, supported('agent', 'idefactory attempt start demo 1.1')])),
+    'Next: idefactory attempt start demo 1.1 (an agent may run it)',
+  );
+  assert.equal(
+    nextLine(report([supported('independent', 'idefactory red waive a --kind unit')])),
+    'Next: idefactory red waive a --kind unit (an identity other than the implementer may run it)',
+  );
+  assert.equal(
+    nextLine(report([supported('human', 'idefactory resume')])),
+    'Next: idefactory resume (a person may run it)',
+  );
+  assert.equal(
+    nextLine(report([{ supported: false }])),
+    'Next: no supported recovery for this stop. A person must decide what to do.',
+  );
 });

@@ -32,7 +32,7 @@ Each iteration resumes the persisted run session for the change. Do not reset bu
 Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human configured.
 
 3. Interpret the exit code:
-   - `0` — stopped cleanly (all done, human-gate, or a persisted stop such as `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, `unchanged-state`, `vacuous-red`, `infrastructure-failure`, `baseline`, or `retry-cap`). Summarize and stop. Do not continue after `vacuous-red` or `retry-cap`.
+   - `0` — stopped cleanly (all done, human-gate, or a persisted stop such as `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, `unchanged-state`, `vacuous-red`, `infrastructure-failure`, `baseline`, or `retry-cap`). Summarize and stop. After `vacuous-red`, resolve the red and invoke `run` again; the session reopens once the red is resolved. Do not continue after `retry-cap`.
    - `1` — error (lockout, blocked deps, rejection, invalid session or budget). Report and stop.
    - `2` — needs an agent step. Read the orchestration request JSON.
 
@@ -48,7 +48,7 @@ Optional: `--max-tasks N`, `--max-agent-steps N`, and other run flags the human 
 
 ## Stop conditions
 
-Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, `unchanged-state`, `vacuous-red`, `infrastructure-failure`, `baseline`, and `retry-cap`. `infrastructure-failure` and `baseline` can be retried by the next human-started run. `vacuous-red` and `retry-cap` wait until the human passes `--new-run`. Other clean stops include all work items done or human-gate (true profile `humanGate`). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
+Persisted budget and state stops: `max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`, `unchanged-state`, `vacuous-red`, `infrastructure-failure`, `baseline`, and `retry-cap`. `infrastructure-failure` and `baseline` can be retried by the next run. `unchanged-state` and `vacuous-red` clear on their own once their condition is gone. `retry-cap` and budget stops wait for `--new-run`, which is bounded by `run.maxNewRuns`. Other clean stops include all work items done or human-gate (true profile `humanGate`). Hard stops include halt, lockout, rejected review, failed verification evidence, and invalid session or budget errors.
 
 ## Blocked states
 
@@ -67,15 +67,15 @@ Standing decisions in a packet are approvals, standing authorizations, red excep
 
 Before a step that publishes, deploys, spends, or opens an account, run `idefactory authorize --change <name> --action <publish|deploy|spend|account> --target <name>`. Continue when it reports `authorized: true`. Stop and report its `reason` and the `approve` command it prints when it reports false.
 
-## New session (human only)
+## New session (bounded)
 
-After a sticky budget stop, `vacuous-red`, or `retry-cap`, the closed session stays in force until the **human** explicitly opens a new run, for example:
+After a budget stop or `retry-cap`, the closed session stays in force until a new run is opened with `--new-run`:
 
 ```bash
 idefactory run --change <name> --new-run
 ```
 
-Only the human may add that flag after `vacuous-red`, `retry-cap`, or another sticky stop; the factory-run loop never passes it.
+The cap is `run.maxNewRuns` (default 3) session files per change. Past it, or after a spend ceiling (`max-tokens`, `max-cost`), the run stops with a blocked report whose resolver is a human. Never add that flag after `vacuous-red`: resolve the red and run again, and the session reopens by itself.
 
 ## Pull requests
 
@@ -88,11 +88,35 @@ Held items (deferred or dropped by a reconciliation) are never selected by `run`
 
 When the human asks you to run, or to run the full pipeline, for a change, that request covers `sync-tasks`, `run`, `verify`, and `complete` for that change, with the attempt, red, and method records they involve. Do not ask again before each of them. The cover ends when the run stops and does not extend to another change.
 
-These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Only a human passes `--new-run` after a budget stop, `vacuous-red`, or `retry-cap`.
+These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Pass `--new-run` only after a budget stop or `retry-cap`, and only while the change is under `run.maxNewRuns`. `vacuous-red` and `unchanged-state` clear once their condition is resolved, so run again without `--new-run`.
 
 The cover does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review.
 
-Before any action with an external effect (publish, deploy, spend, creating an account), run `idefactory authorize` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop and report the reason and the `approve` command. When it reports `authorized: true`, do not ask the human whether to proceed.
+Before any action with an external effect (publish, deploy, spend, creating an account), run `idefactory authorize` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop and report the reason and the `approve` command. When it reports `authorized: true`, do not ask whether to proceed.
+
+## Blocked states and authority
+
+Read the report with `--json` before you act on it. Take the first option that is `supported`, has `resolves: true`, and has an authority of `agent` or `independent`:
+- `agent`: run it yourself.
+- `independent`: run it only under an identity other than the implementer's, such as the reviewing role. Never run it as the implementer.
+- `human`: a person decides. Stop and quote the report to them. Do not ask for a decision that the packet lists under standing decisions.
+
+A person is needed only for these gates, which the authority table marks `human`:
+- `record-approval`: approve a publish, deploy, spend, or account action, or a human gate on a task. Command: `idefactory approve <id> --note "<why>" --change <change> --task <task> --action <action> --approver <id> --expiry <iso>`
+- `resume`: remove HALT. Command: `idefactory resume`
+- `raise-new-run-cap`: raise a configured run cap or ceiling. Command: `set run.maxNewRuns in .factory/config.json`
+- `new-run-spend`: open a new run session after max-tokens or max-cost. Command: `idefactory run --change <change> --new-run`
+- `new-run-human`: open a new run session on a stop that a person must decide. Command: `idefactory run --change <change> --new-run`
+- `record-setup`: record the test command and governance mode, which are project decisions. Command: `idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)`
+
+Stop rules:
+- `retry: never`: stop and report. Do not retry.
+- `retry: only-after-change`: retry only after the recorded state changes.
+- Condition stops (`vacuous-red`, `unchanged-state`, `host-usage-unavailable`, `invalid-budget`) clear when their condition is resolved. Resolve it and run again without `--new-run`.
+- Budget stops (`max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`) take `--new-run` only within `run.maxNewRuns`. Past the cap, the report names a person.
+- `max-tokens` and `max-cost` take `--new-run` only after a person decides.
+
+Authority levels: `agent` (an implementing agent may decide); `independent` (an identity other than the implementer decides); `human` (a person decides). Enforcement labels: `none` (recorded, not checked); `identity` (the command checks the approver identity); `principal` (the command checks a verified principal).
 
 ## Never
 

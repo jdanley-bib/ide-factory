@@ -244,6 +244,7 @@ test('an attempt is not started when the requirement set has a problem', async (
       registry: registryOf(['unit']),
       policy: 2,
       pattern: /human gate[\s\S]*principalVerifier/,
+      runPattern: /Setup is incomplete: missing principal verifier/,
     },
     {
       name: 'missing dependency',
@@ -267,7 +268,7 @@ test('an attempt is not started when the requirement set has a problem', async (
       if (!scenario.skipRun) {
         const run = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
         assert.notEqual(run.code, 2, scenario.name);
-        assert.match(run.out + run.err, scenario.pattern, scenario.name);
+        assert.match(run.out + run.err, scenario.runPattern || scenario.pattern, scenario.name);
       }
       assert.deepEqual(attemptFiles(dir), [], scenario.name);
     } finally {

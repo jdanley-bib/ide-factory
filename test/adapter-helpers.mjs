@@ -15,9 +15,14 @@ export function walkTree(root, rel = '') {
   return out;
 }
 
+/** The stop trail is written on refusal by design, so it is not compared as project state. */
 export function hashTree(root) {
-  return walkTree(root).map((rel) => `${rel}:${digest(fs.readFileSync(path.join(root, rel), 'utf8'))}`);
+  return walkTree(root)
+    .filter((rel) => !STOP_TRAIL.some((prefix) => rel.startsWith(prefix)))
+    .map((rel) => `${rel}:${digest(fs.readFileSync(path.join(root, rel), 'utf8'))}`);
 }
+
+const STOP_TRAIL = ['.factory/observability/', '.factory/blocked/'];
 
 export function writeRendering(dir, entries, { crlf = false } = {}) {
   for (const item of entries) {

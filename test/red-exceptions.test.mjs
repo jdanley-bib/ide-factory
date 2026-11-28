@@ -16,10 +16,12 @@ import {
   WAIVER_WARNING_SENTENCE,
 } from '../src/lib/red-exceptions.mjs';
 import { renderWorkPacket } from '../src/lib/queue.mjs';
+import { evaluateConditionStop } from '../src/lib/run-stop.mjs';
 import { canonicalJson, resolveGitBinding } from '../src/lib/verification-evidence.mjs';
 import { getWorkItem } from '../src/lib/work.mjs';
 import { createHash } from 'node:crypto';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
+import { retireAttempt } from './factory-project.mjs';
 
 function writeRegistry(dir, exitCode) {
   fs.writeFileSync(
@@ -193,6 +195,7 @@ test('a bound waiver or reuse exception satisfies red for its kind only', async 
     assert.equal(bound.evidence.reds ?? null, null, 'exception must not be stored as a CLI red');
     assert.equal(fs.existsSync(exceptionFilePath(dir, 'exc-1')), true);
 
+    retireAttempt(dir, attempt.id);
     const second = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const next = getAttempt(dir, JSON.parse(second.out).id);
     bindRedException(dir, next.id, exceptionRecord(next, {
@@ -221,6 +224,7 @@ test('an edited, deleted, or other-attempt exception file does not satisfy red',
     fs.writeFileSync(file, original);
     assert.equal(redSatisfaction(dir, getAttempt(dir, attempt.id), 'unit'), 'waiver');
 
+    retireAttempt(dir, attempt.id);
     const second = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const other = getAttempt(dir, JSON.parse(second.out).id);
     const pointer = getAttempt(dir, attempt.id).evidence.redExceptions;
@@ -799,7 +803,7 @@ test('waive refuses an approver equal to the implementer and an empty approver',
     const before = fileBytes(attemptPath(dir, attempt.id));
     assert.throws(
       () => waiveRed(dir, waiveOptions(attempt, { approver: 'engineer-1' })),
-      /differ from the implementer/,
+      /an identity other than the implementer's/,
     );
     for (const approver of ['', '  ', undefined]) {
       assert.throws(() => waiveRed(dir, waiveOptions(attempt, { approver })), /approver is required/);
@@ -822,7 +826,7 @@ test('reuse refuses an approver equal to the implementer', async () => {
       source,
       target,
       reuseOptions(source, target, { approver: 'engineer-2' }),
-      /differ from the implementer/,
+      /an identity other than the implementer's/,
     );
     await assertReuseRefused(
       dir,
@@ -899,6 +903,7 @@ test('an exception on one attempt does not satisfy a later attempt for the same 
   try {
     const attempt = await stuckAttempt(dir);
     waiveRed(dir, waiveOptions(attempt));
+    retireAttempt(dir, attempt.id);
     const started = await idefactory(dir, ['attempt', 'start', 'demo', '1.1']);
     const later = getAttempt(dir, JSON.parse(started.out).id);
     assert.equal(redSatisfaction(dir, later, 'unit'), 'missing');
@@ -1186,7 +1191,7 @@ test('run keeps the red request when one required kind is still missing', async 
   }
 });
 
-test('a closed vacuous-red session stays closed after a waiver until --new-run', async () => {
+test('a closed vacuous-red session reopens on the next run after a waiver, without --new-run', async () => {
   const dir = tempProject();
   try {
     const started = await seedAttempt(dir);
@@ -1197,20 +1202,114 @@ test('a closed vacuous-red session stays closed after a waiver until --new-run',
     await toImplementing(dir, started.id);
     const vacuous = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
     assert.notEqual(vacuous.code, 0);
+    const stoppedRuns = path.join(dir, '.factory/orchestration/runs');
+    const stopped = JSON.parse(fs.readFileSync(path.join(stoppedRuns, fs.readdirSync(stoppedRuns)[0]), 'utf8'));
+    assert.equal(stopped.stopReason, 'vacuous-red');
+    assert.deepEqual(stopped.stopContext, { attemptId: started.id, kinds: ['unit'] });
 
+    const runsRoot = path.join(dir, '.factory/orchestration/runs');
+    const runFile = path.join(runsRoot, fs.readdirSync(runsRoot).find((name) => name.endsWith('.json')));
+    const closedBytes = fs.readFileSync(runFile, 'utf8');
     const waived = await idefactory(dir, [
       'red', 'waive', started.id, '--kind', 'unit', '--note', 'n', '--approver', 'human-1',
     ]);
     assert.equal(waived.code, 0, waived.err + waived.out);
+    assert.equal(fs.readFileSync(runFile, 'utf8'), closedBytes);
 
-    const stillClosed = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
-    assert.equal(stillClosed.code, 0, stillClosed.err + stillClosed.out);
-    assert.match(stillClosed.out, /vacuous-red/);
-    assert.doesNotMatch(stillClosed.out, /Orchestration request/);
-
-    const reopened = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1', '--new-run']);
+    const reopened = await idefactory(dir, ['run', '--change', 'demo', '--max-tasks', '1']);
     assert.equal(reopened.code, 2, reopened.err + reopened.out);
     assert.equal(parseRequest(reopened.out).nextState, 'verifying');
+    const session = JSON.parse(fs.readFileSync(runFile, 'utf8'));
+    assert.equal(session.status, 'open');
+    assert.deepEqual(session.clearedStops.map((entry) => [entry.stopReason, entry.resolution]), [['vacuous-red', 'exception']]);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous-red stop clears one kind by waiver and stays closed while a second kind is unresolved', async () => {
+  const dir = tempProject();
+  try {
+    const started = await seedAttempt(dir);
+    writeRegistry(dir, 0);
+    ensureCleanGitCommit(dir);
+    await toImplementing(dir, started.id);
+    const vacuous = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
+    assert.notEqual(vacuous.code, 0);
+    const waived = await idefactory(dir, [
+      'red', 'waive', started.id, '--kind', 'unit', '--note', 'n', '--approver', 'human-1',
+    ]);
+    assert.equal(waived.code, 0, waived.err + waived.out);
+    const attempt = getAttempt(dir, started.id);
+    assert.deepEqual(evaluateConditionStop(dir, {
+      stopReason: 'vacuous-red',
+      stopContext: { attemptId: attempt.id, kinds: ['unit'] },
+    }), { holds: false, resolution: 'exception' });
+    assert.deepEqual(evaluateConditionStop(dir, {
+      stopReason: 'vacuous-red',
+      stopContext: { attemptId: attempt.id, kinds: ['unit', 'integration'] },
+    }), { holds: true, unresolved: ['integration'] });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous-red stop clears when a genuine failing red is recorded after the vacuous result', async () => {
+  const dir = tempProject();
+  try {
+    const started = await seedAttempt(dir);
+    writeRegistry(dir, 0);
+    ensureCleanGitCommit(dir);
+    await toImplementing(dir, started.id);
+    const vacuous = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
+    assert.notEqual(vacuous.code, 0);
+    const stopped = { stopReason: 'vacuous-red', stopContext: { attemptId: started.id, kinds: ['unit'] } };
+    assert.deepEqual(evaluateConditionStop(dir, stopped), { holds: true, unresolved: ['unit'] });
+
+    writeRegistry(dir, 1);
+    ensureCleanGitCommit(dir);
+    const red = await idefactory(dir, ['verify', 'run', started.id, '--check', 'unit', '--red']);
+    assert.equal(red.code, 0, red.err + red.out);
+    assert.deepEqual(evaluateConditionStop(dir, stopped), { holds: false, resolution: 'state-changed' });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a withdrawn red does not clear a vacuous-red stop by itself', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await postHocRed(dir);
+    const invalidated = await idefactory(dir, [
+      'red', 'invalidate', attempt.id, '--kind', 'unit', '--class', 'post-implementation',
+      '--note', 'recorded after the implementation was written', '--by', 'engineer-1',
+    ]);
+    assert.equal(invalidated.code, 0, invalidated.err + invalidated.out);
+    assert.deepEqual(evaluateConditionStop(dir, {
+      stopReason: 'vacuous-red',
+      stopContext: { attemptId: attempt.id, kinds: ['unit'] },
+    }), { holds: true, unresolved: ['unit'] });
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a reuse exception clears a vacuous-red stop for its kind', async () => {
+  const dir = tempProject();
+  try {
+    const source = await rejectedSource(dir);
+    const target = await greenTarget(dir);
+    const vacuous = await idefactory(dir, ['verify', 'run', target.id, '--check', 'unit', '--red']);
+    assert.notEqual(vacuous.code, 0);
+    const reused = await idefactory(dir, [
+      'red', 'reuse', target.id, '--from', source.id, '--kind', 'unit',
+      '--note', 'rejected only for dirty-workspace verification', '--approver', 'human-1',
+    ]);
+    assert.equal(reused.code, 0, reused.err + reused.out);
+    assert.deepEqual(evaluateConditionStop(dir, {
+      stopReason: 'vacuous-red',
+      stopContext: { attemptId: target.id, kinds: ['unit'] },
+    }), { holds: false, resolution: 'exception' });
   } finally {
     cleanup(dir);
   }
@@ -1367,7 +1466,11 @@ test('every shipped copy of the build skills documents the red exception command
       const label = `${dir}/${name}`;
       assert.match(skill, /idefactory red reuse/, label);
       assert.match(skill, /idefactory red waive/, label);
-      assert.match(skill, /ask the human first/i, label);
+      assert.match(skill, /already-satisfied/, label);
+      assert.match(skill, /red invalidate/, label);
+      if (skill.includes('idefactory red waive')) {
+        assert.ok(skill.indexOf('already-satisfied') < skill.indexOf('idefactory red waive'), label);
+      }
       assert.ok(skill.includes(WAIVER_WARNING_SENTENCE), `${label} warning sentence`);
       assert.match(skill, /--acknowledge-not-stuck/, label);
       assert.match(skill, /only after the human acknowledges/i, label);
@@ -1559,6 +1662,7 @@ test('an invalid-red waiver needs a stored failing red and the acknowledgment', 
       () => waiveRed(dir, waiveOptions(stuck, { invalidRed: POST_HOC_REASON, acknowledgeNotStuck: true })),
       /--invalid-red needs a failing CLI red stored on this attempt for: unit/,
     );
+    retireAttempt(dir, stuck.id);
 
     const attempt = await postHocRed(dir);
     const before = fileBytes(attemptPath(dir, attempt.id));

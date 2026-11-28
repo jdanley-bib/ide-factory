@@ -54,11 +54,35 @@ When the human asks to archive, run `isDeliverableChange` first. If it is false,
 
 When the human asks you to run, or to run the full pipeline, for a change, that request covers `sync-tasks`, `run`, `verify`, and `complete` for that change, with the attempt, red, and method records they involve. Do not ask again before each of them. The cover ends when the run stops and does not extend to another change.
 
-These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Only a human passes `--new-run` after a budget stop, `vacuous-red`, or `retry-cap`.
+These still wait for a separate human request: `approve` (the human's own record; never run it for yourself), `ci scaffold`, archive, and spec sync. Pass `--new-run` only after a budget stop or `retry-cap`, and only while the change is under `run.maxNewRuns`. `vacuous-red` and `unchanged-state` clear once their condition is resolved, so run again without `--new-run`.
 
 The cover does not waive a true profile human gate, an active lockout, `HALT`, a run budget stop, or independent review.
 
-Before any action with an external effect (publish, deploy, spend, creating an account), run `idefactory authorize` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop and report the reason and the `approve` command. When it reports `authorized: true`, do not ask the human whether to proceed.
+Before any action with an external effect (publish, deploy, spend, creating an account), run `idefactory authorize` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop and report the reason and the `approve` command. When it reports `authorized: true`, do not ask whether to proceed.
+
+## Blocked states and authority
+
+Read the report with `--json` before you act on it. Take the first option that is `supported`, has `resolves: true`, and has an authority of `agent` or `independent`:
+- `agent`: run it yourself.
+- `independent`: run it only under an identity other than the implementer's, such as the reviewing role. Never run it as the implementer.
+- `human`: a person decides. Stop and quote the report to them. Do not ask for a decision that the packet lists under standing decisions.
+
+A person is needed only for these gates, which the authority table marks `human`:
+- `record-approval`: approve a publish, deploy, spend, or account action, or a human gate on a task. Command: `idefactory approve <id> --note "<why>" --change <change> --task <task> --action <action> --approver <id> --expiry <iso>`
+- `resume`: remove HALT. Command: `idefactory resume`
+- `raise-new-run-cap`: raise a configured run cap or ceiling. Command: `set run.maxNewRuns in .factory/config.json`
+- `new-run-spend`: open a new run session after max-tokens or max-cost. Command: `idefactory run --change <change> --new-run`
+- `new-run-human`: open a new run session on a stop that a person must decide. Command: `idefactory run --change <change> --new-run`
+- `record-setup`: record the test command and governance mode, which are project decisions. Command: `idefactory setup --governance <lightweight|strict> --map unit --argv <part>... (or --no-test)`
+
+Stop rules:
+- `retry: never`: stop and report. Do not retry.
+- `retry: only-after-change`: retry only after the recorded state changes.
+- Condition stops (`vacuous-red`, `unchanged-state`, `host-usage-unavailable`, `invalid-budget`) clear when their condition is resolved. Resolve it and run again without `--new-run`.
+- Budget stops (`max-agent-steps`, `max-tasks`, `wall-clock`, `max-failures`) take `--new-run` only within `run.maxNewRuns`. Past the cap, the report names a person.
+- `max-tokens` and `max-cost` take `--new-run` only after a person decides.
+
+Authority levels: `agent` (an implementing agent may decide); `independent` (an identity other than the implementer decides); `human` (a person decides). Enforcement labels: `none` (recorded, not checked); `identity` (the command checks the approver identity); `principal` (the command checks a verified principal).
 
 ## What you never do
 

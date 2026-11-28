@@ -161,7 +161,7 @@ test('a resolver equal to the locked agent is still refused', async () => {
     const id = lockoutId((await idefactory(dir, create('eng-5.1'))).out);
     const same = await idefactory(dir, ['lockout', 'resolve', id, '--resolver', 'eng-5.1', '--reason', 'ok']);
     assert.notEqual(same.code, 0);
-    assert.match(same.err, /distinct from the locked agent/);
+    assert.match(same.err, /an identity other than the locked agent's/);
   } finally {
     cleanup(dir);
   }

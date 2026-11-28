@@ -1,9 +1,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt, startAttempt, transitionAttempt } from './attempt.mjs';
+import { REPOINT_USAGE, applyRepoint, repointPreview } from './attempt-repoint.mjs';
 import { completeWorkItem } from './complete.mjs';
-import { approve, createLockout, doctor, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
-import { blockedReportForError, buildBlockedReport, recordStop } from './blocked-states.mjs';
+import { approve, createLockout, doctor, orphanAttemptLines, reject, resolveLockout, revokeApproval, status } from './govern.mjs';
+import { blockedReportForError, buildBlockedReport, nextLine, recordStop, resolveSetupStop } from './blocked-states.mjs';
 import { buildAutonomyReport, renderAutonomyText } from './autonomy.mjs';
 import { authorizeRequest, renderAuthorizeText } from './authorize.mjs';
 import { buildStatusDocument } from './read-model.mjs';
@@ -16,7 +17,7 @@ import { EXIT_NEEDS_AGENT, runFactory } from './orchestrate.mjs';
 import { buildPacket, syncTasks } from './queue.mjs';
 import { scaffoldConsumerCi } from './ci-scaffold.mjs';
 import { capturePullRequestComments, commentOnPullRequest, openPullRequest } from './pull-request.mjs';
-import { mapsFromSequence, setupProject, setupReadinessErrors } from './setup.mjs';
+import { mapsFromSequence, setupProject, setupReadinessErrors, setupStopGaps, setupStopMessage } from './setup.mjs';
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { TRANSITION_USAGE, readTransitionEvidence } from './evidence-input.mjs';
 import { reopenAttempt } from './attempt-reopen.mjs';
@@ -24,7 +25,8 @@ import { applyReconciliation, buildReconciliationPlan, renderPlanText } from './
 import { describeDrift } from './reconcile-diff.mjs';
 import { listReds, renderRedList } from './red-list.mjs';
 import { reuseRed, waiveRed } from './red-exceptions.mjs';
-import { describeAttemptMethod, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
+import { recordRedInvalidation } from './red-invalidation.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod, proposeMethod, reviewMethod } from './red-method.mjs';
 import { verifyImport, verifyRun } from './verification-evidence.mjs';
 import { renderVerifyStatusText, verifyStatus } from './verification-status.mjs';
 import { answerHelp } from './command-help.mjs';
@@ -32,7 +34,7 @@ import { resolveRequirements } from './required-checks.mjs';
 import { listWorkItems } from './work.mjs';
 import { renderRequirementsText, requirementsDocument } from './requirements-command.mjs';
 import { cliCommandKey, isMutatingCommand, withWriterLease } from './writer-lease.mjs';
-import { consumeEventWarning } from './event-log.mjs';
+import { appendControlEvent, consumeEventWarning } from './event-log.mjs';
 import { closeLatestRunSession } from './run-session.mjs';
 import { configureBoard, configureForge } from './integration-config.mjs';
 import { claimBoard, commentBoard, publishBoard, reportBoard, transitionBoard } from './board.mjs';
@@ -130,7 +132,7 @@ export async function run(argv, io = {}) {
     if (warning) err(warning);
     return code;
   } catch (error) {
-    const blocked = blockedFailure(project, commandKey, parsed, error);
+    const blocked = recordFailure(project, commandKey, parsed, error);
     if (blocked && parsed.flags.json) {
       out(JSON.stringify({ ok: false, message: error.message || String(error), blocked }, null, 2));
       return 1;
@@ -142,8 +144,7 @@ export async function run(argv, io = {}) {
 
 const BLOCKED_COMMANDS = new Set(['run', 'next', 'complete', 'attempt transition', 'sync-tasks']);
 
-function blockedFailure(project, commandKey, parsed, error) {
-  if (!BLOCKED_COMMANDS.has(commandKey)) return null;
+function blockedScope(commandKey, parsed) {
   const scope = {};
   if (commandKey === 'complete') {
     scope.change = parsed.rest[0];
@@ -156,13 +157,28 @@ function blockedFailure(project, commandKey, parsed, error) {
   } else {
     scope.change = (typeof parsed.flags.change === 'string' && parsed.flags.change) || parsed.rest[0];
   }
+  return scope;
+}
+
+/**
+ * Record a failed command in the control log. A stop with a known invariant is recorded as a
+ * blocked stop; any other failure of a mutating command is recorded as command.error without
+ * its text. The blocked report is returned only for commands that print one.
+ */
+function recordFailure(project, commandKey, parsed, error) {
+  const scope = BLOCKED_COMMANDS.has(commandKey) ? blockedScope(commandKey, parsed) : {};
+  let report = null;
   try {
-    const report = blockedReportForError(project, error, scope);
-    if (report.invariant.code !== 'unclassified' && report.change && report.task) recordStop(project, report);
-    return report;
+    report = blockedReportForError(project, error, scope);
   } catch {
-    return null;
+    report = null;
   }
+  if (report && report.invariant.code !== 'unclassified') {
+    recordStop(project, report);
+  } else if (isMutatingCommand(commandKey)) {
+    appendControlEvent(project, { type: 'command.error', time: new Date().toISOString(), command: commandKey, code: 'unclassified' });
+  }
+  return BLOCKED_COMMANDS.has(commandKey) ? report : null;
 }
 
 function requirementWarnings(project, change) {
@@ -311,11 +327,25 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     }
     case 'next': {
+      const change = parsed.flags.change || undefined;
+      const setupGaps = setupStopGaps(project);
+      if (setupGaps.length) {
+        const blocked = buildBlockedReport(project, { code: 'setup-incomplete', change, message: setupStopMessage(setupGaps) });
+        if (change) recordStop(project, blocked);
+        if (parsed.flags.json) {
+          out(JSON.stringify({ ok: false, empty: true, text: '', blocked }, null, 2));
+        } else {
+          out(setupStopMessage(setupGaps));
+          out(nextLine(blocked));
+        }
+        return 0;
+      }
+      if (change) resolveSetupStop(project, change);
       const packet = buildPacket(project, env, parsed.flags.change || '');
+      const blocked = packet.empty
+        ? buildBlockedReport(project, { code: 'no-ready-work', change })
+        : null;
       if (parsed.flags.json) {
-        const blocked = packet.empty
-          ? buildBlockedReport(project, { code: 'no-ready-work', change: parsed.flags.change || undefined })
-          : null;
         out(JSON.stringify({
           ok: !packet.empty,
           empty: Boolean(packet.empty),
@@ -326,9 +356,13 @@ async function dispatchCommand(cmd, ctx) {
         return 0;
       }
       out(packet.text);
+      if (blocked) out(nextLine(blocked));
       return 0;
     }
     case 'run': {
+      if (parsed.flags['accept-baseline'] && !stringFlag(parsed.flags, 'reason')) {
+        throw new Error('run --accept-baseline needs --reason "<text>" to record why the baseline is accepted');
+      }
       const result = runFactory(project, env, {
         change: parsed.flags.change || parsed.rest[0],
         until: parsed.flags.until || 'human-gate',
@@ -340,6 +374,7 @@ async function dispatchCommand(cmd, ctx) {
         hostCost: parsed.flags['host-cost'],
         newRun: Boolean(parsed.flags['new-run']),
         acceptBaseline: Boolean(parsed.flags['accept-baseline']),
+        acceptReason: stringFlag(parsed.flags, 'reason') || undefined,
       });
       if (parsed.flags.json) {
         out(JSON.stringify({
@@ -351,7 +386,10 @@ async function dispatchCommand(cmd, ctx) {
         }, null, 2));
         return result.code;
       }
+      const orphans = orphanAttemptLines(project, parsed.flags.change || parsed.rest[0] || undefined);
+      if (orphans.length) out(['Orphan attempts:', ...orphans].join('\n'));
       out(result.text);
+      if (result.blocked) out(nextLine(result.blocked));
       return result.code === EXIT_NEEDS_AGENT ? EXIT_NEEDS_AGENT : result.code;
     }
     case 'attempt':
@@ -460,7 +498,10 @@ async function dispatchCommand(cmd, ctx) {
       return 0;
     case 'resume': {
       const haltFile = path.join(project, 'HALT');
-      if (fs.existsSync(haltFile)) fs.unlinkSync(haltFile);
+      if (fs.existsSync(haltFile)) {
+        fs.unlinkSync(haltFile);
+        appendControlEvent(project, { type: 'halt.resumed', time: new Date().toISOString() });
+      }
       out('HALT removed.');
       return 0;
     }
@@ -482,6 +523,42 @@ function handleAttempt(project, parsed, env, out, cwd) {
     if (!change || !taskId) throw new Error('Usage: idefactory attempt start <change> <taskId>');
     const attempt = startAttempt(project, change, taskId);
     out(JSON.stringify(attempt, null, 2));
+    return 0;
+  }
+  if (sub === 'repoint') {
+    const change = parsed.rest[1];
+    const taskId = parsed.rest[2];
+    const targetId = stringFlag(parsed.flags, 'attempt');
+    if (!change || !taskId || !targetId) throw new Error(REPOINT_USAGE);
+    const principalFlags = {
+      principalProvider: stringFlag(parsed.flags, 'principal-provider') || undefined,
+      principalSubject: stringFlag(parsed.flags, 'principal-subject') || undefined,
+    };
+    if (!parsed.flags.apply) {
+      const plan = repointPreview(project, change, taskId, targetId);
+      const shown = {
+        change: plan.change,
+        task: plan.task,
+        currentAttemptId: plan.currentAttemptId,
+        targetAttemptId: plan.targetAttemptId,
+        current: plan.current,
+        target: plan.target,
+        planDigest: plan.planDigest,
+        applyWith: `idefactory attempt repoint ${change} ${taskId} --attempt ${targetId} --apply --plan-digest ${plan.planDigest} --decided-by <id> --reason "<text>"`,
+      };
+      out(JSON.stringify(shown, null, 2));
+      return 0;
+    }
+    const result = applyRepoint(project, {
+      change,
+      task: taskId,
+      attemptId: targetId,
+      planDigest: stringFlag(parsed.flags, 'plan-digest'),
+      decidedBy: stringFlag(parsed.flags, 'decided-by'),
+      reason: stringFlag(parsed.flags, 'reason'),
+      ...principalFlags,
+    });
+    out(JSON.stringify(result, null, 2));
     return 0;
   }
   if (sub === 'transition') {
@@ -538,7 +615,7 @@ function handleAttempt(project, parsed, env, out, cwd) {
     out(JSON.stringify(attempt, null, 2));
     return 0;
   }
-  throw new Error('Usage: idefactory attempt start|transition|reopen|show ...');
+  throw new Error('Usage: idefactory attempt start|transition|reopen|repoint|show ...');
 }
 
 function handleCi(project, parsed, out) {
@@ -790,7 +867,35 @@ async function handleVerify(project, parsed, out) {
 const REOPEN_USAGE = 'Usage: idefactory attempt reopen <attemptId> --kind <kind>... --for method|exception --by <id> --reason "text" [--principal-provider <id> --principal-subject <id>]';
 const REUSE_USAGE = 'Usage: idefactory red reuse <targetAttemptId> --from <sourceAttemptId> --kind <kind>... --note "text" --approver <id>';
 const WAIVE_USAGE = 'Usage: idefactory red waive <targetAttemptId> --kind <kind>... --note "text" --approver <id> [--acknowledge-not-stuck] [--invalid-red "text"]';
-const EXCEPTION_NEW_RUN_NOTE = 'A closed vacuous-red or retry-cap run session stays closed until the human passes --new-run.';
+const INVALIDATE_USAGE = 'Usage: idefactory red invalidate <attemptId> --kind <kind> --class <post-implementation|wrong-failure> --note "text" --by <identity>';
+const EXCEPTION_NEW_RUN_NOTE = 'The closed vacuous-red run session reopens on the next run once the red is resolved. A retry-cap session needs --new-run within run.maxNewRuns.';
+
+function handleRedInvalidate(project, parsed, out) {
+  const attemptId = parsed.rest[1];
+  const kind = stringFlag(parsed.flags, 'kind');
+  const invalidationClass = stringFlag(parsed.flags, 'class');
+  const note = stringFlag(parsed.flags, 'note');
+  const by = stringFlag(parsed.flags, 'by');
+  if (!attemptId || !kind || !invalidationClass || !note || !by) throw new Error(INVALIDATE_USAGE);
+  const { record, file } = recordRedInvalidation(project, {
+    attemptId,
+    kind,
+    class: invalidationClass,
+    note,
+    by,
+  });
+  out(JSON.stringify({
+    attemptId,
+    invalidation: {
+      id: record.id,
+      kind: record.kind,
+      class: record.class,
+      file: path.relative(project, file),
+    },
+    note: 'The red ran and is withdrawn as not genuine. It does not satisfy red; a reviewed method, an exception, or a later failing red is still needed.',
+  }, null, 2));
+  return 0;
+}
 
 function stringFlag(flags, key) {
   return typeof flags[key] === 'string' && flags[key].length > 0 ? flags[key] : '';
@@ -814,7 +919,7 @@ function handleMethod(project, parsed, out) {
     const attempt = getAttempt(project, attemptId);
     if (!attempt) throw new Error(`Attempt not found: ${attemptId}`);
     const row = describeAttemptMethod(project, attempt);
-    out(row ? `${describeMethod(row)}\n` : `Attempt ${attemptId} uses the red-first method.\n`);
+    out(row ? `${[describeMethod(row), ...describeCoverage(row)].join('\n')}\n` : `Attempt ${attemptId} uses the red-first method.\n`);
     return 0;
   }
   if (halted(project)) {
@@ -894,6 +999,7 @@ function handleRed(project, parsed, out) {
     throw new Error('HALT file present. Factory commands are stopped. Remove it with idefactory resume.');
   }
   const sub = parsed.rest[0];
+  if (sub === 'invalidate') return handleRedInvalidate(project, parsed, out);
   if (sub !== 'reuse' && sub !== 'waive') {
     throw new Error(`${REUSE_USAGE}\n       ${WAIVE_USAGE}\n       Usage: idefactory red list <attemptId> [--json]`);
   }

@@ -9,11 +9,16 @@ import { assertIdentity } from './identity.mjs';
 import { ledger, readText, writeText } from './layout.mjs';
 import { confirmPrincipal, readPolicyVersion } from './principal.mjs';
 import { isFailingRed, redForKind } from './red-evidence.mjs';
-import { redKindsFor } from './required-checks.mjs';
-import { isFactoryRunStatePath, resolveGitBinding } from './verification-evidence.mjs';
+import { redInvalidated } from './red-invalidation.mjs';
+import { readCheckRegistry, redKindsFor } from './required-checks.mjs';
+import { allowlistedTargetPaths } from './finalization-recovery.mjs';
+import { commandDigest, isFactoryRunStatePath, resolveGitBinding } from './verification-evidence.mjs';
 import { getWorkItem } from './work.mjs';
 
-export const REASON_CLASSES = ['docs-or-text', 'configuration', 'behavior-preserving', 'mechanical', 'exploratory'];
+export const REASON_CLASSES = ['docs-or-text', 'configuration', 'behavior-preserving', 'mechanical', 'exploratory', 'already-satisfied'];
+const ALREADY_SATISFIED = 'already-satisfied';
+const MAX_CHANGED_PATHS_RECORDED = 50;
+const MAX_OFFENDING_PATHS_NAMED = 10;
 export const METHOD_VERDICTS = ['ACCEPT', 'REJECT'];
 
 const SCHEMA_VERSION = 1;
@@ -151,6 +156,120 @@ function normalizeTestPath(project, raw) {
   return relative;
 }
 
+function gitLines(project, args) {
+  const result = spawnSync('git', args, { cwd: project, encoding: 'utf8', shell: false });
+  if (result.status !== 0) return null;
+  return result.stdout.split('\n').filter((line) => line.length > 0);
+}
+
+function isAncestorOfHead(project, revision) {
+  const result = spawnSync('git', ['merge-base', '--is-ancestor', revision, 'HEAD'], {
+    cwd: project,
+    encoding: 'utf8',
+    shell: false,
+  });
+  return result.status === 0;
+}
+
+function isDirectory(project, rel) {
+  try {
+    return fs.statSync(path.join(project, rel)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Paths changed since the attempt's start revision that count against an already-satisfied
+ * claim: tracked edits and deletions plus untracked files git does not ignore, minus factory
+ * run state and the finalization targets the attempt itself writes.
+ */
+function changedSinceStart(project, attempt) {
+  const tracked = gitLines(project, ['diff', '--name-only', attempt.startRevision]);
+  const untracked = gitLines(project, ['ls-files', '--others', '--exclude-standard']);
+  if (tracked === null || untracked === null) {
+    throw new Error(`cannot read the changed paths since start revision ${attempt.startRevision}`);
+  }
+  const ownTargets = new Set(allowlistedTargetPaths({ change: attempt.change, attemptId: attempt.id }));
+  return [...new Set([...tracked, ...untracked])]
+    .map((rel) => rel.replace(/\\/g, '/'))
+    .filter((rel) => !isFactoryRunStatePath(rel, project) && !ownTargets.has(rel))
+    .sort();
+}
+
+function outsideCitedTests(project, testPaths, changed) {
+  return changed.filter((rel) => !testPaths.some((cited) => {
+    if (rel === cited) return true;
+    return isDirectory(project, cited) && rel.startsWith(`${cited.replace(/\/+$/, '')}/`);
+  }));
+}
+
+function namedOffenders(offending) {
+  const shown = offending.slice(0, MAX_OFFENDING_PATHS_NAMED).join(', ');
+  const more = offending.length > MAX_OFFENDING_PATHS_NAMED ? ` and ${offending.length - MAX_OFFENDING_PATHS_NAMED} more` : '';
+  return `${shown}${more}`;
+}
+
+function latestObservedPass(project, attempt, kind, digest) {
+  let latest = null;
+  for (const entry of attempt.evidence?.redFailures || []) {
+    if (entry.kind !== kind || entry.classification !== 'vacuous-red') continue;
+    if (!digest || entry.commandDigest !== digest) continue;
+    if (!entry.sourceRevision || !isAncestorOfHead(project, entry.sourceRevision)) continue;
+    latest = entry;
+  }
+  if (!latest) return null;
+  return {
+    logDigest: latest.logDigest,
+    commandDigest: latest.commandDigest,
+    sourceRevision: latest.sourceRevision,
+    recordedAt: latest.recordedAt,
+  };
+}
+
+function assertAlreadySatisfiable(project, attempt, kinds, testPaths) {
+  if (testPaths.length === 0) {
+    throw new Error('an already-satisfied method must cite at least one existing test with --test-path');
+  }
+  for (const rel of testPaths) {
+    if (!fs.existsSync(path.join(project, rel))) throw new Error(`test path ${rel} does not exist`);
+  }
+  if (!attempt.startRevision) {
+    throw new Error(
+      `attempt ${attempt.id} has no start revision (the project had no git commit when it started); `
+      + 'an already-satisfied method cannot check its diff, so start a new attempt after a commit',
+    );
+  }
+  const registry = readCheckRegistry(project);
+  const observedPass = {};
+  const unobserved = [];
+  for (const kind of kinds) {
+    const rawEntry = registry[kind];
+    const digest = rawEntry?.argv ? commandDigest(rawEntry.argv) : null;
+    const pass = latestObservedPass(project, attempt, kind, digest);
+    if (pass) observedPass[kind] = pass;
+    else unobserved.push(kind);
+  }
+  if (unobserved.length > 0) {
+    throw new Error(
+      `already-satisfied needs a vacuous red run for each covered kind with the current registered command; `
+      + `no observed pass for: ${unobserved.join(', ')}`,
+    );
+  }
+  const changed = changedSinceStart(project, attempt);
+  const offending = outsideCitedTests(project, testPaths, changed);
+  if (offending.length > 0) {
+    throw new Error(`already-satisfied allows only the cited tests to change; outside them: ${namedOffenders(offending)}`);
+  }
+  return {
+    observedPass,
+    changedPaths: {
+      count: changed.length,
+      paths: changed.slice(0, MAX_CHANGED_PATHS_RECORDED),
+    },
+  };
+}
+
 /**
  * Record a no-red method on an attempt. Immutable once written.
  *
@@ -199,7 +318,7 @@ export function proposeMethod(project, options) {
   if (item.factory?.taskType === 'lightweight') {
     throw new Error('a method does not apply to a lightweight work item');
   }
-  if (item.factory?.taskTypeSource !== 'inferred') {
+  if (reason !== ALREADY_SATISFIED && item.factory?.taskTypeSource !== 'inferred') {
     throw new Error(
       `${attempt.change}/${attempt.taskId} has an explicit factory.taskType (${item.factory?.taskType}); `
       + 'a human set the class and an agent cannot override it',
@@ -210,8 +329,8 @@ export function proposeMethod(project, options) {
     if (!required.includes(kind)) {
       throw new Error(`${kind} is not a required test kind of ${attempt.change}/${attempt.taskId}`);
     }
-    if (isFailingRed(redForKind(attempt, kind))) {
-      throw new Error(`a failing red is already stored for ${kind}; a method cannot replace it`);
+    if (isFailingRed(redForKind(attempt, kind)) && !redInvalidated(project, attempt, kind)) {
+      throw new Error(`a failing red is already stored for ${kind}; withdraw it with idefactory red invalidate, or a method cannot replace it`);
     }
     if (attempt.evidence?.redExceptions?.[kind]) {
       throw new Error(`attempt already has a red exception for ${kind}`);
@@ -235,6 +354,10 @@ export function proposeMethod(project, options) {
     }
   }
 
+  const coverage = reason === ALREADY_SATISFIED
+    ? assertAlreadySatisfiable(project, attempt, kinds, testPaths)
+    : null;
+
   const { sourceRevision } = resolveGitBinding(project);
   if (!sourceRevision) throw new Error('method propose requires a resolvable git HEAD');
   const record = {
@@ -248,6 +371,11 @@ export function proposeMethod(project, options) {
     kinds,
     rationale,
     ...(testPaths.length ? { testPaths } : {}),
+    ...(coverage ? {
+      startRevision: attempt.startRevision,
+      observedPass: coverage.observedPass,
+      changedPaths: coverage.changedPaths,
+    } : {}),
     proposer,
     sourceRevision,
     changedFiles: changedFileCount(project),
@@ -331,6 +459,10 @@ export function reviewMethod(project, options) {
  * Throw unless an attempt that has a no-red method also has an ACCEPT review from a
  * reviewer other than the implementer. A pointer whose file was altered also refuses.
  */
+export function hasMethodRecord(attempt) {
+  return Boolean(attempt?.evidence?.method);
+}
+
 export function assertMethodAccepted(project, attempt) {
   if (!attempt?.evidence?.method) return;
   const method = readBoundMethod(project, attempt);
@@ -351,6 +483,33 @@ export function assertMethodAccepted(project, attempt) {
       throw new Error('the method review must come from a reviewer other than the implementer');
     }
   }
+  if (method.reason === ALREADY_SATISFIED) assertStillSatisfied(project, attempt, method);
+}
+
+function assertStillSatisfied(project, attempt, method) {
+  if (!attempt.startRevision) {
+    throw new Error(`attempt ${attempt.id} has no start revision; its already-satisfied method cannot be checked`);
+  }
+  const offending = outsideCitedTests(project, method.testPaths || [], changedSinceStart(project, attempt));
+  if (offending.length > 0) {
+    throw new Error(
+      `already-satisfied no longer holds: production paths changed after the proposal: ${namedOffenders(offending)}`,
+    );
+  }
+}
+
+/** Lines that show a reviewer what an already-satisfied method rests on; empty for other classes. */
+export function describeCoverage(row) {
+  if (!row || row.reason !== ALREADY_SATISFIED) return [];
+  const passes = Object.entries(row.observedPass || {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([kind, pass]) => `${kind} (log ${pass.logDigest}, command ${pass.commandDigest}, revision ${pass.sourceRevision}, at ${pass.recordedAt})`);
+  return [
+    `Observed passes: ${passes.join('; ')}.`,
+    `Cited test paths: ${(row.testPaths || []).join(', ')}.`,
+    `Diff check at proposal: ${row.changedPaths?.count ?? 0} path(s) changed since start revision ${row.startRevision}, all cited tests or run state.`,
+    "The reviewer must confirm the cited tests cover the task's acceptance criteria, and reject the method if they do not.",
+  ];
 }
 
 /** One row per method bound to an attempt, with its review. Rows carry no check output. */
@@ -367,6 +526,11 @@ export function describeAttemptMethod(project, attempt) {
     kinds: method.kinds,
     rationale: method.rationale,
     testPaths: method.testPaths || [],
+    ...(method.reason === ALREADY_SATISFIED ? {
+      startRevision: method.startRevision,
+      observedPass: method.observedPass,
+      changedPaths: method.changedPaths,
+    } : {}),
     proposer: method.proposer,
     sourceRevision: method.sourceRevision,
     changedFiles: method.changedFiles,

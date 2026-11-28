@@ -76,3 +76,9 @@ export const BASIC_TASK = [
   '    roles: [engineer, reviewer, scribe]',
   '',
 ].join('\n');
+
+export function retireAttempt(dir, attemptId) {
+  const file = path.join(dir, '.factory/attempts', `${attemptId}.json`);
+  const attempt = JSON.parse(fs.readFileSync(file, 'utf8'));
+  fs.writeFileSync(file, `${JSON.stringify({ ...attempt, state: 'rejected' }, null, 2)}\n`);
+}

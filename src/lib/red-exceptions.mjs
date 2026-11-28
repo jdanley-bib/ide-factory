@@ -9,6 +9,12 @@ import { ledger, readText, writeText } from './layout.mjs';
 import { isFailingRed, redForKind, redHistoryFor, retryKey } from './red-evidence.mjs';
 import { redKindsFor } from './required-checks.mjs';
 import { methodCovers } from './red-method.mjs';
+import {
+  invalidatedRedDigest,
+  laterRedAfterInvalidation,
+  latestInvalidation,
+  readBoundInvalidations,
+} from './red-invalidation.mjs';
 import { isReopenedKind, openReopen } from './attempt-reopen.mjs';
 import {
   canonicalJson,
@@ -163,7 +169,11 @@ export function redSatisfaction(project, attempt, kind) {
     if (isFailingRed(red) && redDigestOf(red) === record.invalidRed.redDigest) return 'waiver';
     return laterRedFor(attempt, kind, record) ? 'cli' : 'missing';
   }
-  if (isFailingRed(redForKind(attempt, kind))) return 'cli';
+  const latest = latestInvalidation(project, attempt, kind);
+  if (isFailingRed(redForKind(attempt, kind))) {
+    if (!latest) return 'cli';
+    if (laterRedAfterInvalidation(attempt, kind, latest)) return 'cli';
+  }
   if (record) return record.type;
   return methodCovers(project, attempt, kind) ? 'method' : 'missing';
 }
@@ -217,7 +227,7 @@ function requireText(value, label) {
 function authorizeApprover(project, target, options) {
   const approver = requireText(options.approver, 'approver');
   if (typeof target.implementerId === 'string' && target.implementerId === approver) {
-    throw new Error('red exception approver must differ from the implementer');
+    throw new Error("red exception approver must be an identity other than the implementer's");
   }
   if (readPolicyVersion(project) < 2) return { approver };
   const principal = confirmPrincipal(project, {
@@ -480,7 +490,7 @@ export function waiveRed(project, options) {
       const red = redForKind(target, withRed[0]);
       throw new Error(
         `a failing CLI red is stored for ${withRed.join(', ')} (exit ${red.exitCode}, started ${red.startedAt}); `
-        + 'if that red was recorded after implementation, invalidate it with --invalid-red "<reason>" and --acknowledge-not-stuck',
+        + 'if that red is not genuine, withdraw it with idefactory red invalidate; if a human accepts it, use --invalid-red "<reason>" and --acknowledge-not-stuck',
       );
     }
     const notStuck = kinds.filter((kind) => !isStuck(target, kind));
@@ -535,6 +545,24 @@ export function waiveRed(project, options) {
  */
 export function listAttemptExceptions(project, attempt) {
   const rows = [];
+  for (const kind of Object.keys(attempt?.evidence?.redInvalidations || {}).sort()) {
+    for (const record of readBoundInvalidations(project, attempt, kind)) {
+      rows.push({
+        attemptId: attempt.id,
+        change: attempt.change,
+        task: attempt.taskId,
+        id: record.id,
+        type: 'invalidated',
+        kind: record.kind,
+        approver: record.by,
+        reason: record.note,
+        invalidationClass: record.class,
+        invalidatedRedDigest: record.invalidatedRedDigest,
+        issuedAt: record.issuedAt,
+        ...invalidationLaterRedRow(attempt, kind, record),
+      });
+    }
+  }
   for (const kind of Object.keys(attempt?.evidence?.redExceptions || {}).sort()) {
     const record = readBoundException(project, attempt, kind);
     if (!record) continue;
@@ -560,6 +588,13 @@ export function listAttemptExceptions(project, attempt) {
   return rows;
 }
 
+function invalidationLaterRedRow(attempt, kind, record) {
+  const later = laterRedAfterInvalidation(attempt, kind, record);
+  return later
+    ? { laterRedDigest: invalidatedRedDigest(later), laterRedStartedAt: later.startedAt }
+    : {};
+}
+
 function laterRedRow(attempt, kind, record) {
   const later = laterRedFor(attempt, kind, record);
   return later ? { laterRedDigest: redDigestOf(later), laterRedStartedAt: later.startedAt } : {};
@@ -578,7 +613,7 @@ export function listAllExceptions(project) {
     } catch {
       continue;
     }
-    if (!attempt?.evidence?.redExceptions) continue;
+    if (!attempt?.evidence?.redExceptions && !attempt?.evidence?.redInvalidations) continue;
     rows.push(...listAttemptExceptions(project, attempt));
   }
   return rows;
@@ -589,6 +624,14 @@ export function listAllExceptions(project) {
  * verdict comment so the wording matches.
  */
 export function describeException(row, { withReason = true } = {}) {
+  if (row.type === 'invalidated') {
+    const note = withReason ? `: ${row.reason}` : ` (note on record ${row.id})`;
+    return `A red ran for ${row.kind} on attempt ${row.attemptId} and was withdrawn as not genuine (${row.invalidationClass}) by ${row.approver}${note}; `
+      + `the withdrawn red (digest ${row.invalidatedRedDigest}, recorded ${row.issuedAt}) does not satisfy red. `
+      + (row.laterRedDigest
+        ? `A later failing red (digest ${row.laterRedDigest}, started ${row.laterRedStartedAt}) was recorded after the withdrawal and satisfies red.`
+        : 'A reviewed method, an exception, or a later failing red is still needed.');
+  }
   const why = withReason ? `: ${row.reason}` : ` (reason on record ${row.id})`;
   if (row.invalidRedDigest) {
     const invalid = withReason

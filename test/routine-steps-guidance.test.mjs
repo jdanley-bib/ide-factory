@@ -5,6 +5,7 @@ import { test } from 'node:test';
 import { SKILL_DIRS, digest, manifestPath } from '../src/lib/adapters.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
 import { currentRendering, installLegacyRelease } from './adapter-helpers.mjs';
+import { driftedSections, extractSection } from './guidance-sections.mjs';
 
 const HEADING = '## Routine steps and external effects';
 const BLOCK_SKILLS = ['factory-run', 'factory-coordinator', 'factory-governance', 'factory-openspec'];
@@ -24,25 +25,13 @@ function shippedCopies() {
   return [...TEMPLATES, ...adapters];
 }
 
-/** The text from the heading to the next heading or the ownership marker. */
 export function extractBlock(text) {
-  const start = text.indexOf(`${HEADING}\n`);
-  if (start < 0) return null;
-  const rest = text.slice(start + HEADING.length);
-  const end = rest.search(/^## |^<!-- idefactory:owned -->/m);
-  return (end < 0 ? rest : rest.slice(0, end)).trim();
+  return extractSection(text, HEADING);
 }
 
 /** The files whose block differs from the first file's block, or is missing. */
 export function driftedFiles(files) {
-  const [reference, ...others] = files;
-  const expected = extractBlock(reference.text);
-  const drifted = [];
-  if (expected === null) drifted.push(reference.name);
-  for (const file of others) {
-    if (extractBlock(file.text) !== expected) drifted.push(file.name);
-  }
-  return drifted;
+  return driftedSections(files, HEADING);
 }
 
 function load(root, rels) {

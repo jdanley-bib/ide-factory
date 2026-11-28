@@ -6,6 +6,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
+import { renderWorkPacket } from '../src/lib/queue.mjs';
 import { readRunSession, validateRunSession } from '../src/lib/run-session.mjs';
 import { listWorkItems, updateWorkItem } from '../src/lib/work.mjs';
 import { cleanup, idefactory, repoRoot, tempProject } from './helpers.mjs';
@@ -1395,12 +1396,25 @@ test('baseline stops for infrastructure or assertion failure and continues when 
     const attemptId = listWorkItems(red, 'demo')[0].attemptId;
     assert.equal(getAttempt(red, attemptId).evidence.reds, undefined);
 
-    const accepted = spawnRun(red, ['--max-tasks', '1', '--accept-baseline']);
+    const refused = spawnRun(red, ['--max-tasks', '1', '--accept-baseline']);
+    assert.equal(refused.status, 1, refused.stderr + refused.stdout);
+    assert.match(refused.stderr + refused.stdout, /--accept-baseline needs --reason/);
+    assert.equal(readRunSession(listRunSessionFiles(red)[0]).testBaseline, undefined);
+
+    const accepted = spawnRun(red, ['--max-tasks', '1', '--accept-baseline', '--reason', 'known failing fixture']);
     assert.equal(accepted.status, 2, accepted.stderr + accepted.stdout);
     assert.match(accepted.stdout, /# Orchestration request/);
     assert.equal(getAttempt(red, attemptId).evidence.reds, undefined);
     const session = readRunSession(listRunSessionFiles(red)[0]);
     assert.equal(session.testBaseline.result, 'accepted');
+    assert.equal(session.testBaseline.reason, 'known failing fixture');
+    assert.ok(Number.isFinite(Date.parse(session.testBaseline.acceptedAt)));
+    assert.equal(typeof session.testBaseline.sourceRevision, 'string');
+    const item = listWorkItems(red, 'demo')[0];
+    const reviewer = renderWorkPacket(red, item, 'reviewer');
+    assert.match(reviewer, /Accepted baseline/);
+    assert.match(reviewer, /Reason: known failing fixture/);
+    assert.doesNotMatch(renderWorkPacket(red, item, 'engineer'), /Accepted baseline/);
   } finally {
     cleanup(red);
   }

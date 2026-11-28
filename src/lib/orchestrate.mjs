@@ -1,6 +1,7 @@
 import { standingDecisionsText } from './standing-decisions.mjs';
 import { haltError } from './blocked-error.mjs';
-import { blockedReportForStop, focusItem, recordStop, resolveClearedRecords, resolveOpenForChange } from './blocked-states.mjs';
+import { blockedReportForStop, focusItem, recordStop, resolveClearedRecords, resolveOpenForChange, resolveSetupStop } from './blocked-states.mjs';
+import { setupStopGaps, setupStopMessage } from './setup.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -16,7 +17,11 @@ import { halted, ledger, readText, writeText } from './layout.mjs';
 import { syncTasks } from './queue.mjs';
 import {
   checkHostUsageBudgets,
+  closeLatestRunSession,
+  CONDITION_STOP_REASONS,
   InvalidBudgetError,
+  latestRunSession,
+  newRunRefusal,
   openOrResumeRunSession,
   parseExposedHostMetric,
   refreshCompletedTasks,
@@ -25,10 +30,11 @@ import {
   STICKY_STOP_REASONS,
   writeRunSession,
 } from './run-session.mjs';
-import { classifyCheckOutcome, isRequiredTestKind, retryKey } from './red-evidence.mjs';
+import { evaluateConditionStop } from './run-stop.mjs';
+import { classifyCheckOutcome, isFailingRed, isRequiredTestKind, redForKind, retryKey } from './red-evidence.mjs';
 import { describeException, listAttemptExceptions, redSatisfaction } from './red-exceptions.mjs';
 import { describeReopens } from './attempt-reopen.mjs';
-import { describeAttemptMethod, describeMethod, methodCoveredKinds } from './red-method.mjs';
+import { describeAttemptMethod, describeCoverage, describeMethod, methodCoveredKinds } from './red-method.mjs';
 import { humanGateAllows } from './risk-gates.mjs';
 import { describeProblems, missingChecks, redKindsFor, resolveRequirements } from './required-checks.mjs';
 import {
@@ -47,6 +53,7 @@ export const EXIT_NEEDS_AGENT = 2;
 export function runFactory(project, env, options = {}) {
   const focus = {};
   const result = runFactoryCore(project, env, options, focus);
+  if (focus.advisory) result.text = `${focus.advisory}${result.text}`;
   const scope = { change: options.change, ...(focus.task ? { task: focus.task } : {}), ...(focus.attemptId ? { attemptId: focus.attemptId } : {}), ...(focus.action ? { action: focus.action } : {}) };
   const blocked = blockedReportForStop(project, result, scope);
   if (blocked) {
@@ -69,11 +76,18 @@ function runFactoryCore(project, env, {
   hostCost,
   newRun = false,
   acceptBaseline = false,
+  acceptReason,
 } = {}, focus = {}) {
   if (halted(project)) {
     throw haltError();
   }
   if (!change) throw new Error('Usage: idefactory run --change <name>');
+  const setupGaps = setupStopGaps(project);
+  if (setupGaps.length) {
+    const message = setupStopMessage(setupGaps);
+    return { code: EXIT_OK, text: `${message}\n`, stopReason: 'setup-incomplete', request: null, blocked: { message } };
+  }
+  resolveSetupStop(project, change);
   resolveClearedRecords(project, change);
   if (hasActiveLockout(project)) {
     const focusItemRow = focusItem(project, change);
@@ -110,6 +124,8 @@ function runFactoryCore(project, env, {
     };
   } catch (err) {
     if (err instanceof InvalidBudgetError) {
+      const latest = latestRunSession(project, change);
+      if (latest?.status === 'open') closeLatestRunSession(project, change, 'invalid-budget');
       return {
         code: EXIT_ERROR,
         text: `Run stopped (invalid-budget) for ${change}.\n`,
@@ -120,6 +136,17 @@ function runFactoryCore(project, env, {
     throw err;
   }
   const now = new Date();
+  const existingSession = latestRunSession(project, change);
+  const refusal = newRun ? newRunRefusal(project, change, existingSession, config) : null;
+  if (refusal) {
+    return {
+      code: EXIT_ERROR,
+      text: refusal.text,
+      stopReason: refusal.stopReason,
+      request: null,
+    };
+  }
+  const priorRunId = existingSession?.runId ?? null;
   let session = openOrResumeRunSession(project, {
     change,
     budgets: sessionBudgets,
@@ -127,11 +154,16 @@ function runFactoryCore(project, env, {
     newRun,
     resumeFlags: { maxTasks, maxAgentSteps },
     config,
+    condition: (candidate) => evaluateConditionStop(project, candidate, {
+      budgets: sessionBudgets,
+      hostUsage,
+    }),
   });
-  if (session.status === 'closed' && STICKY_STOP_REASONS.has(session.stopReason)) {
+  const createdNow = session.runId !== priorRunId;
+  if (session.status === 'closed' && (STICKY_STOP_REASONS.has(session.stopReason) || CONDITION_STOP_REASONS.has(session.stopReason))) {
     return {
       code: EXIT_OK,
-      text: `Run stopped (${session.stopReason}) for ${change}.\n`,
+      text: `Run stopped (${session.stopReason}) for ${change}.\n${unresolvedRedText(project, session)}`,
       stopReason: session.stopReason,
       request: null,
     };
@@ -185,6 +217,10 @@ function runFactoryCore(project, env, {
   }
 
   syncTasks(project, change, env);
+  if (createdNow) {
+    const advisory = lowBudgetAdvisory(project, change, session.budgets.maxAgentSteps);
+    if (advisory) focus.advisory = advisory;
+  }
   session = refreshCompletedTasks(project, session);
   if (session.completedTasks >= session.budgets.maxTasks) {
     session = closeRunSession(project, session, 'max-tasks');
@@ -279,6 +315,7 @@ function runFactoryCore(project, env, {
           request: null,
         };
       }
+      session = recordPendingStopCleared(project, session);
       session = persistCompleteBeforeRequest(project, session, fingerprint);
       const message = attempt.state === 'accepted'
         ? 'Attempt accepted. Run idefactory complete to finalize.'
@@ -329,7 +366,7 @@ function runFactoryCore(project, env, {
         };
       }
       if ((attempt.state === 'planned' || attempt.state === 'assigned') && stage.nextState === 'implementing') {
-        const baseline = applyTestBaseline(project, session, attempt, { acceptBaseline });
+        const baseline = applyTestBaseline(project, session, attempt, { acceptBaseline, acceptReason });
         session = baseline.session;
         if (baseline.stop) {
           session = closeRunSession(project, session, baseline.stop);
@@ -375,6 +412,7 @@ function runFactoryCore(project, env, {
           request: null,
         };
       }
+      session = recordPendingStopCleared(project, session);
       session = persistAgentStepBeforeRequest(project, session, {
         action: 'agent-step',
         role: stage.role,
@@ -446,6 +484,45 @@ function persistAgentStepBeforeRequest(project, session, fingerprint) {
   return written;
 }
 
+/**
+ * A session reopened from `unchanged-state` is cleared once the next request
+ * differs from the stored one; the same request closes it again without a clear.
+ */
+function recordPendingStopCleared(project, session) {
+  if (!session.pendingStopCheck) return session;
+  const clearedAt = new Date().toISOString();
+  const written = writeRunSession(project, {
+    ...session,
+    pendingStopCheck: null,
+    clearedStops: [
+      ...(session.clearedStops || []),
+      { stopReason: session.pendingStopCheck, clearedAt, resolution: 'state-changed' },
+    ],
+    lastObservedAt: clearedAt,
+  });
+  appendControlEvent(project, {
+    type: 'run.stop-cleared',
+    time: clearedAt,
+    runId: written.runId,
+    change: written.change,
+    stopReason: session.pendingStopCheck,
+    resolution: 'state-changed',
+  });
+  return written;
+}
+
+function lowBudgetAdvisory(project, change, maxAgentSteps) {
+  const pending = listWorkItems(project, change).filter((item) => item.status !== 'done').length;
+  if (pending === 0 || maxAgentSteps >= 4 * pending) return null;
+  return `advisory: agent-step budget ${maxAgentSteps} is low for ${pending} pending tasks (suggest at least ${4 * pending})\n`;
+}
+
+function unresolvedRedText(project, session) {
+  if (session.stopReason !== 'vacuous-red') return '';
+  const { unresolved = [] } = evaluateConditionStop(project, session);
+  return unresolved.length > 0 ? `Unresolved red kinds: ${unresolved.join(', ')}.\n` : '';
+}
+
 function persistCompleteBeforeRequest(project, session, fingerprint) {
   return writeRunSession(project, {
     ...session,
@@ -460,6 +537,7 @@ function closeRunSession(project, session, stopReason, extra = {}) {
     ...extra,
     status: 'closed',
     stopReason,
+    pendingStopCheck: null,
     lastObservedAt: new Date().toISOString(),
   });
   appendControlEvent(project, {
@@ -470,6 +548,18 @@ function closeRunSession(project, session, stopReason, extra = {}) {
     stopReason,
   });
   return written;
+}
+
+function alreadySatisfiedHint(attempt) {
+  const kinds = [...new Set((attempt?.evidence?.redFailures || [])
+    .filter((entry) => entry.classification === 'vacuous-red')
+    .map((entry) => entry.kind))]
+    .filter((kind) => !isFailingRed(redForKind(attempt, kind)));
+  if (kinds.length === 0) return '';
+  const kindFlags = kinds.map((kind) => `--kind ${kind}`).join(' ');
+  return ` A red run reported vacuous-red for ${kinds.join(', ')}. If the behavior already exists, record an already-satisfied method: `
+    + `idefactory method propose ${attempt.id} --choice no-red --reason already-satisfied --rationale "<text>" --implementer <id> ${kindFlags} --test-path <path>. `
+    + 'Cite the tests that cover the behavior; the diff may change only those tests.';
 }
 
 function stageForState(state, item, { project, attempt } = {}) {
@@ -521,7 +611,8 @@ function stageForState(state, item, { project, attempt } = {}) {
         message: 'Write a failing test and report red evidence with idefactory verify run --red.'
           + (item.factory?.taskTypeSource === 'inferred'
             ? ' If a failing test cannot specify the change, record a no-red method with idefactory method propose before editing.'
-            : ''),
+            : '')
+          + alreadySatisfiedHint(attempt),
       };
     case 'red-confirmed':
       return {
@@ -603,7 +694,7 @@ function withRedExceptions(project, attempt, stage) {
   const method = describeAttemptMethod(project, attempt);
   let message = stage.message;
   if (method) {
-    const methodLines = [`- ${describeMethod(method)}`];
+    const methodLines = [describeMethod(method), ...describeCoverage(method)].map((line) => `- ${line}`);
     if (stage.role === 'reviewer' || stage.role === 'security-reviewer') {
       methodLines.push(
         `- Record a method review: idefactory method review ${attempt.id} --verdict ACCEPT|REJECT --reviewer <id> --note "text". Reject it when the reason class does not fit the diff.`,
@@ -684,7 +775,7 @@ function readConfig(project) {
   }
 }
 
-function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
+function applyTestBaseline(project, session, attempt, { acceptBaseline, acceptReason }) {
   const mapped = mappedTestChecks(project);
   if (mapped.length === 0) return { session, stop: null };
   const snapshot = gitSnapshot(project);
@@ -711,7 +802,13 @@ function applyTestBaseline(project, session, attempt, { acceptBaseline }) {
         return {
           session: writeRunSession(project, {
             ...session,
-            testBaseline: { sourceRevision: revision, configDigest, result: 'accepted' },
+            testBaseline: {
+              sourceRevision: revision,
+              configDigest,
+              result: 'accepted',
+              reason: acceptReason,
+              acceptedAt: new Date().toISOString(),
+            },
           }),
           stop: null,
         };

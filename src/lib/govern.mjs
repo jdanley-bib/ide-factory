@@ -3,15 +3,16 @@ import { createHash, randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ROLES, ledger, readText, writeText } from './layout.mjs';
-import { getAttempt, recordedAttemptIdentities } from './attempt.mjs';
+import { getAttempt, orphanAttempts, recordedAttemptIdentities } from './attempt.mjs';
 import { redStates } from './verification-status.mjs';
 import { appendControlEvent } from './event-log.mjs';
 import { assertIdentity } from './identity.mjs';
 import { describeException, listAllExceptions } from './red-exceptions.mjs';
-import { describeMethod, listAllMethods } from './red-method.mjs';
+import { describeCoverage, describeMethod, listAllMethods } from './red-method.mjs';
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
+import { malformedAdapterNotes } from './adapters.mjs';
 import {
   actionIds,
   actionRow,
@@ -24,6 +25,7 @@ import { resolveGitBinding } from './verification-evidence.mjs';
 import { LOCKOUT_CREATE_USAGE, LOCKOUT_RESOLVE_USAGE } from './usage-lines.mjs';
 import { describeHold, isHeld, listWorkItems, workCounts } from './work.mjs';
 import { boardConfigErrors, forgeConfigErrors } from './integration-config.mjs';
+import { configuredAuthority } from './authority.mjs';
 
 const REQUIRED = [
   '.factory/team.md',
@@ -67,8 +69,12 @@ export function doctor(project) {
   }
   if (!fs.existsSync(path.join(project, 'openspec'))) warnings.push('openspec/ is not initialized');
   if (fs.existsSync(path.join(project, 'HALT'))) warnings.push('HALT file is present');
+  for (const entry of configuredAuthority(project).ignored) {
+    warnings.push(`ignored authority entry ${entry.key}: ${entry.reason}`);
+  }
   const policyVersion = readPolicyVersion(project);
   for (const item of setupReadinessErrors(project)) errors.push(item);
+  for (const note of malformedAdapterNotes(project)) warnings.push(note);
   for (const kind of unmappedCheckKinds(project)) {
     warnings.push(`unmapped check kind: ${kind}`);
   }
@@ -91,9 +97,13 @@ export function status(project, _env) {
     ? `${counts.todo} todo, ${counts.in_progress} in progress, ${counts.done} done, ${counts.blocked} blocked`
     : summarizeAllWork(project);
   const attemptLines = openAttemptRedLines(project, change || undefined);
+  const orphanNotices = orphanAttemptLines(project, change || undefined);
   const heldLines = listWorkItems(project, change || undefined).filter(isHeld).map((item) => `- ${item.change}/${item.id} ${describeHold(item)}${item.hold.supersededBy?.length ? ` (superseded by ${item.hold.supersededBy.map((ref) => `${ref.change}/${ref.id}`).join(', ')})` : ''}`);
   const reopenLines = listReopenLines(project);
-  const methodLines = listAllMethods(project).map((row) => `- ${describeMethod(row)}`);
+  const methodLines = listAllMethods(project).flatMap((row) => [
+    `- ${describeMethod(row)}`,
+    ...describeCoverage(row).map((line) => `  - ${line}`),
+  ]);
   const exceptionLines = listAllExceptions(project).map((row) => `- ${describeException(row)}`);
   const checkLines = Object.entries(registeredArgv(project)).map(([kind, argv]) => `- ${kind}: ${formatArgv(argv)}`);
   return [
@@ -104,6 +114,7 @@ export function status(project, _env) {
     `Work queue: ${workLine}`,
     ...(heldLines.length ? ['Held items:', ...heldLines] : []),
     ...(attemptLines.length ? ['Open attempts:', ...attemptLines] : []),
+    ...(orphanNotices.length ? ['Orphan attempts:', ...orphanNotices] : []),
     ...(reopenLines.length ? ['Reopened attempts:', ...reopenLines.map((line) => `- ${line}`)] : []),
     ...(methodLines.length ? ['Red methods:', ...methodLines] : []),
     ...(exceptionLines.length ? ['Red exceptions:', ...exceptionLines] : []),
@@ -114,6 +125,17 @@ export function status(project, _env) {
     now,
     '',
   ].join('\n');
+}
+
+/** Notices only; nothing is repaired or written. */
+export function orphanAttemptLines(project, change) {
+  const lines = [];
+  for (const item of listWorkItems(project, change)) {
+    for (const orphan of orphanAttempts(project, item)) {
+      lines.push(`- ${orphan.attemptId} ${item.change}/${item.id} (${orphan.state}) is not referenced by its work item. If it should be current, run idefactory attempt repoint ${item.change} ${item.id} --attempt ${orphan.attemptId}.`);
+    }
+  }
+  return lines;
 }
 
 function openAttemptRedLines(project, change) {
@@ -157,6 +179,9 @@ export function approve(project, id, note, scope = {}) {
     throw new Error(APPROVE_USAGE);
   }
   if (!note) throw new Error('--note is required');
+  if (typeof scope.approver !== 'string' || scope.approver.length === 0) {
+    throw new Error('approve needs --approver <id>: a person is required to approve this action');
+  }
   if (!actionRow(scope.action)) {
     throw new Error(`${unknownActionMessage(scope.action)}\n${APPROVE_USAGE}`);
   }
@@ -380,7 +405,7 @@ export function resolveLockout(project, id, { resolver, reason }) {
     throw new Error(`Lockout creation record is invalid: ${id}`);
   }
   if (resolver === created.agent) {
-    throw new Error('lockout resolver must be distinct from the locked agent');
+    throw new Error("lockout resolve needs an identity other than the locked agent's");
   }
   if (readPolicyVersion(project) >= 2) {
     confirmPrincipal(project, {
@@ -433,7 +458,7 @@ export function hasActiveLockout(project) {
 function resolveLegacyLockout(project, legacy, { resolver, reason }) {
   const { basename, absPath, relPath, body, digest, agent } = legacy;
   if (resolver === agent) {
-    throw new Error('lockout resolver must be distinct from the locked agent');
+    throw new Error("lockout resolve needs an identity other than the locked agent's");
   }
   if (readPolicyVersion(project) >= 2) {
     confirmPrincipal(project, {

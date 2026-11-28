@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { createHash, generateKeyPairSync, sign } from 'node:crypto';
+import { createHash, generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import fs, { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { getAttempt } from '../src/lib/attempt.mjs';
+import { attemptPath, getAttempt } from '../src/lib/attempt.mjs';
+import { BlockedError } from '../src/lib/blocked-error.mjs';
 import { eventLogPath } from '../src/lib/event-log.mjs';
 import { hasAnyFailingRed, redForKind } from '../src/lib/red-evidence.mjs';
 import {
@@ -314,6 +315,40 @@ test('verify run --red stores red only on non-zero exit', async () => {
     } finally {
       cleanup(passDir);
     }
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous red entry binds the registered command digest and the source revision', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 0);
+    const head = ensureCleanGitCommit(dir);
+    const red = await idefactory(dir, ['verify', 'run', attempt.id, '--check', 'unit', '--red']);
+    assert.notEqual(red.code, 0);
+    const [entry] = getAttempt(dir, attempt.id).evidence.redFailures;
+    assert.equal(entry.classification, 'vacuous-red');
+    assert.equal(entry.commandDigest, commandDigest(registryForExit(0).checks.unit.argv));
+    assert.equal(entry.sourceRevision, head);
+    assert.equal(JSON.stringify(entry).includes('stdout'), false);
+  } finally {
+    cleanup(dir);
+  }
+});
+
+test('a vacuous red throws a BlockedError with the unchanged message', async () => {
+  const dir = tempProject();
+  try {
+    const attempt = await seedAttempt(dir, 0);
+    ensureCleanGitCommit(dir);
+    await assert.rejects(verifyRun(dir, attempt.id, { check: 'unit', asRed: true }), (error) => {
+      assert.ok(error instanceof BlockedError);
+      assert.equal(error.invariant, 'vacuous-red');
+      assert.equal(error.context.attemptId, attempt.id);
+      assert.match(error.message, /^vacuous-red: red run did not record an assertion failure for unit \(/);
+      return true;
+    });
   } finally {
     cleanup(dir);
   }
@@ -875,7 +910,11 @@ test('attestation for a different attempt id is rejected with no evidence added'
   const fixture = await seedImportFixture();
   const { dir, key, argv, attempt, attestDir } = fixture;
   try {
-    const otherAttempt = await seedAttempt(dir, unitRegistryWithImportKeys([key], argv));
+    const otherAttempt = { id: randomUUID() };
+    fs.writeFileSync(
+      attemptPath(dir, otherAttempt.id),
+      `${JSON.stringify({ ...getAttempt(dir, attempt.id), id: otherAttempt.id }, null, 2)}\n`,
+    );
     const head = ensureCleanGitCommit(dir);
     const attestation = buildSignedAttestation({
       attemptId: otherAttempt.id,

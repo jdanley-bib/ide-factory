@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
+import { AUTHORITY, gateLabel } from '../src/lib/authority.mjs';
 import {
   ATTEMPT_STATES,
   SUPPLIED_EVIDENCE_TYPES,
@@ -151,6 +152,21 @@ test('help states whether a command writes', async () => {
   assert.match((await cli(['help', 'setup'])).out, /Effects: writes project state, read-only with --detect/);
 });
 
+test('autonomy report help documents the coverage fields, the alias, and the completeness rule', async () => {
+  const { out, code } = await cli(['help', 'autonomy', 'report']);
+  assert.equal(code, 0);
+  assert.match(out, /schemaVersion 2/);
+  assert.match(out, /noStopEvents/);
+  assert.match(out, /noEvents \(an alias of noStopEvents/);
+  assert.match(out, /unrecordedStops/);
+  assert.match(out, /unreadableSessions/);
+  assert.match(out, /measurementComplete is false/);
+  assert.match(out, /routineClean is true only when measurementComplete is true/);
+  assert.match(out, /Effects: read-only/);
+  const json = JSON.parse((await cli(['help', 'autonomy', 'report', '--json'])).out);
+  assert.match(JSON.stringify(json), /measurementComplete/);
+});
+
 test('group help lists the subcommands', async () => {
   const { out, code } = await cli(['help', 'attempt']);
   assert.equal(code, 0);
@@ -181,7 +197,7 @@ test('an unknown help topic exits non-zero and lists what is known', async () =>
   assert.equal(misspelled.code, 1);
   assert.equal(misspelled.out, '');
   assert.match(misspelled.err, /Unknown help topic: attempt transitoin/);
-  assert.match(misspelled.err, /Subcommands of attempt: start, transition, reopen, show/);
+  assert.match(misspelled.err, /Subcommands of attempt: start, repoint, transition, reopen, show/);
 
   const unknown = await cli(['help', 'frobnicate']);
   assert.equal(unknown.code, 1);
@@ -235,7 +251,7 @@ test('JSON help for a command has the documented shape', async () => {
 
 test('JSON help for a group lists subcommands, and the command list names every command', async () => {
   const group = JSON.parse((await cli(['help', 'attempt', '--json'])).out);
-  assert.deepEqual(group.subcommands.map((sub) => sub.command), ['attempt start', 'attempt transition', 'attempt reopen', 'attempt show']);
+  assert.deepEqual(group.subcommands.map((sub) => sub.command), ['attempt start', 'attempt repoint', 'attempt transition', 'attempt reopen', 'attempt show']);
   assert.equal(group.effects, 'varies');
 
   const list = JSON.parse((await cli(['help', '--json'])).out);
@@ -456,5 +472,48 @@ test('each documented precondition is enforced by the command', async () => {
     } finally {
       cleanup(dir);
     }
+  }
+});
+
+test('each gated command states its level and enforcement from the authority table', async () => {
+  const gated = [
+    [['approve'], 'record-approval'],
+    [['resume'], 'resume'],
+    [['lockout', 'resolve'], 'resolve-lockout'],
+    [['red', 'waive'], 'waive-red'],
+    [['red', 'reuse'], 'reuse-red'],
+    [['red', 'invalidate'], 'red-invalidate'],
+    [['attempt', 'reopen'], 'reopen-attempt'],
+    [['attempt', 'repoint'], 'attempt-repoint'],
+    [['method', 'review'], 'method-review'],
+  ];
+  for (const [words, gate] of gated) {
+    const result = await cli(['help', ...words]);
+    assert.equal(result.code, 0, result.err);
+    assert.ok(result.out.includes(`Authority: ${gateLabel(gate)}.`), `${words.join(' ')} shows ${gate}`);
+    assert.ok(result.out.includes(`level ${AUTHORITY[gate].level}`), words.join(' '));
+  }
+});
+
+test('run help defines the authority levels and enforcement labels', async () => {
+  const result = await cli(['help', 'run']);
+  assert.equal(result.code, 0, result.err);
+  for (const word of ['agent', 'independent', 'human', 'none', 'identity', 'principal']) {
+    assert.match(result.out, new RegExp(`\\b${word}\\b`), word);
+  }
+  assert.ok(result.out.includes(`--new-run within run.maxNewRuns: ${gateLabel('new-run')}.`));
+  assert.ok(result.out.includes(`--accept-baseline with --reason: ${gateLabel('accept-baseline')}.`));
+});
+
+test('method propose help names the six reason classes and the already-satisfied flags', async () => {
+  const dir = tempProject();
+  try {
+    const text = (await idefactory(dir, ['help', 'method', 'propose'])).out;
+    assert.match(text, /docs-or-text, configuration, behavior-preserving, mechanical, exploratory, already-satisfied/);
+    assert.match(text, /--reason already-satisfied/);
+    assert.match(text, /--test-path <path>/);
+    assert.match(text, /except for already-satisfied/);
+  } finally {
+    cleanup(dir);
   }
 });

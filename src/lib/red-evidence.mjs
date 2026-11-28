@@ -102,6 +102,8 @@ export function redFailureDiagnostics({
   executable,
   logDigest,
   recordedAt,
+  commandDigest,
+  sourceRevision,
 }) {
   const durationMs = Math.max(0, Date.parse(finishedAt) - Date.parse(startedAt));
   return {
@@ -115,6 +117,8 @@ export function redFailureDiagnostics({
     ...(spawnError && typeof executable === 'string' ? { executable } : {}),
     logDigest,
     recordedAt,
+    commandDigest: commandDigest ?? null,
+    sourceRevision: sourceRevision ?? null,
   };
 }
 

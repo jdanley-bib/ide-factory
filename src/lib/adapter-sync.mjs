@@ -1,6 +1,7 @@
 import {
   applyPlan,
   createRun,
+  malformedNote,
   markReplacements,
   planAdapters,
   stageConflicts,
@@ -70,6 +71,11 @@ export function syncAdapters(project, options = {}) {
     force: options.force,
     replace: options.replace,
   });
+  for (const item of plan.files) {
+    if (item.status !== 'malformed') continue;
+    const note = malformedNote(item.path, item);
+    if (!notes.includes(note)) notes.push(note);
+  }
   if (dryRun) {
     return { plan, staged: null, result: null, report: buildReport(plan, null, null, new Map(), notes, command, true) };
   }
@@ -106,7 +112,7 @@ export function formatReport(report) {
     );
   }
   if (summary.malformed > 0) {
-    lines.push('Repair the instruction file markers by hand, then run upgrade again.');
+    lines.push('Make the edit named in each malformed note, then run upgrade again.');
   }
   return lines;
 }
