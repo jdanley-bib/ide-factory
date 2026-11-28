@@ -1,0 +1,18 @@
+{
+  "reservedReasons": {
+    "product-decision": "the design conflicts with a recorded decision, so a person chooses",
+    "install-decision": "installing the factory is a person's decision"
+  },
+  "entries": [
+    {
+      "file": "templates/skills/factory-governance/SKILL.md",
+      "sentence": "ask the human to run it",
+      "gate": "record-approval"
+    },
+    {
+      "file": "templates/skills/factory-openspec/SKILL.md",
+      "sentence": "stop and ask the human",
+      "gate": "product-decision"
+    }
+  ]
+}

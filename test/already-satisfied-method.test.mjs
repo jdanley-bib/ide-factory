@@ -522,7 +522,7 @@ test('shipped guidance names the six reason classes and answers vacuous-red with
   for (const rel of ['templates/skills/factory-build/SKILL.md', 'templates/skills/factory-tdd/SKILL.md', 'templates/skills/factory-verify/SKILL.md']) {
     const text = fs.readFileSync(path.join(repoRoot, rel), 'utf8');
     assert.match(text, /vacuous-red[\s\S]*?already-satisfied/, rel);
-    assert.match(text, /Only when that proposal is refused, ask the human/, rel);
+    assert.match(text, /Only when neither fits, use/, rel);
     assert.match(text, /red-first/, rel);
   }
   const reviewer = fs.readFileSync(path.join(repoRoot, 'templates/factory/agents/reviewer/charter.md'), 'utf8');

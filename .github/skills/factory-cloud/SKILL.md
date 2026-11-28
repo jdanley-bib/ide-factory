@@ -124,7 +124,7 @@ Standing decisions in a packet are approvals, standing authorizations, red excep
 
 ## External effects
 
-The ready move covers the routine steps of this run (`sync-tasks`, `run`, `verify`, and `complete`) for this change only. It does not cover an external effect. Before any action that publishes, deploys, spends, or creates an account, run `idefactory authorize --change <change> --action <publish|deploy|spend|account> --target <name>` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop, report its `reason` and the `approve` command it prints, and put that in the `board report`. Do not ask the human whether to proceed when it reports `authorized: true`.
+The ready move covers the routine steps of this run (`sync-tasks`, `run`, `verify`, and `complete`) for this change only. It does not cover an external effect. Before any action that publishes, deploys, spends, or creates an account, run `idefactory authorize --change <change> --action <publish|deploy|spend|account> --target <name>` and proceed only when it reports `authorized: true`. When it reports `authorized: false`, stop, report its `reason` and the `approve` command it prints, and put that in the `board report`. Do not ask whether to proceed when it reports `authorized: true`.
 
 To bring human review comments into the factory, read the threads with `repo_pull_request_thread`, action `list`, save the result to a temporary file, and run `idefactory pr capture <change> --threads-file <file>`.
 
@@ -141,7 +141,7 @@ The agent never merges. It does not open or edit a pull request through the Curs
 
 - Do not run `idefactory approve`. Approvals come from a verified human.
 - Do not run `idefactory lockout resolve`. A different human resolves a lockout.
-- Do not run `idefactory resume`. Only a human clears `HALT`.
+- Do not run `idefactory resume`. A person clears `HALT`.
 - Do not run `idefactory red waive` or `idefactory red reuse`. A human approver records a red exception.
 - Do not edit a plan, a plan file under `.factory/mcp/`, or the arguments of its operations.
 - Do not edit the OpenSpec proposal, design, specs, or task text. Only `idefactory complete` checks a box.

@@ -1466,7 +1466,11 @@ test('every shipped copy of the build skills documents the red exception command
       const label = `${dir}/${name}`;
       assert.match(skill, /idefactory red reuse/, label);
       assert.match(skill, /idefactory red waive/, label);
-      assert.match(skill, /ask the human first/i, label);
+      assert.match(skill, /already-satisfied/, label);
+      assert.match(skill, /red invalidate/, label);
+      if (skill.includes('idefactory red waive')) {
+        assert.ok(skill.indexOf('already-satisfied') < skill.indexOf('idefactory red waive'), label);
+      }
       assert.ok(skill.includes(WAIVER_WARNING_SENTENCE), `${label} warning sentence`);
       assert.match(skill, /--acknowledge-not-stuck/, label);
       assert.match(skill, /only after the human acknowledges/i, label);
