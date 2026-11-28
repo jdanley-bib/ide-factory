@@ -19,15 +19,20 @@ When a factory command stops without completing its step, it SHALL be able to re
 - **AND** it states that no recovery is known
 
 ### Requirement: Responsible actor
-The report SHALL name one actor from `human`, `independent-agent`, `implementing-agent`, or `tooling`. The actor SHALL be `human` whenever the next step needs authority only a human holds, and `independent-agent` whenever it needs an identity other than the implementer's.
+The report SHALL name one actor from `human`, `independent-agent`, `implementing-agent`, or `tooling`, derived from the authority level of its first usable option. The actor SHALL be `human` whenever the next step is a human-level gate, and `independent-agent` whenever it needs an identity other than the implementer's. Each option SHALL also carry its authority level and enforcement label.
 
 #### Scenario: Reviewer lockout
 - **WHEN** the stop is a reviewer lockout
-- **THEN** the actor is `human`
+- **THEN** the actor is `independent-agent`
+- **AND** the resolve option's level is `independent`
 
 #### Scenario: Review needed
 - **WHEN** the attempt awaits review
 - **THEN** the actor is `independent-agent`
+
+#### Scenario: Human gate
+- **WHEN** the stop needs approval of a publish action
+- **THEN** the actor is `human`
 
 ### Requirement: Recovery options
 Each recovery option SHALL state an id, whether it is supported, the command to run when it is, the actor that may run it, and what it requires. When no supported option exists the report SHALL say there is no supported recovery, SHALL list the unsupported options with `supported: false` and no command, and SHALL name the human as the actor.
@@ -101,3 +106,68 @@ Every shipped factory skill that runs or builds work SHALL tell the agent to bra
 #### Scenario: Skill does not re-ask
 - **WHEN** a shipped factory-build skill is read
 - **THEN** it says not to ask for a decision listed under standing decisions
+
+### Requirement: Red-run stops are classified
+A `verify run --red` that stops for `vacuous-red` or `retry-cap` SHALL fail with a blocked-state error carrying the matching invariant and the same message text as before, so that its stop is reportable and recordable.
+
+#### Scenario: Vacuous red is a blocked error
+- **WHEN** a red run exits zero
+- **THEN** the command fails with invariant `vacuous-red`
+- **AND** the message text is unchanged
+
+#### Scenario: Retry cap is a blocked error
+- **WHEN** the fourth identical red failure occurs
+- **THEN** the command fails with invariant `retry-cap` and the message begins with `retry-cap:`
+
+### Requirement: Vacuous red offers its matching method
+The `vacuous-red` blocked report SHALL list a method proposal with reason class `already-satisfied` as its first recovery option, with the flags `--test-path` and `--kind`, available when the attempt is in a state that accepts proposals and holds a vacuous entry. The report's `propose-method` option SHALL state the attempt states the command accepts, matching the command's own refusal rules.
+
+#### Scenario: Option order
+- **WHEN** a `vacuous-red` report is built for an attempt in `implementing` with a vacuous entry
+- **THEN** its first option is the `already-satisfied` proposal with the exact command and flags
+
+#### Scenario: State text matches the command
+- **WHEN** the report lists the `propose-method` option
+- **THEN** its availability text names `planned`, `assigned`, and `implementing`
+
+### Requirement: Advertised options are accepted
+A recovery option that names an attempt state SHALL be accepted by its command in every state it names, and a test SHALL drive each such option in an allowed and a disallowed state to check it. An option SHALL NOT name a state its command refuses for a state reason.
+
+#### Scenario: Method proposal states
+- **WHEN** a `vacuous-red` report lists the method option for an attempt in `implementing`
+- **THEN** running the listed command does not refuse for the attempt state
+
+#### Scenario: Disallowed state
+- **WHEN** the attempt is in `verifying`
+- **THEN** the report does not list the method option and the command refuses for the state
+
+#### Scenario: Table change without a command change
+- **WHEN** an option names a state its command refuses
+- **THEN** the conformance test fails naming the option and the state
+
+### Requirement: Setup-incomplete stop
+The `setup-incomplete` report SHALL have retry class `only-after-change`, SHALL list recording the setup decision first with authority `human`, and SHALL list `idefactory setup --detect` second with authority `agent`. Its actor SHALL be `human`.
+
+#### Scenario: Option order
+- **WHEN** a `setup-incomplete` report is built
+- **THEN** its first option is recording the setup decision and its second is `idefactory setup --detect`
+
+#### Scenario: Actor
+- **WHEN** the report is printed
+- **THEN** the actor is `human`
+
+### Requirement: Text stops name the next step
+When `run` or `next` stops with a blocked report, the text output SHALL print a `Next:` line naming the first supported option's command and who may run it: an agent, an identity other than the implementer, or a person. When no option is supported it SHALL say so and name a person. The JSON output SHALL be unchanged.
+
+#### Scenario: Rejected attempt
+- **WHEN** run stops with `rejected` and the first supported option starts a new attempt
+- **THEN** the text output contains `Next: idefactory attempt start` with the change and task
+- **AND** it says an agent may run it
+
+#### Scenario: No supported option
+- **WHEN** a stop has no supported option
+- **THEN** the text says there is no supported recovery and names a person
+
+#### Scenario: Text and JSON agree
+- **WHEN** the same stop is printed in text and JSON
+- **THEN** both name the same first option

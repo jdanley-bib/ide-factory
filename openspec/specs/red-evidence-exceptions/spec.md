@@ -145,7 +145,7 @@ Each exception SHALL cover one target attempt and only the kinds it names, SHALL
 - **THEN** an exception on an earlier attempt does not satisfy it
 
 ### Requirement: Unrelated gates stay in force
-An exception SHALL NOT waive a passing attestation at the current clean HEAD, a distinct reviewer, a security stage, a human gate, a lockout, the retry cap, or the `code` classification, and SHALL NOT alter the rejected attempt or its evidence. It SHALL NOT reopen a closed run session.
+An exception SHALL NOT waive a passing attestation at the current clean HEAD, a distinct reviewer, a security stage, a human gate, a lockout, the retry cap, or the `code` classification, and SHALL NOT alter the rejected attempt or its evidence. It SHALL NOT edit a run session file. A closed `vacuous-red` session SHALL reopen on the next run once its stop condition is resolved, and not before.
 
 #### Scenario: Completion still needs clean passing evidence
 - **WHEN** an attempt with a valid exception completes with a stale or missing passing attestation
@@ -157,7 +157,8 @@ An exception SHALL NOT waive a passing attestation at the current clean HEAD, a 
 
 #### Scenario: Run session stays closed
 - **WHEN** the latest run session stopped for `vacuous-red` and a waiver is then recorded
-- **THEN** the session stays closed until the human passes `--new-run`
+- **THEN** the session file bytes are unchanged until the next run evaluates it
+- **AND** the next run reopens the session because the waiver resolves the stop
 
 ### Requirement: Exceptions are visible
 Status, the reviewer packet, and the pull-request verdict comment for an attempt SHALL name each exception with its type, kind, approver, and reason. For a waiver or reuse, they SHALL say that no red ran on that attempt for that kind. For an invalidated red, they SHALL name the invalidated red's digest and the invalid-red reason, and SHALL say that a red ran but does not satisfy red. A waiver acknowledged before a stuck signal SHALL be marked.
@@ -213,12 +214,16 @@ An invalidated red SHALL satisfy red only through its bound waiver while the inv
 - **AND** the transition into `verifying` is rejected
 
 ### Requirement: Waiver refused over an existing red
-`red waive` without `--invalid-red` SHALL refuse a kind for which a failing CLI red is stored. The refusal SHALL name that red and SHALL point to `--invalid-red` for a post-implementation red. It SHALL record nothing.
+`red waive` without `--invalid-red` SHALL refuse a kind for which a failing CLI red is stored. The refusal SHALL name that red, SHALL point to `red invalidate` for a red that is not genuine, and SHALL point to `--invalid-red` for a human acceptance of such a red. It SHALL record nothing.
 
 #### Scenario: Waiver over a genuine red
 - **WHEN** waive runs for `unit` on an attempt with a failing CLI red for `unit` and without `--invalid-red`
 - **THEN** the command exits non-zero, names the existing red, and names `--invalid-red`
 - **AND** no exception file is written and the attempt is unchanged
+
+#### Scenario: Refusal names the agent command
+- **WHEN** the same refusal is printed
+- **THEN** it also names `red invalidate`
 
 ### Requirement: Reuse needs a valid source red
 `red reuse` SHALL refuse a source attempt whose red for a named kind does not satisfy red on that source attempt, including a red invalidated on the source.
@@ -229,7 +234,7 @@ An invalidated red SHALL satisfy red only through its bound waiver while the inv
 - **THEN** reuse fails and records nothing
 
 ### Requirement: Guidance matches the waiver rules
-The help for `red waive`, the README, and the shipped `factory-build`, `factory-tdd`, `factory-verify`, and governance guidance SHALL name `--invalid-red`, SHALL state that a post-implementation red is invalidated and not treated as genuine, and SHALL state that a waiver does not replace passing verification, distinct review, or lockouts.
+The help for `red waive`, the README, and the shipped `factory-build`, `factory-tdd`, `factory-verify`, and governance guidance SHALL name `--invalid-red` and `red invalidate`, SHALL state that a post-implementation red is invalidated and not treated as genuine, and SHALL state that a waiver does not replace passing verification, distinct review, or lockouts.
 
 #### Scenario: Help names the flags
 - **WHEN** `idefactory help red waive` runs
@@ -237,7 +242,7 @@ The help for `red waive`, the README, and the shipped `factory-build`, `factory-
 
 #### Scenario: Shipped copies name the flag
 - **WHEN** each shipped copy of the `factory-build` skill is read
-- **THEN** it names `--invalid-red` and states that a waiver does not replace passing verification, distinct review, or lockouts
+- **THEN** it names `--invalid-red` and `red invalidate` and states that a waiver does not replace passing verification, distinct review, or lockouts
 
 ### Requirement: Halt blocks exceptions
 When a file named `HALT` exists in the project root, reuse and waive SHALL refuse to mutate factory state.
