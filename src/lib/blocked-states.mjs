@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getAttempt } from './attempt.mjs';
+import { openReopen } from './attempt-reopen.mjs';
 import { ACTORS, BlockedError, HALT_MESSAGE, RETRY_CLASSES } from './blocked-error.mjs';
 import { findEntry } from './command-help.mjs';
 import { appendControlEvent, readControlEvents } from './event-log.mjs';
@@ -24,15 +25,17 @@ const hasItem = (ctx) => Boolean(ctx.change && ctx.task);
 const hasAttempt = (ctx) => Boolean(ctx.attempt);
 const PROPOSAL_STATES = ['planned', 'assigned', 'implementing'];
 const proposable = attemptIs(...PROPOSAL_STATES);
+const reopenedForMethod = (ctx) => attemptIs('awaiting-review')(ctx) && Boolean(openReopen(ctx.attempt));
+const methodProposable = (ctx) => proposable(ctx) || reopenedForMethod(ctx);
 const hasVacuousEntry = (ctx) => (ctx.attempt?.evidence?.redFailures || [])
   .some((entry) => entry.classification === 'vacuous-red');
-const PROPOSAL_AVAILABILITY = 'an attempt in planned, assigned, or implementing';
+const PROPOSAL_AVAILABILITY = 'an attempt in planned, assigned, or implementing, or an attempt reopened for a method';
 const PROPOSE_METHOD_COMMAND = 'idefactory method propose {attemptId} --choice no-red --reason <class> --rationale "<text>" --implementer <id> --kind <kind>';
 const PROPOSE_ALREADY_SATISFIED = option(
   'propose-already-satisfied', ['method', 'propose'],
   'idefactory method propose {attemptId} --choice no-red --reason already-satisfied --rationale "<text>" --implementer <id> --kind <kind> --test-path <path>',
   `${PROPOSAL_AVAILABILITY} with a vacuous red`, true,
-  (ctx) => proposable(ctx) && hasVacuousEntry(ctx),
+  (ctx) => methodProposable(ctx) && hasVacuousEntry(ctx),
 );
 
 const SHOW_REQUIREMENTS = option('show-requirements', ['requirements'], 'idefactory requirements {change} {task}', 'a work item', false, hasItem,
@@ -144,7 +147,7 @@ export const BLOCKED_TABLE = {
     retry: 'only-after-change',
     message: 'A required failing test, method, or red exception is missing.',
     options: [
-      option('propose-method', ['method', 'propose'], PROPOSE_METHOD_COMMAND, PROPOSAL_AVAILABILITY, true, proposable),
+      option('propose-method', ['method', 'propose'], PROPOSE_METHOD_COMMAND, PROPOSAL_AVAILABILITY, true, methodProposable),
       option('reopen-attempt', ['attempt', 'reopen'], 'idefactory attempt reopen {attemptId} --kind <kind> --for method|exception --by <id> --reason "<text>"', 'an accepted attempt that is not finalizing, and an identity other than the implementer', true, attemptIs('accepted')),
       option('waive-red', ['red', 'waive'], 'idefactory red waive {attemptId} --kind <kind> --note "<reason>" --approver <id>', 'an identity other than the implementer\'s', true, attemptIs('planned', 'assigned', 'implementing', 'red-confirmed', 'verifying')),
       option('list-reds', ['red', 'list'], 'idefactory red list {attemptId}', 'an attempt', false, hasAttempt),
@@ -155,7 +158,7 @@ export const BLOCKED_TABLE = {
     message: 'The test already passes, so no failing test can be recorded.',
     options: [
       PROPOSE_ALREADY_SATISFIED,
-      option('propose-method', ['method', 'propose'], PROPOSE_METHOD_COMMAND, PROPOSAL_AVAILABILITY, true, proposable),
+      option('propose-method', ['method', 'propose'], PROPOSE_METHOD_COMMAND, PROPOSAL_AVAILABILITY, true, methodProposable),
       option('reuse-red', ['red', 'reuse'], 'idefactory red reuse {attemptId} --from <sourceAttemptId> --kind <kind> --note "<reason>" --approver <id>', 'a genuine red from a rejected attempt', true, hasAttempt),
       option('waive-red', ['red', 'waive'], 'idefactory red waive {attemptId} --kind <kind> --note "<reason>" --approver <id>', 'an identity other than the implementer\'s', true, hasAttempt),
       NEW_RUN_HUMAN,

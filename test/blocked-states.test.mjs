@@ -515,3 +515,10 @@ test('shipped skills tell the agent to branch on the report and not to re-ask', 
   const run = fs.readFileSync(path.join(repoRoot, 'templates/skills/factory-run/SKILL.md'), 'utf8');
   for (const word of ['actor', 'supported', 'safe', 'only-after-change', 'never']) assert.match(run, new RegExp(word));
 });
+
+test('the method proposal rows name the reopened case that the command accepts', () => {
+  for (const [code, id] of [['red-missing', 'propose-method'], ['vacuous-red', 'propose-method'], ['vacuous-red', 'propose-already-satisfied']]) {
+    const option = BLOCKED_TABLE[code].options.find((entry) => entry.id === id);
+    assert.match(option.requires, /reopened for a method/, `${code} ${id}`);
+  }
+});
