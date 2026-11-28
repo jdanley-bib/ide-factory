@@ -282,20 +282,52 @@ function indexesOf(text, needle) {
   return out;
 }
 
+function lineOf(text, index) {
+  return text.slice(0, index).split('\n').length;
+}
+
+/** Locate the factory section, or say what is malformed and the one edit that repairs it. */
 function locateSection(text) {
   const starts = indexesOf(text, SECTION_START);
   const ends = indexesOf(text, SECTION_END);
   if (starts.length === 0 && ends.length === 0) return { kind: 'none' };
-  if (starts.length !== 1 || ends.length !== 1) {
-    return {
-      kind: 'malformed',
-      reason: `expected one ${SECTION_START} and one ${SECTION_END} marker, found ${starts.length} and ${ends.length}`,
-    };
+  const startLines = starts.map((at) => lineOf(text, at));
+  const endLines = ends.map((at) => lineOf(text, at));
+  const malformed = (reason, repair) => ({ kind: 'malformed', reason, repair });
+  if (starts.length === 1 && ends.length === 0) {
+    return malformed(
+      `the start marker at line ${startLines[0]} has no end marker`,
+      `Add ${SECTION_END} on its own line after the factory section, or delete the start marker at line ${startLines[0]}.`,
+    );
   }
-  if (ends[0] < starts[0]) {
-    return { kind: 'malformed', reason: 'the end marker comes before the start marker' };
+  if (starts.length === 0 && ends.length === 1) {
+    return malformed(
+      `the end marker at line ${endLines[0]} has no start marker`,
+      `Add ${SECTION_START} on its own line before the factory section, or delete the end marker at line ${endLines[0]}.`,
+    );
   }
-  return { kind: 'one', start: starts[0], end: ends[0] + SECTION_END.length };
+  if (starts.length === 1 && ends.length === 1) {
+    if (ends[0] > starts[0]) return { kind: 'one', start: starts[0], end: ends[0] + SECTION_END.length };
+    return malformed(
+      `the end marker at line ${endLines[0]} comes before the start marker at line ${startLines[0]}`,
+      'Swap the two markers, or delete both and run idefactory upgrade to append a fresh section.',
+    );
+  }
+  return malformed(
+    `found ${starts.length} start markers at lines ${startLines.join(', ') || 'none'} and ${ends.length} end markers at lines ${endLines.join(', ') || 'none'}`,
+    'Keep one start marker and one end marker as a pair, and delete the others.',
+  );
+}
+
+/** The note upgrade, init, and doctor print for a malformed instruction file. The file is never written. */
+export function malformedNote(rel, item) {
+  return `${rel} has malformed instruction markers and was not replaced: ${item.reason}. ${item.repair} An agent may make that edit and run idefactory upgrade again; upgrade does not write this file.`;
+}
+
+export function malformedAdapterNotes(project) {
+  return planAdapters(project).files
+    .filter((item) => item.status === 'malformed')
+    .map((item) => malformedNote(item.path, item));
 }
 
 /** CRLF only when every line break in the text is CRLF. */
@@ -328,7 +360,7 @@ function planSection(project, item, manifest, history) {
   if (!local.regular) return { ...base, status: 'preserved', reason: 'not a regular file', mode: 'none' };
   const found = locateSection(local.text);
   if (found.kind === 'malformed') {
-    return { ...base, status: 'malformed', reason: found.reason, localText: local.text, mode: 'none' };
+    return { ...base, status: 'malformed', reason: found.reason, repair: found.repair, localText: local.text, mode: 'none' };
   }
   if (found.kind === 'none') {
     return { ...base, status: 'create', mode: 'append', localText: local.text };
@@ -503,18 +535,13 @@ export function markReplacements(project, plan, { force = false, replace = [] } 
     if (replaceable.has(item.status)) files[indexOf(item)] = mark(item);
     else if (item.status === 'pinned') {
       notes.push(`${rel} is pinned and was not replaced. Run idefactory adapters unpin ${rel} first.`);
-    } else if (item.status === 'malformed') {
-      notes.push(`${rel} has malformed instruction markers and was not replaced: ${item.reason}. Repair them by hand.`);
-    } else if (item.status !== 'replace') {
+    } else if (item.status !== 'malformed' && item.status !== 'replace') {
       notes.push(`Nothing to replace for ${rel}: it is ${item.status}.`);
     }
   }
   if (force) {
     files.forEach((item, index) => {
       if (item.status === 'preserved') files[index] = mark(item);
-      else if (item.status === 'malformed') {
-        notes.push(`${item.path} has malformed instruction markers and was not replaced: ${item.reason}. Repair them by hand.`);
-      }
     });
   }
   return { plan: { ...plan, files }, notes };

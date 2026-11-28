@@ -12,6 +12,7 @@ import { describeCoverage, describeMethod, listAllMethods } from './red-method.m
 import { confirmPrincipal, configuredPrincipalProvider, readPolicyVersion } from './principal.mjs';
 import { formatArgv, registeredArgv } from './checks-preview.mjs';
 import { setupReadinessErrors } from './setup.mjs';
+import { malformedAdapterNotes } from './adapters.mjs';
 import {
   actionIds,
   actionRow,
@@ -73,6 +74,7 @@ export function doctor(project) {
   }
   const policyVersion = readPolicyVersion(project);
   for (const item of setupReadinessErrors(project)) errors.push(item);
+  for (const note of malformedAdapterNotes(project)) warnings.push(note);
   for (const kind of unmappedCheckKinds(project)) {
     warnings.push(`unmapped check kind: ${kind}`);
   }
